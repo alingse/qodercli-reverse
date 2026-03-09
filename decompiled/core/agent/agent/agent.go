@@ -45,7 +45,7 @@ type Agent struct {
 	mu     sync.RWMutex
 	
 	// 回调
-	onMessage    func(msg *types.Message)
+	onMessage   func(msg *types.Message)
 	onToolCall   func(call *types.ToolCall)
 	onToolResult func(result *types.ToolResult)
 	onError      func(err error)
@@ -54,17 +54,18 @@ type Agent struct {
 
 // Config Agent 配置
 type Config struct {
-	SystemPrompt     string
-	Model            string
-	MaxTokens        int
-	Temperature      float64
-	MaxTurns         int
-	AllowedTools     []string
-	DisallowedTools  []string
-	PermissionMode   permission.Mode
-	ThinkLevel       provider.ThinkLevel
-	SubagentMode     bool
-	AgentName        string
+	SystemPrompt         string
+	Model                string
+	MaxTokens            int
+	Temperature          float64
+	MaxTurns             int
+	AllowedTools         []string
+	DisallowedTools      []string
+	PermissionMode       permission.Mode
+	ThinkLevel           provider.ThinkLevel
+	SubagentMode         bool
+	AgentName            string
+	EnableEnhancedCompact bool // 启用增强 compact 功能
 }
 
 // NewAgent 创建 Agent
@@ -220,14 +221,14 @@ func (a *Agent) generate(ctx context.Context) error {
 		
 		// 构建请求
 		req := &provider.ModelRequest{
-			Model:       a.config.Model,
-			Messages:    a.state.GetMessages(),
-			Tools:       a.toolRegistry.ToToolInfo(),
-			MaxTokens:   a.config.MaxTokens,
-			Temperature: a.config.Temperature,
-			Stream:      true,
+			Model:        a.config.Model,
+			Messages:     a.state.GetMessages(),
+			Tools:        a.toolRegistry.ToToolInfo(),
+			MaxTokens:    a.config.MaxTokens,
+			Temperature:  a.config.Temperature,
+			Stream:       true,
 			SystemPrompt: a.config.SystemPrompt,
-			ThinkLevel:  a.config.ThinkLevel,
+			ThinkLevel:   a.config.ThinkLevel,
 		}
 		
 		// 流式请求
@@ -504,10 +505,29 @@ func (a *Agent) compactContext(ctx context.Context) error {
 	// 获取当前消息
 	messages := a.state.GetMessages()
 	if len(messages) <= 2 {
+		log.Debug("Too few messages to compact: %d", len(messages))
 		return nil // 消息太少，无需压缩
 	}
 
-	// 保留系统消息和最近的用户-助手对话
+	log.Debug("Starting context compaction with %d messages", len(messages))
+
+	// 简单实现
+	compressed := simpleCompact(messages)
+	
+	// 更新状态
+	a.state.SetMessages(compressed)
+	log.Debug("Context compaction completed: %d -> %d messages", len(messages), len(compressed))
+
+	return nil
+}
+
+// simpleCompact 简单的上下文压缩（向后兼容）
+func simpleCompact(messages []types.Message) []types.Message {
+	if len(messages) <= 2 {
+		return messages
+	}
+
+	// 保留系统消息和最近的用户 - 助手对话
 	var compressed []types.Message
 	var summary strings.Builder
 
@@ -523,11 +543,11 @@ func (a *Agent) compactContext(ctx context.Context) error {
 			summary.WriteString("- User asked about: ")
 			for _, part := range msg.Content {
 				if part.Type == "text" {
-					summary.WriteString(part.Text[:min(len(part.Text), 50)])
-					if len(part.Text) > 50 {
-						summary.WriteString("...")
+					text := part.Text
+					if len(text) > 50 {
+						text = text[:50] + "..."
 					}
-					summary.WriteString("\n")
+					summary.WriteString(text + "\n")
 					break
 				}
 			}
@@ -543,12 +563,10 @@ func (a *Agent) compactContext(ctx context.Context) error {
 	// 保留最后两条消息（用户输入和助手回复）
 	compressed = append(compressed, messages[len(messages)-2:]...)
 
-	// 更新状态
-	a.state.SetMessages(compressed)
-
-	return nil
+	return compressed
 }
 
+// min 返回两个整数中的较小值
 func min(a, b int) int {
 	if a < b {
 		return a
@@ -588,7 +606,7 @@ func (f HookFunc) Execute(ctx *HookContext) error {
 // HookContext Hook 上下文
 type HookContext struct {
 	Agent      *Agent
-	Message    *types.Message
+	Message   *types.Message
 	ToolCall   *types.ToolCall
 	ToolResult *tools.ToolResult
 }
