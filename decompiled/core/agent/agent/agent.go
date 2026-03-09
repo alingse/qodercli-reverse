@@ -33,6 +33,10 @@ type Agent struct {
 	// 状态
 	state *state.State
 	
+	// Todo 状态
+	todoState state.TodoState
+	sessionMemory *state.SessionMemory
+	
 	// 权限
 	permissionCoordinator *permission.Coordinator
 	
@@ -72,11 +76,17 @@ type Config struct {
 func NewAgent(config *Config, provider provider.Client) (*Agent, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	
+	// 创建会话内存和 Todo 状态
+	sessionMemory := state.NewSessionMemory()
+	todoState := state.NewTodoState(sessionMemory)
+	
 	agent := &Agent{
 		config:                config,
 		provider:              provider,
 		toolRegistry:          tools.NewRegistry(),
 		state:                 state.New(),
+		todoState:             todoState,
+		sessionMemory:         sessionMemory,
 		permissionCoordinator: permission.NewCoordinator(config.PermissionMode),
 		hooks:                 NewHookManager(),
 		ctx:                   ctx,
@@ -129,6 +139,11 @@ func (a *Agent) registerBuiltinTools() error {
 		return err
 	}
 	if err := a.toolRegistry.Register(tools.NewKillBashTool(shellManager)); err != nil {
+		return err
+	}
+	
+	// TodoWrite 工具
+	if err := a.toolRegistry.Register(tools.NewTodoWriteTool(a.todoState)); err != nil {
 		return err
 	}
 	
@@ -643,4 +658,17 @@ func (m *HookManager) Execute(hookType HookType, ctx *HookContext) error {
 		}
 	}
 	return nil
+}
+
+// GetTodoState 获取 Todo 状态
+func (a *Agent) GetTodoState() state.TodoState {
+	return a.todoState
+}
+
+// GetTodoListText 获取 Todo 列表的文本描述
+func (a *Agent) GetTodoListText() string {
+	if a.todoState == nil {
+		return "Todo list not initialized."
+	}
+	return a.todoState.TodosToText()
 }
