@@ -34,6 +34,15 @@ func (s *State) AddToolResult(result *types.ToolResult) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.toolResults[result.ToolCallID] = result
+	
+	// 同时将工具结果作为 tool 角色的消息添加到消息列表
+	// 这样 API 才能正确识别工具调用的响应
+	toolMsg := types.Message{
+		Role:       types.RoleTool,
+		Content:    []types.ContentPart{{Type: "text", Text: result.Content}},
+		ToolCallID: result.ToolCallID,
+	}
+	s.messages = append(s.messages, toolMsg)
 }
 
 // GetMessages 获取所有消息

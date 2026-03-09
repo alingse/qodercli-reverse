@@ -349,7 +349,7 @@ func (c *OpenAIClient) processSSEStream(ctx context.Context, reader io.Reader, e
 
 	var currentContent strings.Builder
 	var currentToolCall *openAIToolCall
-	var toolCallIndex int
+	lastToolCallIndex := -1  // 初始化为 -1，这样第一个工具调用（index=0）也能被正确处理
 
 	for scanner.Scan() {
 		select {
@@ -420,9 +420,20 @@ func (c *OpenAIClient) processSSEStream(ctx context.Context, reader io.Reader, e
 		// 处理工具调用
 		if len(chunk.Choices) > 0 && len(chunk.Choices[0].Delta.ToolCalls) > 0 {
 			for _, tc := range chunk.Choices[0].Delta.ToolCalls {
-				if tc.Index != toolCallIndex {
-					// 新的工具调用
-					toolCallIndex = tc.Index
+				log.Debug("Processing tool call: index=%d, name=%s, args=%s", tc.Index, tc.Function.Name, tc.Function.Arguments)
+				
+				if tc.Index != lastToolCallIndex {
+					// 新的工具调用 - 先发送前一个工具调用的停止事件
+					if currentToolCall != nil {
+						eventChan <- Event{
+							Type: EventTypeToolUseStop,
+						}
+						log.Debug("Sent ToolUseStop for previous tool call")
+					}
+					
+					// 更新索引
+					lastToolCallIndex = tc.Index
+					
 					if tc.Function.Name != "" {
 						currentToolCall = &openAIToolCall{
 							ID:   tc.ID,
@@ -438,6 +449,7 @@ func (c *OpenAIClient) processSSEStream(ctx context.Context, reader io.Reader, e
 								Name: tc.Function.Name,
 							},
 						}
+						log.Debug("Sent ToolUseStart for tool: %s", tc.Function.Name)
 					}
 				}
 
@@ -454,6 +466,7 @@ func (c *OpenAIClient) processSSEStream(ctx context.Context, reader io.Reader, e
 							Arguments: tc.Function.Arguments,
 						},
 					}
+					log.Debug("Sent ToolUseDelta for tool: %s, args len: %d", tc.Function.Name, len(tc.Function.Arguments))
 				}
 			}
 		}
@@ -461,6 +474,16 @@ func (c *OpenAIClient) processSSEStream(ctx context.Context, reader io.Reader, e
 		// 处理完成原因
 		if len(chunk.Choices) > 0 && chunk.Choices[0].FinishReason != "" {
 			finishReason := types.FinishReason(chunk.Choices[0].FinishReason)
+			log.Debug("Finish reason: %s", finishReason)
+
+			// 如果有未完成的工具调用，发送停止事件
+			if currentToolCall != nil {
+				eventChan <- Event{
+					Type: EventTypeToolUseStop,
+				}
+				log.Debug("Sent final ToolUseStop")
+				currentToolCall = nil
+			}
 
 			// 发送 token 使用信息
 			if chunk.Usage != nil {

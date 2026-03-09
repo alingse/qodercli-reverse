@@ -14,6 +14,7 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/agent/provider"
 	"github.com/alingse/qodercli-reverse/decompiled/core/agent/state"
 	"github.com/alingse/qodercli-reverse/decompiled/core/agent/tools"
+	"github.com/alingse/qodercli-reverse/decompiled/core/log"
 	"github.com/alingse/qodercli-reverse/decompiled/core/types"
 )
 
@@ -207,12 +208,15 @@ func (a *Agent) generate(ctx context.Context) error {
 	for {
 		// 检查最大回合数
 		if a.config.MaxTurns > 0 && turnCount >= a.config.MaxTurns {
+			log.Debug("Max turns reached: %d/%d", turnCount, a.config.MaxTurns)
 			if a.onFinish != nil {
 				a.onFinish(types.FinishReasonLength)
 			}
 			return fmt.Errorf("max turns reached: %d", a.config.MaxTurns)
 		}
 		turnCount++
+		
+		log.Debug("Starting turn %d, current messages count: %d", turnCount, len(a.state.GetMessages()))
 		
 		// 构建请求
 		req := &provider.ModelRequest{
@@ -227,6 +231,7 @@ func (a *Agent) generate(ctx context.Context) error {
 		}
 		
 		// 流式请求
+		log.Debug("Calling provider.Stream() for turn %d", turnCount)
 		eventChan := a.provider.Stream(ctx, req)
 		
 		// 处理事件
@@ -237,10 +242,12 @@ func (a *Agent) generate(ctx context.Context) error {
 		var toolCalls []types.ToolCall
 		var finishReason types.FinishReason
 		
+		log.Debug("Processing events for turn %d", turnCount)
 		for event := range eventChan {
 			switch event.Type {
 			case provider.EventTypeMessageStart:
 				// 消息开始
+				log.Debug("Event: MessageStart")
 				
 			case provider.EventTypeContentBlockDelta:
 				// 内容增量 - 只打印新增的文本
@@ -251,6 +258,7 @@ func (a *Agent) generate(ctx context.Context) error {
 				if a.onMessage != nil {
 					a.onMessage(assistantMsg)
 				}
+				log.Debug("Event: ContentBlockDelta, content length: %d", len(event.Content))
 				
 			case provider.EventTypeThinkingDelta:
 				// 思考增量
@@ -258,6 +266,7 @@ func (a *Agent) generate(ctx context.Context) error {
 					Type:     "thinking",
 					Thinking: event.Thinking,
 				})
+				log.Debug("Event: ThinkingDelta")
 				
 			case provider.EventTypeToolUseStart:
 				// 工具使用开始
@@ -265,29 +274,35 @@ func (a *Agent) generate(ctx context.Context) error {
 					ID:   generateToolCallID(),
 					Name: event.ToolUse.Name,
 				}
+				log.Debug("Event: ToolUseStart, tool name: %s", event.ToolUse.Name)
 				
 			case provider.EventTypeToolUseDelta:
 				// 工具使用增量
 				if currentToolCall != nil {
 					currentToolCall.Arguments += event.ToolCall.Arguments
 				}
+				log.Debug("Event: ToolUseDelta, arguments length: %d", len(currentToolCall.Arguments))
 				
 			case provider.EventTypeToolUseStop:
 				// 工具使用结束
 				if currentToolCall != nil {
 					toolCalls = append(toolCalls, *currentToolCall)
+					log.Debug("Event: ToolUseStop, total tool calls so far: %d", len(toolCalls))
 					currentToolCall = nil
 				}
 				
 			case provider.EventTypeMessageStop:
 				// 消息结束
+				log.Debug("Event: MessageStop")
 				
 			case provider.EventTypeMessageDelta:
 				// 消息增量（包含 finish_reason）
 				finishReason = event.FinishReason
+				log.Debug("Event: MessageDelta, finish reason: %s", finishReason)
 				
 			case provider.EventTypeError:
 				// 错误
+				log.Debug("Event: Error, message: %s", event.Error.Message)
 				if a.onError != nil {
 					a.onError(fmt.Errorf("provider error: %s", event.Error.Message))
 				}
@@ -295,16 +310,21 @@ func (a *Agent) generate(ctx context.Context) error {
 			}
 		}
 		
+		log.Debug("Event channel closed for turn %d, tool calls: %d, finish reason: %s", turnCount, len(toolCalls), finishReason)
+		
 		// 添加工具调用
 		if len(toolCalls) > 0 {
 			assistantMsg.ToolCalls = toolCalls
+			log.Debug("Added %d tool calls to assistant message", len(toolCalls))
 		}
 		
 		// 保存助手消息
 		a.state.AddMessage(assistantMsg)
+		log.Debug("Added assistant message to state, total messages now: %d", len(a.state.GetMessages()))
 		
 		// 如果没有工具调用，结束
 		if len(toolCalls) == 0 {
+			log.Debug("No tool calls, finishing with reason: %s", finishReason)
 			if a.onFinish != nil {
 				a.onFinish(finishReason)
 			}
@@ -312,11 +332,16 @@ func (a *Agent) generate(ctx context.Context) error {
 		}
 		
 		// 执行工具调用
-		for _, tc := range toolCalls {
+		log.Debug("Executing %d tool calls for turn %d", len(toolCalls), turnCount)
+		for i, tc := range toolCalls {
+			log.Debug("Executing tool call %d/%d: %s", i+1, len(toolCalls), tc.Name)
 			if err := a.executeToolCall(ctx, &tc); err != nil {
+				log.Debug("Tool call %d failed: %v", i+1, err)
 				return err
 			}
+			log.Debug("Tool call %d completed successfully", i+1)
 		}
+		log.Debug("All tool calls completed for turn %d, will continue to next turn", turnCount)
 	}
 }
 

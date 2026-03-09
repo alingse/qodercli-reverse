@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -161,17 +162,25 @@ func runPrintMode(input string) {
 	}
 
 	// 简单的输出处理 - 流式增量打印
-	var lastContentLen int
+	var lastPrintedLen int
+	var fullText strings.Builder
 	ag.SetCallbacks(
 		func(msg *types.Message) {
 			if !quiet {
-				// 只打印新增的文本内容部分
-				for i := lastContentLen; i < len(msg.Content); i++ {
-					if msg.Content[i].Type == "text" && msg.Content[i].Text != "" {
-						fmt.Print(msg.Content[i].Text)
+				// 构建完整的文本内容
+				fullText.Reset()
+				for _, part := range msg.Content {
+					if part.Type == "text" && part.Text != "" {
+						fullText.WriteString(part.Text)
 					}
 				}
-				lastContentLen = len(msg.Content)
+				
+				// 只打印新增的文本部分
+				fullStr := fullText.String()
+				if len(fullStr) > lastPrintedLen {
+					fmt.Print(fullStr[lastPrintedLen:])
+					lastPrintedLen = len(fullStr)
+				}
 			}
 		},
 		func(call *types.ToolCall) {
