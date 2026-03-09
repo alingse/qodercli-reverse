@@ -5,6 +5,8 @@ package app
 import (
 	"context"
 	"fmt"
+	"os"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -16,6 +18,7 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/types"
 	"github.com/alingse/qodercli-reverse/decompiled/tui/components/interaction/editor"
 	"github.com/alingse/qodercli-reverse/decompiled/tui/components/messages"
+	"github.com/alingse/qodercli-reverse/decompiled/version"
 )
 
 // appModel TUI 应用模型 - 对应原版的 appModel
@@ -101,6 +104,21 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case InitMsg:
 		log.Info("TUI session started")
+
+		// 添加欢迎消息（遵循官方架构的初始化流程）
+		cwd, err := os.Getwd()
+		if err != nil {
+			cwd = "unknown"
+			log.Warn("Failed to get current working directory: %v", err)
+		}
+
+		welcomeMsg := &messages.WelcomeMessage{
+			Version: version.GetVersion(),
+			Cwd:     cwd,
+			MsgTime: time.Now(),
+		}
+		m.msgView.AddMessage(welcomeMsg)
+
 		m.pubsub.Publish(context.Background(), pubsub.Event{
 			Type:    pubsub.EventTypeSessionStart,
 			Payload: m.config,

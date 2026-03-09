@@ -284,3 +284,39 @@ func (m *LogItem) Render() string {
 		Foreground(lipgloss.Color(color))
 	return style.Render(fmt.Sprintf("[%s] %s", m.Level, m.Msg))
 }
+
+// WelcomeMessage 欢迎消息 - 在 TUI 启动时显示
+// 遵循官方架构的消息类型系统
+type WelcomeMessage struct {
+	Version string
+	Cwd     string
+	MsgTime time.Time
+}
+
+func (m *WelcomeMessage) Type() MessageType   { return MsgTypeSystem }
+func (m *WelcomeMessage) Timestamp() time.Time { return m.MsgTime }
+func (m *WelcomeMessage) Render() string {
+	// 使用 lipgloss 绘制带边框的欢迎信息
+	// 参考官方 TUI 实现文档中的样式系统
+	borderStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		Padding(0, 1).
+		BorderForeground(lipgloss.Color("135")). // 紫色边框（官方主题色）
+		Width(56) // 固定宽度，与官方一致
+
+	// 欢迎框内容
+	welcomeContent := fmt.Sprintf("✦ Welcome to Qoder CLI! %s\n\ncwd: %s",
+		m.Version, m.Cwd)
+
+	// 提示信息（不带边框）
+	tipsStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("248")). // 灰色
+		MarginTop(1)
+
+	tips := "Tips for getting started:\n\n" +
+		"1. Ask questions, edit files, or run commands.\n" +
+		"2. Be specific for the best results.\n" +
+		"3. Type /help for more information."
+
+	return borderStyle.Render(welcomeContent) + "\n" + tipsStyle.Render(tips)
+}
