@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -164,6 +165,8 @@ func runPrintMode(input string) {
 	// 简单的输出处理 - 流式增量打印
 	var lastPrintedLen int
 	var fullText strings.Builder
+	var currentToolCall *types.ToolCall // 记录当前工具调用
+
 	ag.SetCallbacks(
 		func(msg *types.Message) {
 			if !quiet {
@@ -174,7 +177,7 @@ func runPrintMode(input string) {
 						fullText.WriteString(part.Text)
 					}
 				}
-				
+
 				// 只打印新增的文本部分
 				fullStr := fullText.String()
 				if len(fullStr) > lastPrintedLen {
@@ -184,10 +187,64 @@ func runPrintMode(input string) {
 			}
 		},
 		func(call *types.ToolCall) {
+			currentToolCall = call // 保存当前工具调用
 			log.Debug("Tool call: %s", call.Name)
+			if !quiet && debug {
+				// 打印工具调用信息到标准输出，使用优雅的格式
+				fmt.Fprintf(os.Stderr, "\n● %s\n", call.Name)
+
+				// 对于 Read 工具，只显示文件路径
+				if call.Name == "Read" {
+					var args map[string]interface{}
+					if err := json.Unmarshal([]byte(call.Arguments), &args); err == nil {
+						if filePath, ok := args["file_path"].(string); ok {
+							fmt.Fprintf(os.Stderr, "  ⎿ %s\n", filePath)
+						}
+					}
+				} else if call.Arguments != "" {
+					fmt.Fprintf(os.Stderr, "  ⎿ %s\n", call.Arguments)
+				}
+			}
 		},
 		func(result *types.ToolResult) {
 			log.Debug("Tool result: %s", result.ToolCallID)
+			if !quiet && debug {
+				// 打印工具结果信息到标准输出，使用优雅的格式
+				if result.IsError {
+					fmt.Fprintf(os.Stderr, "  ⎿ ✗ Error: %s\n", result.Content)
+				} else {
+					// 对于 Read 工具，只显示行数统计
+					if currentToolCall != nil && currentToolCall.Name == "Read" {
+						// 统计行数
+						lineCount := strings.Count(result.Content, "\n")
+						if lineCount > 0 {
+							fmt.Fprintf(os.Stderr, "  ⎿ Read %d lines\n", lineCount)
+						}
+					} else {
+						// 其他工具显示简短摘要
+						content := result.Content
+						maxLen := 100
+						if len(content) > maxLen {
+							// 尝试在合适的位置截断
+							truncated := content[:maxLen]
+							if idx := strings.LastIndex(truncated, "\n"); idx > 50 {
+								truncated = truncated[:idx]
+							}
+							fmt.Fprintf(os.Stderr, "  ⎿ %s... (truncated)\n", truncated)
+						} else if content != "" {
+							// 如果内容较短，显示第一行
+							firstLine := content
+							if idx := strings.Index(content, "\n"); idx > 0 {
+								firstLine = content[:idx]
+							}
+							if len(firstLine) > maxLen {
+								firstLine = firstLine[:maxLen] + "..."
+							}
+							fmt.Fprintf(os.Stderr, "  ⎿ %s\n", firstLine)
+						}
+					}
+				}
+			}
 		},
 		func(err error) {
 			log.Error("Callback error: %v", err)
