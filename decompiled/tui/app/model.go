@@ -4,6 +4,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/alingse/qodercli-reverse/decompiled/core/agent/agent"
+	"github.com/alingse/qodercli-reverse/decompiled/core/agent/state"
 	"github.com/alingse/qodercli-reverse/decompiled/core/config"
 	"github.com/alingse/qodercli-reverse/decompiled/core/log"
 	"github.com/alingse/qodercli-reverse/decompiled/core/pubsub"
@@ -189,8 +191,26 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if toolName == "" {
 			toolName = msg.ToolCallID // 备用：使用 ID 作为名称
 		}
-		// 更新工具调用状态（所有工具统一处理）
-		m.msgView.CompleteTool(msg.ToolCallID, toolName, msg.Content, msg.IsError)
+		
+		// 特殊处理 TodoWrite 工具
+		if toolName == "TodoWrite" && !msg.IsError {
+			// 解析工具参数中的 todos
+			var params struct {
+				Todos []state.Todo `json:"todos"`
+			}
+			if err := json.Unmarshal([]byte(msg.Content), &params); err == nil && len(params.Todos) > 0 {
+				// 获取旧的 todos
+				oldTodos := m.msgView.GetTodoList()
+				// 更新 Todo 列表显示
+				m.msgView.UpdateTodoList(params.Todos, oldTodos)
+			} else {
+				// 如果解析失败，回退到普通工具显示
+				m.msgView.CompleteTool(msg.ToolCallID, toolName, msg.Content, msg.IsError)
+			}
+		} else {
+			// 更新工具调用状态（所有工具统一处理）
+			m.msgView.CompleteTool(msg.ToolCallID, toolName, msg.Content, msg.IsError)
+		}
 		m.status = "Thinking..."
 		cmds = append(cmds, m.waitForEvents())
 

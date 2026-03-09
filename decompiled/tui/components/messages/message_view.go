@@ -7,8 +7,9 @@ import (
 	"strings"
 	"time"
 
-	tea "github.com/charmbracelet/bubbletea"
+	"github.com/alingse/qodercli-reverse/decompiled/core/agent/state"
 	"github.com/charmbracelet/bubbles/viewport"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/glamour"
 )
 
@@ -25,6 +26,7 @@ const (
 	MsgTypeError
 	MsgTypeCompact
 	MsgTypeLog
+	MsgTypeTodoList
 )
 
 // Message 消息接口
@@ -357,4 +359,46 @@ func (mv *MessageView) GetLastMessage() Message {
 		return nil
 	}
 	return mv.messages[len(mv.messages)-1]
+}
+
+// AddTodoList 添加 Todo 列表消息
+func (mv *MessageView) AddTodoList(todos []state.Todo) {
+	msg := &TodoListMessage{
+		Todos:   todos,
+		Updated: false,
+		MsgTime: time.Now(),
+	}
+	mv.AddMessage(msg)
+}
+
+// UpdateTodoList 更新 Todo 列表消息
+func (mv *MessageView) UpdateTodoList(todos []state.Todo, oldTodos []state.Todo) {
+	// 查找是否有现有的 TodoListMessage
+	var existingMsg *TodoListMessage
+	for i := len(mv.messages) - 1; i >= 0; i-- {
+		if tlm, ok := mv.messages[i].(*TodoListMessage); ok {
+			existingMsg = tlm
+			// 从列表中移除旧的消息
+			mv.messages = append(mv.messages[:i], mv.messages[i+1:]...)
+			break
+		}
+	}
+
+	msg := &TodoListMessage{
+		Todos:    todos,
+		OldTodos: oldTodos,
+		Updated:  existingMsg != nil,
+		MsgTime:  time.Now(),
+	}
+	mv.AddMessage(msg)
+}
+
+// GetTodoList 获取当前的 Todo 列表（如果存在）
+func (mv *MessageView) GetTodoList() []state.Todo {
+	for i := len(mv.messages) - 1; i >= 0; i-- {
+		if tlm, ok := mv.messages[i].(*TodoListMessage); ok {
+			return tlm.Todos
+		}
+	}
+	return nil
 }

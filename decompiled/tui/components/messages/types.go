@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alingse/qodercli-reverse/decompiled/core/agent/state"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -15,7 +16,7 @@ type UserMessage struct {
 	MsgTime time.Time
 }
 
-func (m *UserMessage) Type() MessageType   { return MsgTypeUser }
+func (m *UserMessage) Type() MessageType    { return MsgTypeUser }
 func (m *UserMessage) Timestamp() time.Time { return m.MsgTime }
 func (m *UserMessage) Render() string {
 	// 样式：> 用户输入内容（前缀白色）
@@ -40,7 +41,7 @@ type AssistantMessage struct {
 	MsgTime time.Time
 }
 
-func (m *AssistantMessage) Type() MessageType  { return MsgTypeAssistant }
+func (m *AssistantMessage) Type() MessageType    { return MsgTypeAssistant }
 func (m *AssistantMessage) Timestamp() time.Time { return m.MsgTime }
 func (m *AssistantMessage) Render() string {
 	// 样式：⏺ 系统输出（白色），与内容在同一行
@@ -59,12 +60,12 @@ func (m *AssistantMessage) String() string {
 
 // TokenUsageMessage Token 使用统计 - 原版在消息末尾显示
 type TokenUsageMessage struct {
-	InputTokens int
+	InputTokens  int
 	OutputTokens int
 	MsgTime      time.Time
 }
 
-func (m *TokenUsageMessage) Type() MessageType   { return MsgTypeSystem }
+func (m *TokenUsageMessage) Type() MessageType    { return MsgTypeSystem }
 func (m *TokenUsageMessage) Timestamp() time.Time { return m.MsgTime }
 func (m *TokenUsageMessage) Render() string {
 	// 原版格式：Input token usage: xxx | Output token usage: xxx
@@ -88,7 +89,7 @@ type SystemMessage struct {
 	MsgTime time.Time
 }
 
-func (m *SystemMessage) Type() MessageType   { return MsgTypeSystem }
+func (m *SystemMessage) Type() MessageType    { return MsgTypeSystem }
 func (m *SystemMessage) Timestamp() time.Time { return m.MsgTime }
 func (m *SystemMessage) Render() string {
 	style := lipgloss.NewStyle().
@@ -104,7 +105,7 @@ type ToolCall struct {
 	MsgTime   time.Time
 }
 
-func (m *ToolCall) Type() MessageType   { return MsgTypeTool }
+func (m *ToolCall) Type() MessageType    { return MsgTypeTool }
 func (m *ToolCall) Timestamp() time.Time { return m.MsgTime }
 func (m *ToolCall) Render() string {
 	// Bash 工具使用特殊图标和颜色
@@ -136,13 +137,13 @@ func (m *ToolCall) Render() string {
 
 // ToolResult 工具结果消息
 type ToolResult struct {
-	Name       string
-	Result     string
-	Error     error
-	MsgTime    time.Time
+	Name    string
+	Result  string
+	Error   error
+	MsgTime time.Time
 }
 
-func (m *ToolResult) Type() MessageType   { return MsgTypeTool }
+func (m *ToolResult) Type() MessageType    { return MsgTypeTool }
 func (m *ToolResult) Timestamp() time.Time { return m.MsgTime }
 func (m *ToolResult) Render() string {
 	// Bash 工具结果使用 ⏺ 图标
@@ -218,11 +219,11 @@ func (m *ToolResult) Render() string {
 
 // ErrorMessage 错误消息
 type ErrorMessage struct {
-	ErrStr string
+	ErrStr  string
 	MsgTime time.Time
 }
 
-func (m *ErrorMessage) Type() MessageType   { return MsgTypeError }
+func (m *ErrorMessage) Type() MessageType    { return MsgTypeError }
 func (m *ErrorMessage) Timestamp() time.Time { return m.MsgTime }
 func (m *ErrorMessage) Render() string {
 	style := lipgloss.NewStyle().
@@ -235,14 +236,14 @@ func (m *ErrorMessage) Render() string {
 // BashInfo Bash 命令信息 - 原版以折叠框显示
 type BashInfo struct {
 	ID        int
-	Command  string
+	Command   string
 	Output    string
-	IsError  bool
+	IsError   bool
 	Completed bool
 	MsgTime   time.Time
 }
 
-func (m *BashInfo) Type() MessageType   { return MsgTypeBash }
+func (m *BashInfo) Type() MessageType    { return MsgTypeBash }
 func (m *BashInfo) Timestamp() time.Time { return m.MsgTime }
 func (m *BashInfo) Render() string {
 	var statusIcon string
@@ -291,7 +292,7 @@ type CommandInfo struct {
 	MsgTime time.Time
 }
 
-func (m *CommandInfo) Type() MessageType   { return MsgTypeCommand }
+func (m *CommandInfo) Type() MessageType    { return MsgTypeCommand }
 func (m *CommandInfo) Timestamp() time.Time { return m.MsgTime }
 func (m *CommandInfo) Render() string {
 	return fmt.Sprintf("**Command:** %s %s", m.Name, strings.Join(m.Args, " "))
@@ -304,7 +305,7 @@ type CompactResult struct {
 	MsgTime time.Time
 }
 
-func (m *CompactResult) Type() MessageType   { return MsgTypeCompact }
+func (m *CompactResult) Type() MessageType    { return MsgTypeCompact }
 func (m *CompactResult) Timestamp() time.Time { return m.MsgTime }
 func (m *CompactResult) Render() string {
 	style := lipgloss.NewStyle().
@@ -320,7 +321,7 @@ type LogItem struct {
 	MsgTime time.Time
 }
 
-func (m *LogItem) Type() MessageType   { return MsgTypeLog }
+func (m *LogItem) Type() MessageType    { return MsgTypeLog }
 func (m *LogItem) Timestamp() time.Time { return m.MsgTime }
 func (m *LogItem) Render() string {
 	var color string
@@ -350,7 +351,7 @@ type WelcomeMessage struct {
 	MsgTime time.Time
 }
 
-func (m *WelcomeMessage) Type() MessageType   { return MsgTypeSystem }
+func (m *WelcomeMessage) Type() MessageType    { return MsgTypeSystem }
 func (m *WelcomeMessage) Timestamp() time.Time { return m.MsgTime }
 func (m *WelcomeMessage) Render() string {
 	// 使用 lipgloss 绘制带边框的欢迎信息
@@ -359,7 +360,7 @@ func (m *WelcomeMessage) Render() string {
 		Border(lipgloss.RoundedBorder()).
 		Padding(0, 1).
 		BorderForeground(lipgloss.Color("135")). // 紫色边框（官方主题色）
-		Width(56) // 固定宽度，与官方一致
+		Width(56)                                // 固定宽度，与官方一致
 
 	// 欢迎框内容
 	welcomeContent := fmt.Sprintf("✦ Welcome to Qoder CLI! %s\n\ncwd: %s",
@@ -390,7 +391,7 @@ type ToolCallInfo struct {
 	MsgTime   time.Time // 消息时间
 }
 
-func (m *ToolCallInfo) Type() MessageType   { return MsgTypeTool }
+func (m *ToolCallInfo) Type() MessageType    { return MsgTypeTool }
 func (m *ToolCallInfo) Timestamp() time.Time { return m.MsgTime }
 func (m *ToolCallInfo) Render() string {
 	var statusIcon string
@@ -480,4 +481,140 @@ func (m *ToolCallInfo) Render() string {
 	}
 
 	return content
+}
+
+// TodoListMessage Todo 列表消息 - 显示任务进度
+type TodoListMessage struct {
+	Todos    []state.Todo // 任务列表
+	OldTodos []state.Todo // 更新前的任务列表（可选）
+	Updated  bool         // 是否是更新操作
+	MsgTime  time.Time
+}
+
+func (m *TodoListMessage) Type() MessageType    { return MsgTypeTodoList }
+func (m *TodoListMessage) Timestamp() time.Time { return m.MsgTime }
+
+// Render 渲染 Todo 列表
+func (m *TodoListMessage) Render() string {
+	if len(m.Todos) == 0 {
+		return ""
+	}
+
+	var sb strings.Builder
+
+	// 标题样式
+	titleStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("135")).
+		Bold(true)
+
+	// 统计信息
+	completedCount := 0
+	inProgressCount := 0
+	pendingCount := 0
+	cancelledCount := 0
+
+	for _, todo := range m.Todos {
+		switch state.TodoStatus(todo.Status) {
+		case state.TodoStatusCompleted, state.TodoStatusDone:
+			completedCount++
+		case state.TodoStatusInProgress:
+			inProgressCount++
+		case state.TodoStatusPending:
+			pendingCount++
+		case state.TodoStatusCancelled:
+			cancelledCount++
+		}
+	}
+
+	totalCount := len(m.Todos)
+
+	// 标题
+	if m.Updated {
+		sb.WriteString(titleStyle.Render("📝 Todo List Updated"))
+	} else {
+		sb.WriteString(titleStyle.Render("📝 Todo List"))
+	}
+	sb.WriteString("\n")
+
+	// 进度条
+	progressStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("248"))
+
+	completedPercent := 0
+	if totalCount > 0 {
+		completedPercent = (completedCount * 100) / totalCount
+	}
+
+	// 简单的进度条
+	barWidth := 20
+	filled := (completedPercent * barWidth) / 100
+	empty := barWidth - filled
+
+	bar := strings.Repeat("█", filled) + strings.Repeat("░", empty)
+	sb.WriteString(progressStyle.Render(fmt.Sprintf("Progress: [%s] %d%% (%d/%d)\n", bar, completedPercent, completedCount, totalCount)))
+	sb.WriteString("\n")
+
+	// 任务列表
+	for _, todo := range m.Todos {
+		var icon string
+		var iconColor string
+		var statusText string
+
+		switch state.TodoStatus(todo.Status) {
+		case state.TodoStatusCompleted, state.TodoStatusDone:
+			icon = "✅"
+			iconColor = "82" // 绿色
+			statusText = "completed"
+		case state.TodoStatusInProgress:
+			icon = "🔄"
+			iconColor = "75" // 蓝色
+			statusText = "in_progress"
+		case state.TodoStatusPending:
+			icon = "⬜"
+			iconColor = "248" // 灰色
+			statusText = "pending"
+		case state.TodoStatusCancelled:
+			icon = "❌"
+			iconColor = "203" // 红色
+			statusText = "cancelled"
+		default:
+			icon = "⬜"
+			iconColor = "248"
+			statusText = todo.Status
+		}
+
+		iconStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color(iconColor))
+
+		contentStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("252"))
+
+		statusStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color(iconColor)).
+			Italic(true)
+
+		// 任务项
+		sb.WriteString(fmt.Sprintf("%s %s ",
+			iconStyle.Render(icon),
+			contentStyle.Render(todo.Content)))
+
+		// 如果是 in_progress，显示 activeForm
+		if state.TodoStatus(todo.Status) == state.TodoStatusInProgress && todo.ActiveForm != "" {
+			activeStyle := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("75")).
+				Italic(true)
+			sb.WriteString(activeStyle.Render(fmt.Sprintf("(%s)", todo.ActiveForm)))
+		}
+
+		sb.WriteString(" ")
+		sb.WriteString(statusStyle.Render(fmt.Sprintf("[%s]", statusText)))
+		sb.WriteString("\n")
+	}
+
+	return sb.String()
+}
+
+// String 实现 fmt.Stringer 接口
+func (m *TodoListMessage) String() string {
+	return m.Render()
 }
