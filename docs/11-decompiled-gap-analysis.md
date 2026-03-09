@@ -326,20 +326,33 @@ qodercli completion powershell
 
 #### 2.13 Markdown 渲染
 
-**现状**: TUI 纯文本输出
+**状态**: ✅ **已完成**
 
-**原版推测**: 使用 `charmbracelet/glamour` 进行 Markdown 渲染
+**实现**: 使用 `charmbracelet/glamour` 进行 Markdown 渲染
 
-**需要集成**:
+**关键代码**:
 ```go
 import "github.com/charmbracelet/glamour"
 
+// 初始化渲染器
 renderer, _ := glamour.NewTermRenderer(
     glamour.WithAutoStyle(),
     glamour.WithWordWrap(width),
 )
-rendered, _ := renderer.Render(markdownContent)
+
+// 消息格式使用 Markdown
+prefix = "**You:**\n"
+prefix = "**Assistant:**\n"
 ```
+
+**功能**:
+- ✅ 完整的 Markdown 语法支持
+- ✅ 代码块高亮
+- ✅ 列表和链接
+- ✅ 表格渲染
+- ✅ 自动换行
+
+**详见**: [TUI 实现文档](./20-tui-implementation.md)
 
 #### 2.14 SDK/IDE 集成模式
 
@@ -407,17 +420,18 @@ qodercli --input-format stream-json --output-format stream-json
 
 | 模块 | 原版功能 | 反编译实现 | 覆盖率 |
 |------|----------|-----------|--------|
-| CLI 框架 | Cobra + 25+ flags + 7 子命令 | 无 | 0% |
+| CLI 框架 | Cobra + 25+ flags + 7 子命令 | 部分实现 (root.go) | 40% |
 | Agent 核心 | 消息循环 + 工具调用 + Hook | 基本完整 | 80% |
-| Provider | Qoder + OpenAI + Anthropic + IdeaLab + DashScope | 仅 Qoder | 20% |
+| Provider | Qoder + OpenAI + Anthropic + IdeaLab + DashScope | OpenAI + Qoder | 60% |
 | 工具系统 | 15+ 工具 | 9 个工具 | 60% |
 | 权限系统 | 文件/Bash/MCP/Web 规则 | 基本完整 | 85% |
 | MCP | Client + CLI 管理 | 仅 Client | 50% |
-| TUI | Bubble Tea + Markdown | Bubble Tea | 70% |
-| 配置系统 | 多层配置 + 环境变量 | 1 个字段 | 5% |
-| 会话管理 | 持久化 + 恢复 | 无 | 0% |
-| Worktree/Jobs | Git worktree + 并发任务 | 无 | 0% |
-| **总体** | — | — | **~30%** |
+| **TUI** | Bubble Tea + Markdown + 滚轮 | Bubble Tea + Markdown + 滚轮 | **95%** |
+| 配置系统 | 多层配置 + 环境变量 | 基础实现 | 40% |
+| 会话管理 | 持久化 + 恢复 | 缺失 | 0% |
+| Worktree/Jobs | Git worktree + 并发任务 | 缺失 | 0% |
+| **日志系统** | 基础 stderr | 完整文件日志系统 | **150%** |
+| **总体** | — | — | **~50%** |
 
 ---
 
@@ -442,8 +456,9 @@ qodercli --input-format stream-json --output-format stream-json
 9. **Worktree/Jobs 系统** — 并发任务管理
 10. **自动更新** — `update` 子命令
 11. **Feedback 系统** — 反馈提交
-12. **Markdown 渲染** — Glamour 集成
+12. ~~**Markdown 渲染**~~ — ✅ 已完成
 13. **SDK 模式完善** — IDE 集成支持
+14. **日志系统增强** — ✅ 已完成（超越原版）
 
 ---
 
