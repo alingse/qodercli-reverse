@@ -36,7 +36,8 @@ docs/
 ├── 08-config-api.md              # 配置和 API
 ├── 09-github-integration.md      # GitHub 集成
 ├── 10-subagent-skill.md          # SubAgent 和 Skill
-└── 11-decompiled-gap-analysis.md # 反编译差异分析
+├── 11-decompiled-gap-analysis.md # 反编译差异分析
+└── 12-bubbletea-analysis.md      # Bubble Tea 使用分析
 ```
 
 ## decompiled 目录架构
@@ -96,6 +97,69 @@ decompiled/
 | **GitHub 集成** | PR 创建、Actions、Code Review |
 | **运行模式** | 交互/非交互/SDK/容器化 |
 
+## 开发工作流程
+
+在修改或扩展代码前，必须遵循以下逆向分析流程，确保实现与官方架构保持一致：
+
+### 1. 定位官方二进制
+
+```bash
+# 找到官方 qodercli 二进制文件位置
+which qodercli
+# 输出示例: /Users/zhihu/.qoder/bin/qodercli/qodercli-0.1.29
+```
+
+### 2. 逆向分析目标模块
+
+使用反编译工具分析官方实现的函数、方法、调用关系：
+
+```bash
+# 提取符号表，查找相关包和函数
+nm -gU /path/to/qodercli | grep "包名或功能关键字"
+
+# 提取字符串，定位功能模块
+strings /path/to/qodercli | grep "关键字"
+
+# 使用 Go 工具反汇编特定函数
+go tool objdump -s "函数名" /path/to/qodercli
+
+# 示例：分析 MCP 相关实现
+nm -gU $(which qodercli) | grep mcp
+strings $(which qodercli) | grep -i "mcp"
+```
+
+### 3. 对照官方架构
+
+参考 `docs/official-architecture.md` 中的官方包结构：
+
+```
+code.alibaba-inc.com/qoder-core/qodercli/
+├── cmd/                    # 命令行接口层
+├── core/                   # 核心业务逻辑
+│   ├── agent/             # Agent 实现
+│   ├── auth/              # 认证
+│   ├── config/            # 配置管理
+│   └── resource/mcp/      # MCP 集成
+└── tui/                    # 终端 UI
+```
+
+确保你的修改符合官方的分层架构和职责划分。
+
+### 4. 规划实现方案
+
+在动手编码前：
+
+1. **阅读相关文档**: 查看 `docs/` 中对应模块的分析文档
+2. **查看差距分析**: 参考 `docs/11-decompiled-gap-analysis.md` 了解当前缺失的功能
+3. **制定计划**: 明确需要新建/修改哪些文件，如何组织代码结构
+4. **验证设计**: 确保方案与官方架构一致，避免偏离
+
+### 5. 实现与验证
+
+- 按照官方架构的包结构组织代码
+- 使用官方的命名约定（如工具参数类型：`{Tool}Params`）
+- 实现后对比官方二进制的行为，确保功能一致
+
 ## 使用方法
 
 1. **查看架构**: 从 `docs/architecture-overview.md` 开始
@@ -107,14 +171,54 @@ decompiled/
 
 当前 `decompiled/cmd/root.go` 包含 600+ 行代码，混合了多种职责。参考 `docs/official-architecture.md` 中的官方架构，建议进行以下重构：
 
-1. **Phase 1**: 提取 Print Mode 逻辑到 `cmd/print/` 包
-2. **Phase 2**: 分离 TUI 初始化到 `cmd/tui/` 包
-3. **Phase 3**: 提取工具函数到 `cmd/utils/` 包
+**重要**: 每个 Phase 开始前，必须先执行"开发工作流程"中的逆向分析步骤：
+- 使用 `which qodercli` 定位官方二进制
+- 使用 `nm`、`strings`、`go tool objdump` 分析官方实现
+- 对照官方架构规划方案
 
-详见 [官方架构文档](docs/official-architecture.md)。
+### 重构阶段
+
+1. **Phase 1**: 提取 Print Mode 逻辑到 `cmd/print/` 包
+   - 分析官方 `cmd/start/` 和 `cmd/message_io/` 的实现
+   - 提取格式化和流式输出逻辑
+
+2. **Phase 2**: 分离 TUI 初始化到 `cmd/tui/` 包
+   - 分析官方 TUI 启动流程
+   - 分离交互模式和非交互模式
+
+3. **Phase 3**: 提取工具函数到 `cmd/utils/` 包
+   - 对照官方 `cmd/utils/` 包结构
+   - 提取 Provider 创建和配置加载逻辑
+
+详见 [官方架构文档](docs/official-architecture.md) 和 [差距分析](docs/11-decompiled-gap-analysis.md)。
 
 ## 注意事项
 
 - 反编译代码基于二进制推导，可能与原始实现有差异
 - 代码未经测试，不建议直接用于生产环境
 - 仅供学习和架构参考使用
+
+## 常用逆向分析命令
+
+```bash
+# 查看二进制基本信息
+file $(which qodercli)
+otool -L $(which qodercli)  # 查看依赖库
+
+# 符号表分析
+nm -gU $(which qodercli) | grep "关键字"  # 查找导出符号
+nm $(which qodercli) | wc -l              # 统计符号数量
+
+# 字符串提取
+strings $(which qodercli) | grep "关键字"
+strings $(which qodercli) | grep "code.alibaba-inc.com"  # 查找包路径
+
+# Go 特定分析
+go tool nm $(which qodercli) | grep "包名"
+go tool objdump -s "函数名" $(which qodercli)
+
+# 查看帮助信息（了解 CLI 结构）
+qodercli --help
+qodercli mcp --help
+qodercli jobs --help
+```
