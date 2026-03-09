@@ -25,6 +25,7 @@
 ```
 docs/
 ├── architecture-overview.md      # 完整架构概览
+├── official-architecture.md      # 官方 qodercli 架构分析（重构参考）
 ├── 01-package-structure.md       # 包结构和依赖
 ├── 02-cli-commands.md            # CLI 命令系统
 ├── 03-llm-integration.md         # LLM 集成
@@ -98,8 +99,19 @@ decompiled/
 ## 使用方法
 
 1. **查看架构**: 从 `docs/architecture-overview.md` 开始
-2. **深入模块**: 阅读对应模块文档 (01-11)
-3. **参考代码**: 查看 `decompiled/` 中的反编译示例
+2. **官方架构参考**: 查看 `docs/official-architecture.md` 了解官方代码结构（用于重构参考）
+3. **深入模块**: 阅读对应模块文档 (01-11)
+4. **参考代码**: 查看 `decompiled/` 中的反编译示例
+
+## 重构计划
+
+当前 `decompiled/cmd/root.go` 包含 600+ 行代码，混合了多种职责。参考 `docs/official-architecture.md` 中的官方架构，建议进行以下重构：
+
+1. **Phase 1**: 提取 Print Mode 逻辑到 `cmd/print/` 包
+2. **Phase 2**: 分离 TUI 初始化到 `cmd/tui/` 包
+3. **Phase 3**: 提取工具函数到 `cmd/utils/` 包
+
+详见 [官方架构文档](docs/official-architecture.md)。
 
 ## 注意事项
 
