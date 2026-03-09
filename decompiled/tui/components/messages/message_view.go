@@ -3,6 +3,7 @@
 package messages
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -53,6 +54,8 @@ type MessageView struct {
 func NewMessageView() *MessageView {
 	vp := viewport.New(80, 20)
 	vp.SetContent("")
+	// 启用鼠标支持，确保可以滚动
+	vp.MouseWheelEnabled = true
 
 	renderer, _ := glamour.NewTermRenderer(
 		glamour.WithStandardStyle("dark"),
@@ -78,20 +81,6 @@ func (mv *MessageView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		mv.SetSize(msg.Width, msg.Height)
-
-	case tea.MouseMsg:
-		// 处理鼠标滚轮
-		switch msg.Type {
-		case tea.MouseWheelUp:
-			mv.viewport.LineUp(3)
-			mv.autoScroll = false
-		case tea.MouseWheelDown:
-			mv.viewport.LineDown(3)
-			// 检查是否在底部
-			if mv.viewport.AtBottom() {
-				mv.autoScroll = true
-			}
-		}
 	}
 
 	// 更新 viewport
@@ -110,6 +99,8 @@ func (mv *MessageView) View() string {
 // AddMessage 添加消息
 func (mv *MessageView) AddMessage(msg Message) {
 	mv.messages = append(mv.messages, msg)
+	// 先渲染内容，再滚动到底部
+	mv.renderContent()
 	if mv.autoScroll {
 		mv.viewport.GotoBottom()
 	}
@@ -143,6 +134,8 @@ func (mv *MessageView) AppendToLastMessage(content string) {
 	lastMsg := mv.messages[len(mv.messages)-1]
 	if am, ok := lastMsg.(*AssistantMessage); ok {
 		am.Content += content
+		// 重新渲染内容
+		mv.renderContent()
 		if mv.autoScroll {
 			mv.viewport.GotoBottom()
 		}
@@ -170,6 +163,59 @@ func (mv *MessageView) UpdateBashResult(id int, output string, isError bool) {
 			bashInfo.IsError = isError
 			bashInfo.Completed = true
 			break
+		}
+	}
+}
+
+// AddPendingBash 添加待执行的 Bash 命令（白色 ⏺）
+// 注意：此方法已弃用，请使用 AddPendingTool
+func (mv *MessageView) AddPendingBash(command string) {
+	mv.AddPendingTool(fmt.Sprintf("bash-%d", len(mv.messages)), "Bash", command)
+}
+
+// CompleteBash 完成 Bash 命令，更新状态
+// 注意：此方法已弃用，请使用 CompleteTool
+func (mv *MessageView) CompleteBash(output string, isError bool) {
+	// 找到最后一个未完成的工具消息
+	mv.CompleteTool("", "Bash", output, isError)
+}
+
+// AddPendingTool 添加待执行的工具调用（白色 ⏺）
+// 所有工具调用统一使用此方法添加
+func (mv *MessageView) AddPendingTool(toolID, toolName, arguments string) {
+	msg := &ToolCallInfo{
+		ID:        toolID,
+		Name:      toolName,
+		Arguments: arguments,
+		Completed: false,
+		MsgTime:   time.Now(),
+	}
+	mv.AddMessage(msg)
+}
+
+// CompleteTool 完成工具调用，更新状态
+// toolID: 工具调用唯一标识
+// toolName: 工具名称（用于显示）
+// output: 执行结果
+// isError: 是否执行出错
+func (mv *MessageView) CompleteTool(toolID, toolName, output string, isError bool) {
+	// 找到对应的待处理工具消息
+	for i := len(mv.messages) - 1; i >= 0; i-- {
+		if toolInfo, ok := mv.messages[i].(*ToolCallInfo); ok {
+			// 匹配 ID（如果提供）或匹配最后一个未完成的同名工具
+			if !toolInfo.Completed {
+				if toolID == "" || toolInfo.ID == toolID {
+					toolInfo.Output = output
+					toolInfo.IsError = isError
+					toolInfo.Completed = true
+					// 重新渲染以更新图标颜色
+					mv.renderContent()
+					if mv.autoScroll {
+						mv.viewport.GotoBottom()
+					}
+					break
+				}
+			}
 		}
 	}
 }
@@ -240,19 +286,28 @@ func (mv *MessageView) renderContent() {
 
 	for i, msg := range mv.messages {
 		if i > 0 {
-			sb.WriteString("\n")
+			prevMsg := mv.messages[i-1]
+			// 只在不同类型的消息之间添加空行
+			// 同类型消息（如流式输出的多次追加）之间不添加
+			if msg.Type() != prevMsg.Type() {
+				sb.WriteString("\n\n")
+			} else {
+				// 同类型消息之间添加间隔
+				// 对于工具调用消息，添加额外空行以便区分
+				if msg.Type() == MsgTypeTool {
+					sb.WriteString("\n\n")
+				} else {
+					// 其他同类型消息之间只添加一个换行
+					sb.WriteString("\n")
+				}
+			}
 		}
 		sb.WriteString(msg.Render())
 	}
 
 	content := sb.String()
-	if mv.renderer != nil {
-		rendered, err := mv.renderer.Render(content)
-		if err == nil {
-			content = rendered
-		}
-	}
-
+	// 不再使用 glamour 渲染，因为消息已经通过 lipgloss 格式化
+	// glamour 会把 ANSI 转义序列当作普通文本，导致控制符显示出来
 	mv.viewport.SetContent(content)
 }
 

@@ -68,7 +68,20 @@ func NewEditorComponent(ps *pubsub.PubSub) *EditorComponent {
 	ta.Placeholder = "Ask anything..."
 	ta.ShowLineNumbers = false
 	ta.CharLimit = 100000
-	ta.Prompt = "| "
+	// 官方样式：使用 "> " 作为 prompt
+	ta.Prompt = "> "
+	// 设置样式
+	ta.FocusedStyle.Placeholder = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+	ta.BlurredStyle.Placeholder = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+	// 文本样式：白色
+	ta.FocusedStyle.Text = lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
+	ta.BlurredStyle.Text = lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
+	// Prompt 样式：灰色
+	ta.FocusedStyle.Prompt = lipgloss.NewStyle().Foreground(lipgloss.Color("248"))
+	ta.BlurredStyle.Prompt = lipgloss.NewStyle().Foreground(lipgloss.Color("248"))
+	// 光标样式
+	ta.FocusedStyle.CursorLine = lipgloss.NewStyle()
+	ta.FocusedStyle.Base = lipgloss.NewStyle()
 
 	ec := &EditorComponent{
 		textarea:          ta,
@@ -80,7 +93,14 @@ func NewEditorComponent(ps *pubsub.PubSub) *EditorComponent {
 		attachmentHandler: NewAttachmentHandler(),
 		historyHandler:    NewHistoryHandler(),
 		inputCache:        NewInputCache(),
+		// 设置默认尺寸
+		width:  80,
+		height: 3,
 	}
+
+	// 设置 textarea 的默认尺寸
+	ec.textarea.SetWidth(76) // 80 - 4 (边框和 padding)
+	ec.textarea.SetHeight(1) // 单行输入
 
 	return ec
 }
@@ -194,6 +214,8 @@ func (ec *EditorComponent) resetInputs() {
 	ec.textarea.Focus()
 	ec.focused = true
 	ec.attachmentHandler.Reset()
+	// 重置 textarea 高度为单行（1行内容 + 边框）
+	ec.textarea.SetHeight(1)
 }
 
 // sendMessage 发送消息 - 核心功能
@@ -255,6 +277,31 @@ func (ec *EditorComponent) atBottomOfInput() bool {
 	return ec.textarea.Line() >= lineCount-1
 }
 
+// GetLineCount 获取当前行数
+func (ec *EditorComponent) GetLineCount() int {
+	return ec.textarea.LineCount()
+}
+
+// GetPreferredHeight 获取首选高度（根据内容行数 + 边框 + padding）
+func (ec *EditorComponent) GetPreferredHeight() int {
+	// 内容行数（最多5行）
+	contentLines := ec.textarea.LineCount()
+	if contentLines > 5 {
+		contentLines = 5
+	}
+	// 最少1行内容
+	if contentLines < 1 {
+		contentLines = 1
+	}
+	// 总高度 = 内容行数 + 边框(2行)
+	totalHeight := contentLines + 2
+	// 限制最大高度为7行（5行内容+2行边框）
+	if totalHeight > 7 {
+		totalHeight = 7
+	}
+	return totalHeight
+}
+
 // View 渲染视图
 func (ec *EditorComponent) View() string {
 	if !ec.focused {
@@ -272,18 +319,18 @@ func (ec *EditorComponent) View() string {
 		sb.WriteString("\n")
 	}
 
-	// 渲染 textarea
-	borderColor := lipgloss.Color("135") // 紫色
-	if ec.mode == ModeNormal {
-		borderColor = lipgloss.Color("82") // 绿色
+	// 渲染 textarea - 官方样式：圆角边框
+	borderColor := lipgloss.Color("240") // 灰色边框
+	if ec.focused {
+		borderColor = lipgloss.Color("255") // 聚焦时白色边框
 	}
 
+	// 使用单行样式
 	editorStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(borderColor).
-		Padding(0, 1).
-		Width(ec.width).
-		Height(ec.height)
+		Padding(0, 1). // 左右内边距 1
+		Width(ec.width)
 
 	sb.WriteString(editorStyle.Render(ec.textarea.View()))
 
@@ -294,8 +341,18 @@ func (ec *EditorComponent) View() string {
 func (ec *EditorComponent) SetSize(width, height int) {
 	ec.width = width
 	ec.height = height
+	// 减去边框（2字符）和 padding（2字符）
 	ec.textarea.SetWidth(width - 4)
-	ec.textarea.SetHeight(height - 2)
+	// textarea 最大高度为 5 行（多行输入时自动扩展）
+	// 限制内部高度为 1-5 行
+	innerHeight := height - 2 // 减去边框
+	if innerHeight < 1 {
+		innerHeight = 1
+	}
+	if innerHeight > 5 {
+		innerHeight = 5
+	}
+	ec.textarea.SetHeight(innerHeight)
 }
 
 // Focus 聚焦

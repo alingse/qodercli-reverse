@@ -36,11 +36,8 @@ func Run(opts Options) error {
 	}
 
 	// 创建 Bubble Tea 程序
-	p := tea.NewProgram(
-		model,
-		tea.WithAltScreen(),       // 使用备用屏幕
-		tea.WithMouseCellMotion(), // 启用鼠标支持
-	)
+	// 启用备用屏幕，以便支持滚动查看历史消息
+	p := tea.NewProgram(model, tea.WithAltScreen())
 
 	// 运行程序
 	if _, err := p.Run(); err != nil {

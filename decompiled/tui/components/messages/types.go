@@ -1,6 +1,7 @@
 package messages
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -17,8 +18,15 @@ type UserMessage struct {
 func (m *UserMessage) Type() MessageType   { return MsgTypeUser }
 func (m *UserMessage) Timestamp() time.Time { return m.MsgTime }
 func (m *UserMessage) Render() string {
-	// 原版格式：直接显示内容，无标记
-	return m.Content
+	// 样式：> 用户输入内容（前缀白色）
+	prefixStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("255")) // 白色
+	contentStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("252")) // 亮白色
+
+	return fmt.Sprintf("%s %s",
+		prefixStyle.Render(">"),
+		contentStyle.Render(m.Content))
 }
 
 // String 实现 fmt.Stringer 接口
@@ -35,8 +43,13 @@ type AssistantMessage struct {
 func (m *AssistantMessage) Type() MessageType  { return MsgTypeAssistant }
 func (m *AssistantMessage) Timestamp() time.Time { return m.MsgTime }
 func (m *AssistantMessage) Render() string {
-	// 原版格式：直接显示内容
-	return m.Content
+	// 样式：⏺ 系统输出（白色），与内容在同一行
+	prefixStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("255")) // 白色
+
+	return fmt.Sprintf("%s %s",
+		prefixStyle.Render("⏺"),
+		m.Content)
 }
 
 // String 实现 fmt.Stringer 接口
@@ -94,7 +107,20 @@ type ToolCall struct {
 func (m *ToolCall) Type() MessageType   { return MsgTypeTool }
 func (m *ToolCall) Timestamp() time.Time { return m.MsgTime }
 func (m *ToolCall) Render() string {
-	// 原版格式：▶ Tool: name (蓝色)
+	// Bash 工具使用特殊图标和颜色
+	if m.Name == "Bash" {
+		// Bash 默认显示为白色（执行中），结果会根据成功/失败改变
+		headerStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("255")) // 白色
+		contentStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("248"))
+
+		return fmt.Sprintf("%s Bash\n%s",
+			headerStyle.Render("⏺"),
+			contentStyle.Render(m.Arguments))
+	}
+
+	// 其他工具：▶ Tool: name (蓝色)
 	headerStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("75")).
 		Bold(true)
@@ -119,6 +145,40 @@ type ToolResult struct {
 func (m *ToolResult) Type() MessageType   { return MsgTypeTool }
 func (m *ToolResult) Timestamp() time.Time { return m.MsgTime }
 func (m *ToolResult) Render() string {
+	// Bash 工具结果使用 ⏺ 图标
+	if m.Name == "Bash" || strings.Contains(m.Name, "bash") {
+		var iconStyle lipgloss.Style
+		var icon string
+
+		if m.Error != nil {
+			iconStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("203")) // 红色
+			icon = "⏺"
+		} else {
+			iconStyle = lipgloss.NewStyle().
+				Foreground(lipgloss.Color("82")) // 绿色
+			icon = "⏺"
+		}
+
+		contentStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("248"))
+
+		// 截断过长的结果
+		result := m.Result
+		if result == "" && m.Error != nil {
+			result = m.Error.Error()
+		}
+		lines := strings.Split(result, "\n")
+		if len(lines) > 20 {
+			result = strings.Join(lines[:20], "\n") + "\n... (truncated)"
+		}
+
+		return fmt.Sprintf("%s %s",
+			iconStyle.Render(icon),
+			contentStyle.Render(result))
+	}
+
+	// 其他工具结果
 	var headerStyle lipgloss.Style
 	var icon string
 
@@ -190,32 +250,29 @@ func (m *BashInfo) Render() string {
 
 	if m.Completed {
 		if m.IsError {
-			statusIcon= "✗"
-			statusColor = "203"
+			statusIcon = "⏺"
+			statusColor = "203" // 红色
 		} else {
-			statusIcon = "✓"
-			statusColor = "82"
+			statusIcon = "⏺"
+			statusColor = "82" // 绿色
 		}
 	} else {
-		statusIcon = "◐"
-		statusColor = "215"
+		statusIcon = "⏺"
+		statusColor = "255" // 白色（执行中）
 	}
 
 	statusStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color(statusColor))
 
-	headerStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("75")).
-		Bold(true)
-
 	commandStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("248"))
 
-	content := fmt.Sprintf("%s %s $ %s",
+	// 格式：⏺ bash 命令内容
+	content := fmt.Sprintf("%s %s",
 		statusStyle.Render(statusIcon),
-		headerStyle.Render("Bash"),
 		commandStyle.Render(m.Command))
 
+	// 如果有输出，显示在下一行
 	if m.Completed && m.Output != "" {
 		output := m.Output
 		if len(output) > 500 {
@@ -319,4 +376,108 @@ func (m *WelcomeMessage) Render() string {
 		"3. Type /help for more information."
 
 	return borderStyle.Render(welcomeContent) + "\n" + tipsStyle.Render(tips)
+}
+
+// ToolCallInfo 统一的工具调用信息显示
+// 所有工具（Bash、Read、Write、Update 等）都使用此类型显示
+type ToolCallInfo struct {
+	ID        string    // 工具调用唯一 ID
+	Name      string    // 工具名称
+	Arguments string    // 工具参数（JSON 格式）
+	Output    string    // 执行输出
+	Completed bool      // 是否已完成
+	IsError   bool      // 是否执行出错
+	MsgTime   time.Time // 消息时间
+}
+
+func (m *ToolCallInfo) Type() MessageType   { return MsgTypeTool }
+func (m *ToolCallInfo) Timestamp() time.Time { return m.MsgTime }
+func (m *ToolCallInfo) Render() string {
+	var statusIcon string
+	var statusColor string
+
+	if m.Completed {
+		if m.IsError {
+			statusIcon = "⏺"
+			statusColor = "203" // 红色 - 执行失败
+		} else {
+			statusIcon = "⏺"
+			statusColor = "82" // 绿色 - 执行成功
+		}
+	} else {
+		statusIcon = "⏺"
+		statusColor = "255" // 白色 - 执行中
+	}
+
+	statusStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(statusColor))
+
+	// 工具名称样式
+	nameStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("252")). // 亮白色
+		Bold(true)
+
+	// 参数样式
+	argsStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("248")) // 灰色
+
+	// 输出样式
+	outputStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("252")) // 亮白色
+
+	// 解析参数，提取关键信息用于显示
+	displayContent := m.Arguments
+	var argsMap map[string]interface{}
+	if err := json.Unmarshal([]byte(m.Arguments), &argsMap); err == nil {
+		// 根据不同工具类型提取关键信息
+		switch m.Name {
+		case "Bash":
+			if cmd, ok := argsMap["command"].(string); ok && cmd != "" {
+				displayContent = cmd
+			}
+		case "Read", "ReadFile":
+			if path, ok := argsMap["file_path"].(string); ok && path != "" {
+				displayContent = path
+			}
+		case "Write", "WriteFile":
+			if path, ok := argsMap["file_path"].(string); ok && path != "" {
+				displayContent = path
+			}
+		case "Update", "UpdateFile":
+			if path, ok := argsMap["file_path"].(string); ok && path != "" {
+				displayContent = path
+			}
+		default:
+			// 对于其他工具，尝试提取第一个字符串类型的值
+			for _, v := range argsMap {
+				if s, ok := v.(string); ok && s != "" {
+					displayContent = s
+					break
+				}
+			}
+		}
+	}
+
+	// 格式：⏺ ToolName arguments
+	content := fmt.Sprintf("%s %s %s",
+		statusStyle.Render(statusIcon),
+		nameStyle.Render(m.Name),
+		argsStyle.Render(displayContent))
+
+	// 如果有输出，显示在下一行（限制长度）
+	if m.Completed && m.Output != "" {
+		output := m.Output
+		// 限制输出行数
+		lines := strings.Split(output, "\n")
+		if len(lines) > 10 {
+			output = strings.Join(lines[:10], "\n") + "\n... (truncated)"
+		}
+		// 限制总长度
+		if len(output) > 500 {
+			output = output[:500] + "\n... (truncated)"
+		}
+		content += "\n" + outputStyle.Render(output)
+	}
+
+	return content
 }
