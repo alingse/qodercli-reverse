@@ -28,7 +28,6 @@ func Run(opts Options) error {
 
 	// 如果有恢复会话 ID
 	if opts.ResumeID != "" {
-		// 恢复会话逻辑
 		ctx := context.Background()
 		opts.PubSub.Publish(ctx, pubsub.Event{
 			Type:    pubsub.EventTypeSessionResume,
@@ -72,7 +71,6 @@ func RunWithInput(opts Options, input string) error {
 // RunSDKMode 以 SDK 模式运行（JSON 协议）
 func RunSDKMode(opts Options) error {
 	// SDK 模式通过 stdin/stdout 进行 JSON 通信
-	// 用于 IDE 集成
 	decoder := NewJSONDecoder(os.Stdin)
 	encoder := NewJSONEncoder(os.Stdout)
 
@@ -95,9 +93,9 @@ func RunSDKMode(opts Options) error {
 
 // SDKRequest SDK 请求
 type SDKRequest struct {
-	ID      string                 `json:"id"`
-	Method  string                 `json:"method"`
-	Params  map[string]interface{} `json:"params"`
+	ID     string                 `json:"id"`
+	Method string                 `json:"method"`
+	Params map[string]interface{} `json:"params"`
 }
 
 // SDKResponse SDK 响应
@@ -115,33 +113,33 @@ type SDKError struct {
 
 // JSONDecoder JSON 解码器
 type JSONDecoder struct {
-	// 实际实现使用 encoding/json
+	r *os.File
 }
 
 // NewJSONDecoder 创建新的 JSON 解码器
-func NewJSONDecoder(r interface{}) *JSONDecoder {
-	return &JSONDecoder{}
+func NewJSONDecoder(r *os.File) *JSONDecoder {
+	return &JSONDecoder{r: r}
 }
 
 // Decode 解码
 func (d *JSONDecoder) Decode(v interface{}) error {
-	// 实际实现...
+	// 简化实现，实际使用 encoding/json
 	return nil
 }
 
 // JSONEncoder JSON 编码器
 type JSONEncoder struct {
-	// 实际实现使用 encoding/json
+	w *os.File
 }
 
 // NewJSONEncoder 创建新的 JSON 编码器
-func NewJSONEncoder(w interface{}) *JSONEncoder {
-	return &JSONEncoder{}
+func NewJSONEncoder(w *os.File) *JSONEncoder {
+	return &JSONEncoder{w: w}
 }
 
 // Encode 编码
 func (e *JSONEncoder) Encode(v interface{}) error {
-	// 实际实现...
+	// 简化实现，实际使用 encoding/json
 	return nil
 }
 

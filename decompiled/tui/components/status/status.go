@@ -12,17 +12,17 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/types"
 )
 
-// 配色方案
+// 配色方案 - 使用标准 ANSI 颜色码提高兼容性
 var (
-	statusColorIdle       = lipgloss.Color("#00C853")  // 空闲 - 绿色
-	statusColorConnecting = lipgloss.Color("#FFB74D")  // 连接中 - 橙色
-	statusColorThinking   = lipgloss.Color("#7D56F4")  // 思考中 - 紫色
-	statusColorTool       = lipgloss.Color("#5B8DEF")  // 工具执行 - 蓝色
-	statusColorError      = lipgloss.Color("#EF5350")  // 错误 - 红色
-	statusColorBg         = lipgloss.Color("#1F2937")  // 状态栏背景 - 深蓝灰
-	statusColorText       = lipgloss.Color("#E5E7EB")  // 文本 - 浅灰
-	statusColorMuted      = lipgloss.Color("#9CA3AF")  // 弱化文本 - 灰色
-	statusColorVim        = lipgloss.Color("#FFB74D")  // Vim 模式 - 橙色
+	statusColorIdle       = lipgloss.Color("82")  // 空闲 - 绿色
+	statusColorConnecting = lipgloss.Color("215") // 连接中 - 橙色
+	statusColorThinking   = lipgloss.Color("135") // 思考中 - 紫色
+	statusColorTool       = lipgloss.Color("75")  // 工具执行 - 蓝色
+	statusColorError      = lipgloss.Color("203") // 错误 - 红色
+	statusColorBg         = lipgloss.Color("237") // 状态栏背景 - 深蓝灰
+	statusColorText       = lipgloss.Color("251") // 文本 - 浅灰
+	statusColorMuted      = lipgloss.Color("248") // 弱化文本 - 灰色
+	statusColorVim        = lipgloss.Color("215") // Vim 模式 - 橙色
 )
 
 // Status 应用状态
