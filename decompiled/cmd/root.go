@@ -10,6 +10,7 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/cmd/tui"
 	"github.com/alingse/qodercli-reverse/decompiled/cmd/utils"
 	"github.com/alingse/qodercli-reverse/decompiled/core/log"
+	"github.com/alingse/qodercli-reverse/decompiled/version"
 )
 
 var (
@@ -38,7 +39,7 @@ var (
 	path               string
 	withClaudeConfig   bool
 	quiet              bool
-	version            bool
+	showVersion        bool
 	debug              bool
 	logFile            string
 )
@@ -52,8 +53,8 @@ var rootCmd = &cobra.Command{
 
 	// 不带参数时运行 TUI 模式
 	Run: func(cmd *cobra.Command, args []string) {
-		if version {
-			fmt.Println("qodercli version 0.1.29 (decompiled)")
+		if showVersion {
+			fmt.Printf("qodercli version %s (decompiled)\n", version.Version)
 			return
 		}
 
@@ -132,7 +133,7 @@ func init() {
 	rootCmd.Flags().StringVarP(&path, "path", "", "", "Worktree path")
 	rootCmd.Flags().BoolVarP(&withClaudeConfig, "with-claude-config", "", false, "Load .claude configuration")
 	rootCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "Hide spinner in non-interactive mode")
-	rootCmd.Flags().BoolVarP(&version, "version", "v", false, "Show version information")
+	rootCmd.Flags().BoolVarP(&showVersion, "version", "v", false, "Show version information")
 
 	// 隐藏标志（用于兼容性）
 	rootCmd.Flags().BoolP("help", "h", false, "Help for qodercli")
