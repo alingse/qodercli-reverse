@@ -42,11 +42,12 @@ func (l Level) String() string {
 
 // Logger 日志记录器
 type Logger struct {
-	level      Level
-	file       *os.File
-	filePath   string
-	prefix     string
-	logToStderr bool
+	level         Level      // 写入文件的最低日志级别
+	stderrMinLevel Level     // 输出到 stderr 的最低日志级别
+	file          *os.File
+	filePath      string
+	prefix        string
+	logToStderr   bool
 }
 
 // defaultLogger 默认日志记录器
@@ -54,7 +55,7 @@ var defaultLogger *Logger
 
 // Init 初始化日志系统
 // logFile: 日志文件路径，如果为空则只输出到 stderr
-// level: 日志级别
+// level: 日志级别（控制写入文件的级别，以及 debug 模式下 stderr 的级别）
 func Init(logFile string, level Level) error {
 	var file *os.File
 	var filePath string
@@ -74,11 +75,20 @@ func Init(logFile string, level Level) error {
 		filePath = logFile
 	}
 
+	// 根据 level 决定 stderr 的最小输出级别
+	// 如果是 debug 模式 (LevelDebug)，则 stderr 输出所有级别
+	// 否则，stderr 只输出 ERROR 及以上级别
+	stderrMinLevel := LevelError
+	if level == LevelDebug {
+		stderrMinLevel = LevelDebug
+	}
+
 	defaultLogger = &Logger{
-		level:       level,
-		file:        file,
-		filePath:    filePath,
-		logToStderr: true,
+		level:          level,
+		stderrMinLevel: stderrMinLevel,
+		file:           file,
+		filePath:       filePath,
+		logToStderr:    true,
 	}
 
 	return nil
@@ -118,8 +128,11 @@ func log(level Level, format string, args ...interface{}) {
 		return
 	}
 
-	// 检查日志级别
-	if level < defaultLogger.level {
+	// 检查日志级别（文件和 stderr 使用各自的级别控制）
+	needFile := defaultLogger.file != nil && level >= defaultLogger.level
+	needStderr := defaultLogger.logToStderr && level >= defaultLogger.stderrMinLevel
+
+	if !needFile && !needStderr {
 		return
 	}
 
@@ -136,13 +149,13 @@ func log(level Level, format string, args ...interface{}) {
 
 	msg := formatLog(level, callerInfo, format, args...)
 
-	// 输出到 stderr
-	if defaultLogger.logToStderr && level >= LevelInfo {
+	// 输出到 stderr（根据 stderrMinLevel 判断，默认只输出 ERROR 及以上，debug 模式输出所有）
+	if needStderr {
 		fmt.Fprintln(os.Stderr, msg)
 	}
 
 	// 输出到文件
-	if defaultLogger.file != nil {
+	if needFile {
 		defaultLogger.file.WriteString(msg + "\n")
 	}
 }
