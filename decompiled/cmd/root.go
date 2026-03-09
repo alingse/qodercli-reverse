@@ -15,33 +15,33 @@ import (
 
 var (
 	// 全局标志变量
-	model              string
-	maxTokens          int
-	temperature        float64
-	maxTurns           int
-	permissionMode     string
-	systemPrompt       string
-	printMode          string
-	continueSession    bool
-	resumeSession      string
-	workspace          string
-	outputFormat       string
-	inputFormat        string
-	maxOutputTokens    string
-	allowedTools       []string
-	disallowedTools    []string
-	attachments        []string
-	agents             string
-	skipPermissions    bool
-	yolo               bool
-	worktree           bool
-	branch             string
-	path               string
-	withClaudeConfig   bool
-	quiet              bool
-	showVersion        bool
-	debug              bool
-	logFile            string
+	model            string
+	maxTokens        int
+	temperature      float64
+	maxTurns         int
+	permissionMode   string
+	systemPrompt     string
+	printMode        string
+	continueSession  bool
+	resumeSession    string
+	workspace        string
+	outputFormat     string
+	inputFormat      string
+	maxOutputTokens  string
+	allowedTools     []string
+	disallowedTools  []string
+	attachments      []string
+	agents           string
+	skipPermissions  bool
+	yolo             bool
+	worktree         bool
+	branch           string
+	path             string
+	withClaudeConfig bool
+	quiet            bool
+	showVersion      bool
+	debug            bool
+	logFile          string
 )
 
 // rootCmd represents the base command when called without any subcommands

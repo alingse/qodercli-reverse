@@ -14,13 +14,13 @@ import (
 type Tool interface {
 	// Name 工具名称
 	Name() string
-	
+
 	// Description 工具描述
 	Description() string
-	
+
 	// InputSchema 输入 Schema (JSON Schema)
 	InputSchema() map[string]interface{}
-	
+
 	// Execute 执行工具
 	Execute(ctx context.Context, input string) (string, error)
 }
@@ -163,7 +163,7 @@ func (e *Executor) Execute(ctx context.Context, call *ToolCall) (*ToolResult, er
 			IsError:    true,
 		}, nil
 	}
-	
+
 	content, err := tool.Execute(ctx, string(call.Arguments))
 	if err != nil {
 		return &ToolResult{
@@ -172,7 +172,7 @@ func (e *Executor) Execute(ctx context.Context, call *ToolCall) (*ToolResult, er
 			IsError:    true,
 		}, nil
 	}
-	
+
 	return &ToolResult{
 		ToolCallID: call.ID,
 		Content:    content,
@@ -207,10 +207,10 @@ func BuildStringSchema(properties map[string]struct {
 		"type":       "object",
 		"properties": make(map[string]interface{}),
 	}
-	
+
 	props := schema["properties"].(map[string]interface{})
 	var required []string
-	
+
 	for name, prop := range properties {
 		props[name] = map[string]interface{}{
 			"type":        "string",
@@ -220,11 +220,11 @@ func BuildStringSchema(properties map[string]struct {
 			required = append(required, name)
 		}
 	}
-	
+
 	if len(required) > 0 {
 		schema["required"] = required
 	}
-	
+
 	return schema
 }
 

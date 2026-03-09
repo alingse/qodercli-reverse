@@ -61,7 +61,7 @@ func (t *SimpleTokenizer) Count(text string) int {
 	tokens := 0
 	tokens += int(float64(chineseChars) * t.chineseTokenFactor)
 	tokens += int(float64(englishWords) * t.englishTokenFactor)
-	tokens += otherChars/ 4 // 其他字符每 4 个算 1 个 token
+	tokens += otherChars / 4 // 其他字符每 4 个算 1 个 token
 
 	return tokens
 }

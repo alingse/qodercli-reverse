@@ -42,12 +42,12 @@ func (l Level) String() string {
 
 // Logger 日志记录器
 type Logger struct {
-	level         Level      // 写入文件的最低日志级别
-	stderrMinLevel Level     // 输出到 stderr 的最低日志级别
-	file          *os.File
-	filePath      string
-	prefix        string
-	logToStderr   bool
+	level          Level // 写入文件的最低日志级别
+	stderrMinLevel Level // 输出到 stderr 的最低日志级别
+	file           *os.File
+	filePath       string
+	prefix         string
+	logToStderr    bool
 }
 
 // defaultLogger 默认日志记录器

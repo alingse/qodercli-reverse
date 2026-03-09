@@ -164,11 +164,11 @@ func (t *todoWriteTool) buildResponse(metadata TodoWriteResponseMetadata) string
 	// 计算统计信息
 	oldCount := len(metadata.OldTodos)
 	newCount := len(metadata.NewTodos)
-	
+
 	completedCount := 0
 	inProgressCount := 0
 	pendingCount := 0
-	
+
 	for _, todo := range metadata.NewTodos {
 		switch state.TodoStatus(todo.Status) {
 		case state.TodoStatusCompleted, state.TodoStatusDone:
@@ -188,9 +188,9 @@ func (t *todoWriteTool) buildResponse(metadata TodoWriteResponseMetadata) string
 		result = fmt.Sprintf("Updated todo list: %d -> %d task(s).\n", oldCount, newCount)
 	}
 
-	result += fmt.Sprintf("Progress: %d completed, %d in_progress, %d pending\n", 
+	result += fmt.Sprintf("Progress: %d completed, %d in_progress, %d pending\n",
 		completedCount, inProgressCount, pendingCount)
-	
+
 	if newCount > 0 {
 		result += "\nCurrent tasks:\n"
 		for _, todo := range metadata.NewTodos {

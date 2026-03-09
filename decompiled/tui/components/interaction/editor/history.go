@@ -6,8 +6,8 @@ import (
 
 // HistoryHandler 历史记录处理器
 type HistoryHandler struct {
-	history   []string
-	index     int
+	history      []string
+	index        int
 	isNavigating bool
 }
 

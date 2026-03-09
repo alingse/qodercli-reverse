@@ -95,7 +95,7 @@ func NewTodoState(memory *SessionMemory) TodoState {
 func (s *defaultTodoState) LoadTodos() ([]Todo, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	// 从会话内存中读取
 	if s.memory != nil {
 		if data, ok := s.memory.Get("todos"); ok {
@@ -105,7 +105,7 @@ func (s *defaultTodoState) LoadTodos() ([]Todo, error) {
 			}
 		}
 	}
-	
+
 	result := make([]Todo, len(s.todos))
 	copy(result, s.todos)
 	return result, nil
@@ -115,17 +115,17 @@ func (s *defaultTodoState) LoadTodos() ([]Todo, error) {
 func (s *defaultTodoState) SaveTodos(todos []Todo) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	// 验证所有任务
 	for i, todo := range todos {
 		if err := todo.Validate(); err != nil {
 			return fmt.Errorf("todo[%d]: %w", i, err)
 		}
 	}
-	
+
 	s.todos = make([]Todo, len(todos))
 	copy(s.todos, todos)
-	
+
 	// 保存到会话内存
 	if s.memory != nil {
 		data, err := json.Marshal(s.todos)
@@ -133,7 +133,7 @@ func (s *defaultTodoState) SaveTodos(todos []Todo) error {
 			s.memory.Set("todos", data)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -141,7 +141,7 @@ func (s *defaultTodoState) SaveTodos(todos []Todo) error {
 func (s *defaultTodoState) GetTodos() []Todo {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	result := make([]Todo, len(s.todos))
 	copy(result, s.todos)
 	return result
@@ -151,14 +151,14 @@ func (s *defaultTodoState) GetTodos() []Todo {
 func (s *defaultTodoState) TodosToText() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	if len(s.todos) == 0 {
 		return "Todo list is empty."
 	}
-	
+
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("Todo list status (%d todos):\n", len(s.todos)))
-	
+
 	for _, todo := range s.todos {
 		statusIcon := "⬜"
 		switch TodoStatus(todo.Status) {
@@ -171,7 +171,7 @@ func (s *defaultTodoState) TodosToText() string {
 		}
 		sb.WriteString(fmt.Sprintf("%s [%s] %s\n", statusIcon, todo.Status, todo.Content))
 	}
-	
+
 	return sb.String()
 }
 

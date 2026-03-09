@@ -53,7 +53,7 @@ func (m *SessionMemory) Clear() {
 func (m *SessionMemory) Keys() []string {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	keys := make([]string, 0, len(m.data))
 	for k := range m.data {
 		keys = append(keys, k)

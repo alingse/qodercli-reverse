@@ -13,11 +13,11 @@ import (
 
 // SessionMemory 会话内存管理
 type SessionMemory struct {
-	mu            sync.RWMutex
-	sessionID     string
-	memory       map[string]interface{}
+	mu             sync.RWMutex
+	sessionID      string
+	memory         map[string]interface{}
 	compactHistory []*CompactMetadata
-	maxHistory   int
+	maxHistory     int
 }
 
 // NewSessionMemory 创建会话内存
@@ -26,10 +26,10 @@ func NewSessionMemory(sessionID string, maxHistory int) *SessionMemory {
 		maxHistory = 10
 	}
 	return &SessionMemory{
-		sessionID:     sessionID,
-		memory:        make(map[string]interface{}),
+		sessionID:      sessionID,
+		memory:         make(map[string]interface{}),
 		compactHistory: make([]*CompactMetadata, 0),
-		maxHistory:    maxHistory,
+		maxHistory:     maxHistory,
 	}
 }
 
@@ -121,9 +121,9 @@ func (sm *SessionMemory) GetStats() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"session_id":       sm.sessionID,
-		"memory_keys":      len(sm.memory),
-		"compact_count":    len(sm.compactHistory),
+		"session_id":         sm.sessionID,
+		"memory_keys":        len(sm.memory),
+		"compact_count":      len(sm.compactHistory),
 		"total_saved_tokens": totalSavedTokens,
 	}
 }
@@ -177,11 +177,11 @@ func (sm *SessionMemory) Import(data []byte) error {
 
 // TokenManager Token 管理器
 type TokenManager struct {
-	mu              sync.RWMutex
-	tokenizer       Tokenizer
-	currentTokens   int
-	maxTokens       int
-	warningThreshold float64
+	mu                sync.RWMutex
+	tokenizer         Tokenizer
+	currentTokens     int
+	maxTokens         int
+	warningThreshold  float64
 	criticalThreshold float64
 }
 
@@ -308,14 +308,14 @@ func GroupByTurns(messages []types.Message) [][]types.Message {
 // KeepLastTurns 保留最后 N 轮对话
 func KeepLastTurns(messages []types.Message, turns int) []types.Message {
 	grouped := GroupByTurns(messages)
-	
+
 	if turns >= len(grouped) {
 		return messages
 	}
 
 	startIndex := len(grouped) - turns
 	var result []types.Message
-	
+
 	for i := startIndex; i < len(grouped); i++ {
 		result = append(result, grouped[i]...)
 	}
@@ -371,7 +371,7 @@ func extractCodeBlocks(text string, info *map[string]interface{}) {
 			if i-start >= 3 {
 				// 找到代码块开始
 				end := findCodeBlockEnd(text, i)
-				if end> 0 {
+				if end > 0 {
 					code := text[start:end]
 					(*info)["code_blocks"] = append((*info)["code_blocks"].([]string), code)
 				}

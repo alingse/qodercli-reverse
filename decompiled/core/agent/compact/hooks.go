@@ -35,7 +35,7 @@ func (f HookFunc) Execute(ctx context.Context, messages []types.Message, options
 type PostHookFunc func(ctx context.Context, result *CompactResult) error
 
 // Execute 执行压缩后 Hook
-func (f PostHookFunc) Execute(ctx context.Context, result *CompactResult) error{
+func (f PostHookFunc) Execute(ctx context.Context, result *CompactResult) error {
 	return f(ctx, result)
 }
 
@@ -79,7 +79,7 @@ func (h *BuiltinHooks) AddThresholdHook(hook ThresholdHook) {
 }
 
 // ExecutePreHooks 执行所有压缩前 Hook
-func (h *BuiltinHooks) ExecutePreHooks(ctx context.Context, messages []types.Message, options *CompactOptions) error{
+func (h *BuiltinHooks) ExecutePreHooks(ctx context.Context, messages []types.Message, options *CompactOptions) error {
 	for _, hook := range h.preHooks {
 		if err := hook.Execute(ctx, messages, options); err != nil {
 			log.Error("Pre-compact hook error: %v", err)
@@ -117,7 +117,7 @@ func (h *BuiltinHooks) ExecuteThresholdHooks(ctx context.Context, currentTokens 
 type LoggingHook struct{}
 
 // Execute 执行日志记录
-func (h *LoggingHook) Execute(ctx context.Context, messages []types.Message, options *CompactOptions) error{
+func (h *LoggingHook) Execute(ctx context.Context, messages []types.Message, options *CompactOptions) error {
 	log.Debug("Compact started: trigger=%s, strategy=%s, messages=%d",
 		options.Trigger, strategyToString(options.Strategy), len(messages))
 	return nil
@@ -127,7 +127,7 @@ func (h *LoggingHook) Execute(ctx context.Context, messages []types.Message, opt
 type ValidationHook struct{}
 
 // Execute 执行验证
-func (h *ValidationHook) Execute(ctx context.Context, messages []types.Message, options *CompactOptions) error{
+func (h *ValidationHook) Execute(ctx context.Context, messages []types.Message, options *CompactOptions) error {
 	if len(messages) == 0 {
 		return fmt.Errorf("empty messages")
 	}
@@ -147,7 +147,7 @@ type MetricsHook struct {
 }
 
 // Execute 执行指标收集
-func (h *MetricsHook) Execute(ctx context.Context, messages []types.Message, options *CompactOptions) error{
+func (h *MetricsHook) Execute(ctx context.Context, messages []types.Message, options *CompactOptions) error {
 	// 记录压缩前的状态
 	return nil
 }
@@ -174,10 +174,10 @@ func NewCacheHook() *CacheHook {
 }
 
 // Execute 执行缓存检查
-func (h *CacheHook) Execute(ctx context.Context, messages []types.Message, options *CompactOptions) error{
+func (h *CacheHook) Execute(ctx context.Context, messages []types.Message, options *CompactOptions) error {
 	// 生成消息的哈希作为缓存键
 	key := hashMessages(messages)
-	
+
 	// 检查缓存
 	if result, ok := h.cache[key]; ok {
 		log.Debug("Cache hit for compact result")
@@ -185,7 +185,7 @@ func (h *CacheHook) Execute(ctx context.Context, messages []types.Message, optio
 		// 实际使用中需要更复杂的机制
 		_ = result
 	}
-	
+
 	return nil
 }
 

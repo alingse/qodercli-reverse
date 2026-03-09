@@ -12,10 +12,10 @@ import (
 
 // CompactManager Compact 管理器（扩展 Agent 功能）
 type CompactManager struct {
-	manager   *compact.Manager
+	manager  *compact.Manager
 	session  *compact.SessionMemory
-	tokenMgr  *compact.TokenManager
-	config    *CompactConfig
+	tokenMgr *compact.TokenManager
+	config   *CompactConfig
 }
 
 // CompactConfig Compact 配置

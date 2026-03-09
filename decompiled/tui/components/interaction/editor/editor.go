@@ -6,9 +6,9 @@ import (
 	"context"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/charmbracelet/bubbles/textarea"
 
 	"github.com/alingse/qodercli-reverse/decompiled/core/pubsub"
 )
@@ -46,9 +46,9 @@ type EditorComponent struct {
 	height int
 
 	// 状态
-	mode      Mode
-	focused   bool
-	enabled   bool
+	mode    Mode
+	focused bool
+	enabled bool
 
 	// 功能处理器
 	attachmentHandler *AttachmentHandler

@@ -65,6 +65,9 @@ type appModel struct {
 
 	// 工具调用 ID 到名称的映射，用于跟踪工具执行状态
 	toolCallMap map[string]string
+
+	// TodoWrite 工具调用的参数缓存，用于显示 Todo 列表
+	todoWriteArgs map[string][]state.Todo
 }
 
 // New 创建新的 TUI 应用模型
@@ -76,8 +79,9 @@ func New(cfg *config.Config, ag *agent.Agent, ps *pubsub.PubSub) *appModel {
 		sessionActive: true,
 		status:        "Ready",
 		model:         cfg.Model,
-		eventChan:     make(chan tea.Msg, 100), // 缓冲通道，避免阻塞 Agent
-		toolCallMap:   make(map[string]string), // 工具调用 ID 到名称的映射
+		eventChan:     make(chan tea.Msg, 100),       // 缓冲通道，避免阻塞 Agent
+		toolCallMap:   make(map[string]string),       // 工具调用 ID 到名称的映射
+		todoWriteArgs: make(map[string][]state.Todo), // TodoWrite 参数缓存
 	}
 
 	// 初始化子组件
@@ -94,10 +98,10 @@ func New(cfg *config.Config, ag *agent.Agent, ps *pubsub.PubSub) *appModel {
 // Init 初始化 Bubble Tea 程序
 func (m appModel) Init() tea.Cmd {
 	log.Debug("Initializing TUI components")
-	
+
 	// 设置默认尺寸（在收到 WindowSizeMsg 之前使用）
 	m.setDefaultSize()
-	
+
 	return tea.Batch(
 		m.editor.Init(),
 		m.msgView.Init(),
@@ -191,20 +195,19 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if toolName == "" {
 			toolName = msg.ToolCallID // 备用：使用 ID 作为名称
 		}
-		
+
 		// 特殊处理 TodoWrite 工具
 		if toolName == "TodoWrite" && !msg.IsError {
-			// 解析工具参数中的 todos
-			var params struct {
-				Todos []state.Todo `json:"todos"`
-			}
-			if err := json.Unmarshal([]byte(msg.Content), &params); err == nil && len(params.Todos) > 0 {
+			// 获取保存的 todos 参数
+			if todos, ok := m.todoWriteArgs[msg.ToolCallID]; ok && len(todos) > 0 {
 				// 获取旧的 todos
 				oldTodos := m.msgView.GetTodoList()
 				// 更新 Todo 列表显示
-				m.msgView.UpdateTodoList(params.Todos, oldTodos)
+				m.msgView.UpdateTodoList(todos, oldTodos)
+				// 清理缓存
+				delete(m.todoWriteArgs, msg.ToolCallID)
 			} else {
-				// 如果解析失败，回退到普通工具显示
+				// 如果没有缓存的参数，回退到普通工具显示
 				m.msgView.CompleteTool(msg.ToolCallID, toolName, msg.Content, msg.IsError)
 			}
 		} else {
@@ -353,6 +356,16 @@ func (m *appModel) setupAgentCallbacks() {
 		},
 		// onToolCall - 处理工具调用开始
 		func(call *types.ToolCall) {
+			// 特殊处理 TodoWrite 工具：保存参数用于后续显示
+			if call.Name == "TodoWrite" {
+				var params struct {
+					Todos []state.Todo `json:"todos"`
+				}
+				if err := json.Unmarshal([]byte(call.Arguments), &params); err == nil {
+					m.todoWriteArgs[call.ID] = params.Todos
+				}
+			}
+
 			select {
 			case m.eventChan <- AgentToolStartMsg{
 				ID:        call.ID,

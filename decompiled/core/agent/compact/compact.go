@@ -64,14 +64,14 @@ type CompactOptions struct {
 // DefaultOptions 默认压缩选项
 func DefaultOptions() *CompactOptions {
 	return &CompactOptions{
-		Strategy:             StrategyHybrid,
-		Trigger:              TriggerManual,
-		TargetTokens:         0,
-		MaxTokens:            200000,
-		KeepSystemMessages:   true,
-		KeepToolCalls:        false,
-		KeepRecentTurns:      5,
-		CustomPrompt:         "",
+		Strategy:           StrategyHybrid,
+		Trigger:            TriggerManual,
+		TargetTokens:       0,
+		MaxTokens:          200000,
+		KeepSystemMessages: true,
+		KeepToolCalls:      false,
+		KeepRecentTurns:    5,
+		CustomPrompt:       "",
 	}
 }
 
@@ -108,7 +108,7 @@ type CompactMetadata struct {
 	// 模型信息
 	Model string `json:"model"`
 	// 压缩版本
-	Version string`json:"version"`
+	Version string `json:"version"`
 }
 
 // Compactor 压缩器接口
@@ -126,7 +126,7 @@ type Manager struct {
 	tokenizer   Tokenizer
 	hooks       []PreCompactHook
 	strategy    CompactStrategy
-	lastCompact*CompactResult
+	lastCompact *CompactResult
 }
 
 // Tokenizer Token 计算器接口

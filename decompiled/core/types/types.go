@@ -109,10 +109,10 @@ type Delta struct {
 type DeltaType string
 
 const (
-	DeltaTypeText        DeltaType = "text"
-	DeltaTypeThinking    DeltaType = "thinking"
-	DeltaTypeToolUse     DeltaType = "tool_use"
-	DeltaTypeToolCall    DeltaType = "tool_call"
+	DeltaTypeText         DeltaType = "text"
+	DeltaTypeThinking     DeltaType = "thinking"
+	DeltaTypeToolUse      DeltaType = "tool_use"
+	DeltaTypeToolCall     DeltaType = "tool_call"
 	DeltaTypeContentBlock DeltaType = "content_block"
 )
 
@@ -168,8 +168,8 @@ type SdkMessage struct {
 
 // ContentBlock 内容块
 type ContentBlock struct {
-	Type    string `json:"type"`
-	Text    string `json:"text,omitempty"`
+	Type     string `json:"type"`
+	Text     string `json:"text,omitempty"`
 	Thinking string `json:"thinking,omitempty"`
 }
 
@@ -177,12 +177,12 @@ type ContentBlock struct {
 type FeatureName string
 
 const (
-	FeatureCodeReview    FeatureName = "code_review"
-	FeatureWebSearch     FeatureName = "web_search"
-	FeatureImageGen      FeatureName = "image_gen"
-	FeatureSubAgent      FeatureName = "sub_agent"
-	FeatureGitHub        FeatureName = "github"
-	FeatureMCP           FeatureName = "mcp"
+	FeatureCodeReview FeatureName = "code_review"
+	FeatureWebSearch  FeatureName = "web_search"
+	FeatureImageGen   FeatureName = "image_gen"
+	FeatureSubAgent   FeatureName = "sub_agent"
+	FeatureGitHub     FeatureName = "github"
+	FeatureMCP        FeatureName = "mcp"
 )
 
 // BusinessType 业务类型

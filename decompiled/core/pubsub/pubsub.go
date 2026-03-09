@@ -36,9 +36,9 @@ const (
 	EventTypeSessionCompact EventType = "session:compact"
 
 	// 用户交互事件
-	EventTypeUserInput    EventType = "user:input"
+	EventTypeUserInput     EventType = "user:input"
 	EventTypeUserInterrupt EventType = "user:interrupt"
-	EventTypeCommandExec  EventType = "command:exec"
+	EventTypeCommandExec   EventType = "command:exec"
 
 	// 状态事件
 	EventTypeStatusUpdate EventType = "status:update"

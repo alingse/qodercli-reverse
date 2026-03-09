@@ -28,13 +28,13 @@ const (
 
 // Event 流式事件
 type Event struct {
-	Type      EventType   `json:"type"`
-	Content   string      `json:"content,omitempty"`
-	ToolCall  *ToolCall   `json:"tool_call,omitempty"`
-	ToolUse   *ToolUse    `json:"tool_use,omitempty"`
-	Thinking  string      `json:"thinking,omitempty"`
-	Error     *ErrorData  `json:"error,omitempty"`
-	TokenUsage *TokenUsage `json:"token_usage,omitempty"`
+	Type         EventType          `json:"type"`
+	Content      string             `json:"content,omitempty"`
+	ToolCall     *ToolCall          `json:"tool_call,omitempty"`
+	ToolUse      *ToolUse           `json:"tool_use,omitempty"`
+	Thinking     string             `json:"thinking,omitempty"`
+	Error        *ErrorData         `json:"error,omitempty"`
+	TokenUsage   *TokenUsage        `json:"token_usage,omitempty"`
 	FinishReason types.FinishReason `json:"finish_reason,omitempty"`
 }
 
@@ -86,39 +86,39 @@ const (
 
 // ModelRequest 模型请求
 type ModelRequest struct {
-	Model            string              `json:"model"`
-	Messages         []types.Message     `json:"messages"`
-	Tools            []types.ToolInfo    `json:"tools,omitempty"`
-	MaxTokens        int                 `json:"max_tokens,omitempty"`
-	Temperature      float64             `json:"temperature,omitempty"`
-	TopP             float64             `json:"top_p,omitempty"`
-	ThinkLevel       ThinkLevel          `json:"think_level,omitempty"`
-	ReasoningEffort  ReasoningEffort     `json:"reasoning_effort,omitempty"`
-	Stream           bool                `json:"stream"`
-	SystemPrompt     string              `json:"system_prompt,omitempty"`
-	StopSequences    []string            `json:"stop_sequences,omitempty"`
-	Metadata         map[string]string   `json:"metadata,omitempty"`
+	Model           string            `json:"model"`
+	Messages        []types.Message   `json:"messages"`
+	Tools           []types.ToolInfo  `json:"tools,omitempty"`
+	MaxTokens       int               `json:"max_tokens,omitempty"`
+	Temperature     float64           `json:"temperature,omitempty"`
+	TopP            float64           `json:"top_p,omitempty"`
+	ThinkLevel      ThinkLevel        `json:"think_level,omitempty"`
+	ReasoningEffort ReasoningEffort   `json:"reasoning_effort,omitempty"`
+	Stream          bool              `json:"stream"`
+	SystemPrompt    string            `json:"system_prompt,omitempty"`
+	StopSequences   []string          `json:"stop_sequences,omitempty"`
+	Metadata        map[string]string `json:"metadata,omitempty"`
 }
 
 // Response 模型响应
 type Response struct {
-	Content       string              `json:"content"`
-	ToolCalls     []types.ToolCall    `json:"tool_calls,omitempty"`
-	FinishReason  types.FinishReason  `json:"finish_reason"`
-	TokenUsage    *TokenUsage         `json:"token_usage"`
-	Thinking      string              `json:"thinking,omitempty"`
-	ID            string              `json:"id"`
-	Model         string              `json:"model"`
+	Content      string             `json:"content"`
+	ToolCalls    []types.ToolCall   `json:"tool_calls,omitempty"`
+	FinishReason types.FinishReason `json:"finish_reason"`
+	TokenUsage   *TokenUsage        `json:"token_usage"`
+	Thinking     string             `json:"thinking,omitempty"`
+	ID           string             `json:"id"`
+	Model        string             `json:"model"`
 }
 
 // Client Provider 客户端接口
 type Client interface {
 	// Stream 流式请求
 	Stream(ctx context.Context, req *ModelRequest) <-chan Event
-	
+
 	// Send 同步请求
 	Send(ctx context.Context, req *ModelRequest) (*Response, error)
-	
+
 	// Close 关闭客户端
 	Close() error
 }

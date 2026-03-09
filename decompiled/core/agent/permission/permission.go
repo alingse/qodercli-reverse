@@ -38,14 +38,14 @@ type Rule struct {
 
 // Request 权限请求
 type Request struct {
-	ToolName    string            `json:"tool_name"`
-	ToolInput   string            `json:"tool_input,omitempty"`
-	FilePath    string            `json:"file_path,omitempty"`
-	Command     string            `json:"command,omitempty"`
-	MCPName     string            `json:"mcp_name,omitempty"`
-	MCPMethod   string            `json:"mcp_method,omitempty"`
-	URL         string            `json:"url,omitempty"`
-	Metadata    map[string]string `json:"metadata,omitempty"`
+	ToolName  string            `json:"tool_name"`
+	ToolInput string            `json:"tool_input,omitempty"`
+	FilePath  string            `json:"file_path,omitempty"`
+	Command   string            `json:"command,omitempty"`
+	MCPName   string            `json:"mcp_name,omitempty"`
+	MCPMethod string            `json:"mcp_method,omitempty"`
+	URL       string            `json:"url,omitempty"`
+	Metadata  map[string]string `json:"metadata,omitempty"`
 }
 
 // Result 权限结果
@@ -107,11 +107,11 @@ func (c *Coordinator) Check(ctx context.Context, req *Request) (*Result, error) 
 			Reason:   fmt.Sprintf("Tool %s is in disallowed list", req.ToolName),
 		}, nil
 	}
-	
+
 	// 2. 根据工具类型检查具体权限
 	var decision Decision
 	var reason string
-	
+
 	switch req.ToolName {
 	case "Bash", "BashOutput", "KillBash":
 		decision, reason = c.checkBashPermission(req)
@@ -128,7 +128,7 @@ func (c *Coordinator) Check(ctx context.Context, req *Request) (*Result, error) 
 			decision = DecisionAllow
 		}
 	}
-	
+
 	// 3. 应用权限模式
 	if decision == DecisionAsk {
 		switch c.mode {
@@ -149,7 +149,7 @@ func (c *Coordinator) Check(ctx context.Context, req *Request) (*Result, error) 
 			}
 		}
 	}
-	
+
 	return &Result{
 		Decision: decision,
 		Reason:   reason,
@@ -164,7 +164,7 @@ func (c *Coordinator) checkToolPermission(toolName string) Decision {
 			return DecisionDeny
 		}
 	}
-	
+
 	// 检查允许列表
 	if len(c.allowedTools) > 0 {
 		for _, t := range c.allowedTools {
@@ -174,7 +174,7 @@ func (c *Coordinator) checkToolPermission(toolName string) Decision {
 		}
 		return DecisionDeny
 	}
-	
+
 	return DecisionAllow
 }
 
@@ -221,18 +221,18 @@ func (m *FileRuleMatcher) Match(path string) Decision {
 	if path == "" {
 		return DecisionAllow
 	}
-	
+
 	// 规范化路径
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return DecisionAsk
 	}
-	
+
 	// 检查特殊保护路径
 	if isProtectedPath(absPath) {
 		return DecisionAsk
 	}
-	
+
 	// 检查规则
 	for _, rule := range m.rules {
 		if match, _ := filepath.Match(rule.Pattern, absPath); match {
@@ -243,12 +243,12 @@ func (m *FileRuleMatcher) Match(path string) Decision {
 			return rule.Action
 		}
 	}
-	
+
 	// 默认策略：项目内允许，项目外询问
 	if isInProject(absPath) {
 		return DecisionAllow
 	}
-	
+
 	return DecisionAsk
 }
 
@@ -269,24 +269,24 @@ func (m *BashRuleMatcher) Match(command string) (Decision, string) {
 	if command == "" {
 		return DecisionAllow, ""
 	}
-	
+
 	// 检查危险命令模式
 	for _, pattern := range m.denyPatterns {
 		if pattern.MatchString(command) {
 			return DecisionDeny, fmt.Sprintf("matches deny pattern: %s", pattern.String())
 		}
 	}
-	
+
 	// 检查 sudo
 	if strings.Contains(command, "sudo ") {
 		return DecisionAsk, "sudo command requires confirmation"
 	}
-	
+
 	// 检查 rm -rf
 	if strings.Contains(command, "rm -rf") {
 		return DecisionAsk, "rm -rf requires confirmation"
 	}
-	
+
 	return DecisionAllow, ""
 }
 
@@ -305,13 +305,13 @@ func NewMCPRuleMatcher() *MCPRuleMatcher {
 // Match 匹配 MCP 调用
 func (m *MCPRuleMatcher) Match(serverName, method string) (Decision, string) {
 	fullName := fmt.Sprintf("mcp__%s__%s", serverName, method)
-	
+
 	for _, rule := range m.rules {
 		if matched, _ := filepath.Match(rule.Pattern, fullName); matched {
 			return rule.Action, fmt.Sprintf("matches rule: %s", rule.Pattern)
 		}
 	}
-	
+
 	return DecisionAllow, ""
 }
 
@@ -334,14 +334,14 @@ func (m *WebFetchRuleMatcher) Match(url string) (Decision, string) {
 	if url == "" {
 		return DecisionAllow, ""
 	}
-	
+
 	// 检查拒绝列表
 	for _, pattern := range m.denyList {
 		if strings.Contains(url, pattern) {
 			return DecisionDeny, fmt.Sprintf("URL in deny list: %s", pattern)
 		}
 	}
-	
+
 	// 检查允许列表
 	if len(m.allowList) > 0 {
 		for _, pattern := range m.allowList {
@@ -351,7 +351,7 @@ func (m *WebFetchRuleMatcher) Match(url string) (Decision, string) {
 		}
 		return DecisionAsk, "URL not in allow list"
 	}
-	
+
 	return DecisionAllow, ""
 }
 
@@ -364,7 +364,7 @@ func isProtectedPath(path string) bool {
 		"settings.json",
 		"settings.local.json",
 	}
-	
+
 	for _, p := range protected {
 		if strings.Contains(path, p) {
 			return true
@@ -379,13 +379,13 @@ func isInProject(path string) bool {
 	if err != nil {
 		return false
 	}
-	
+
 	// 检查路径是否在工作目录内
 	rel, err := filepath.Rel(cwd, path)
 	if err != nil {
 		return false
 	}
-	
+
 	return !strings.HasPrefix(rel, "..")
 }
 
@@ -406,7 +406,7 @@ func loadDefaultBashDenyPatterns() []*regexp.Regexp {
 		`mkfs\.`,
 		`dd\s+if=/dev/zero\s+of=/dev/sda`,
 	}
-	
+
 	var result []*regexp.Regexp
 	for _, p := range patterns {
 		if re, err := regexp.Compile(p); err == nil {

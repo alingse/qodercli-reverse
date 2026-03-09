@@ -192,7 +192,7 @@ func (c *SummaryCompactor) simpleSummary(messages []types.Message) string {
 	builder.WriteString("Previous conversation summary:\n\n")
 
 	userTopics := make(map[string]int)
-	
+
 	for _, msg := range messages {
 		if msg.Role == types.RoleUser {
 			for _, part := range msg.Content {
@@ -343,7 +343,7 @@ type SelectiveCompactor struct {
 
 // messageImportance 消息重要性评分
 type messageImportance struct {
-	message   types.Message
+	message    types.Message
 	importance int
 	index      int
 }

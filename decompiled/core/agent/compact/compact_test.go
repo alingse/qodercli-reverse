@@ -54,9 +54,9 @@ func TestTokenEstimation(t *testing.T) {
 		expected int
 	}{
 		{"", 0},
-		{"Hello", 2},                         // 5 字符/ 3 ≈ 2
-		{"你好", 3},                           // 2 字符 * 1.5 = 3
-		{"Hello, 世界!", 4},                   // 混合文本（实际计算）
+		{"Hello", 2},      // 5 字符/ 3 ≈ 2
+		{"你好", 3},         // 2 字符 * 1.5 = 3
+		{"Hello, 世界!", 4}, // 混合文本（实际计算）
 	}
 
 	for _, tt := range tests {
@@ -75,11 +75,11 @@ func TestHybridStrategy(t *testing.T) {
 	// 创建更多消息
 	var messages []types.Message
 	messages = append(messages, types.Message{Role: types.RoleSystem, Content: []types.ContentPart{{Type: "text", Text: "System message"}}})
-	
+
 	for i := 0; i < 20; i++ {
 		q := fmt.Sprintf("Question %d", i)
 		a := fmt.Sprintf("Answer %d", i)
-		messages = append(messages, 
+		messages = append(messages,
 			types.Message{Role: types.RoleUser, Content: []types.ContentPart{{Type: "text", Text: q}}},
 			types.Message{Role: types.RoleAssistant, Content: []types.ContentPart{{Type: "text", Text: a}}},
 		)
@@ -153,7 +153,7 @@ func TestTokenManager(t *testing.T) {
 	tokenMgr.Update(messages)
 
 	current, max, ratio := tokenMgr.GetUsage()
-	
+
 	t.Logf("Token usage: %d/%d (%.2f%%)", current, max, ratio*100)
 
 	if current <= 0 {

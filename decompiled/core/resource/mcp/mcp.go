@@ -33,17 +33,17 @@ type ServersConfig struct {
 
 // Client MCP 客户端
 type Client struct {
-	config     *ServerConfig
-	cmd        *exec.Cmd
-	stdin      io.WriteCloser
-	stdout     io.ReadCloser
-	stderr     io.ReadCloser
-	requestID  int
-	mu         sync.Mutex
-	pending    map[int]chan *Response
-	closed     bool
-	closeChan  chan struct{}
-	initDone   bool
+	config       *ServerConfig
+	cmd          *exec.Cmd
+	stdin        io.WriteCloser
+	stdout       io.ReadCloser
+	stderr       io.ReadCloser
+	requestID    int
+	mu           sync.Mutex
+	pending      map[int]chan *Response
+	closed       bool
+	closeChan    chan struct{}
+	initDone     bool
 	capabilities ServerCapabilities
 }
 
@@ -119,58 +119,58 @@ func (c *Client) Start(ctx context.Context) error {
 	if c.config.Type != "" && c.config.Type != "stdio" {
 		return fmt.Errorf("unsupported server type: %s", c.config.Type)
 	}
-	
+
 	// 构建命令
 	cmd := exec.CommandContext(ctx, c.config.Command, c.config.Args...)
-	
+
 	// 设置工作目录
 	if c.config.Cwd != "" {
 		cmd.Dir = c.config.Cwd
 	} else {
 		cmd.Dir, _ = os.Getwd()
 	}
-	
+
 	// 设置环境变量
 	cmd.Env = os.Environ()
 	for k, v := range c.config.Env {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
 	}
-	
+
 	// 获取管道
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return fmt.Errorf("failed to create stdin pipe: %w", err)
 	}
-	
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return fmt.Errorf("failed to create stdout pipe: %w", err)
 	}
-	
+
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return fmt.Errorf("failed to create stderr pipe: %w", err)
 	}
-	
+
 	// 启动进程
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start server: %w", err)
 	}
-	
+
 	c.cmd = cmd
 	c.stdin = stdin
 	c.stdout = stdout
 	c.stderr = stderr
-	
+
 	// 启动消息读取循环
 	go c.readLoop(ctx)
-	
+
 	// 初始化
 	if err := c.initialize(ctx); err != nil {
 		c.Stop()
 		return fmt.Errorf("failed to initialize: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -184,7 +184,7 @@ func (c *Client) Stop() error {
 	c.closed = true
 	close(c.closeChan)
 	c.mu.Unlock()
-	
+
 	// 关闭管道
 	if c.stdin != nil {
 		c.stdin.Close()
@@ -195,20 +195,20 @@ func (c *Client) Stop() error {
 	if c.stderr != nil {
 		c.stderr.Close()
 	}
-	
+
 	// 终止进程
 	if c.cmd != nil && c.cmd.Process != nil {
 		c.cmd.Process.Kill()
 		c.cmd.Wait()
 	}
-	
+
 	return nil
 }
 
 // readLoop 消息读取循环
 func (c *Client) readLoop(ctx context.Context) {
 	scanner := bufio.NewScanner(c.stdout)
-	
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -217,27 +217,27 @@ func (c *Client) readLoop(ctx context.Context) {
 			return
 		default:
 		}
-		
+
 		if !scanner.Scan() {
 			return
 		}
-		
+
 		line := scanner.Text()
 		if line == "" {
 			continue
 		}
-		
+
 		// 解析消息
 		var msg struct {
-			JSONRPC string          `json:"jsonrpc"`
-			ID      int             `json:"id"`
-			Method  string          `json:"method"`
+			JSONRPC string `json:"jsonrpc"`
+			ID      int    `json:"id"`
+			Method  string `json:"method"`
 		}
-		
+
 		if err := json.Unmarshal([]byte(line), &msg); err != nil {
 			continue
 		}
-		
+
 		// 处理响应
 		if msg.ID > 0 && msg.Method == "" {
 			var resp Response
@@ -245,7 +245,7 @@ func (c *Client) readLoop(ctx context.Context) {
 				c.handleResponse(&resp)
 			}
 		}
-		
+
 		// 处理通知
 		if msg.Method != "" && msg.ID == 0 {
 			var notif Notification
@@ -264,7 +264,7 @@ func (c *Client) handleResponse(resp *Response) {
 		delete(c.pending, resp.ID)
 	}
 	c.mu.Unlock()
-	
+
 	if exists {
 		ch <- resp
 	}
@@ -289,17 +289,17 @@ func (c *Client) call(ctx context.Context, method string, params interface{}) (*
 		c.mu.Unlock()
 		return nil, fmt.Errorf("client closed")
 	}
-	
+
 	c.requestID++
 	id := c.requestID
-	
+
 	// 构建请求
 	req := &Request{
 		JSONRPC: "2.0",
 		ID:      id,
 		Method:  method,
 	}
-	
+
 	if params != nil {
 		data, err := json.Marshal(params)
 		if err != nil {
@@ -308,12 +308,12 @@ func (c *Client) call(ctx context.Context, method string, params interface{}) (*
 		}
 		req.Params = data
 	}
-	
+
 	// 创建响应通道
 	ch := make(chan *Response, 1)
 	c.pending[id] = ch
 	c.mu.Unlock()
-	
+
 	// 发送请求
 	data, err := json.Marshal(req)
 	if err != nil {
@@ -322,14 +322,14 @@ func (c *Client) call(ctx context.Context, method string, params interface{}) (*
 		c.mu.Unlock()
 		return nil, fmt.Errorf("marshal request: %w", err)
 	}
-	
+
 	if _, err := fmt.Fprintln(c.stdin, string(data)); err != nil {
 		c.mu.Lock()
 		delete(c.pending, id)
 		c.mu.Unlock()
 		return nil, fmt.Errorf("write request: %w", err)
 	}
-	
+
 	// 等待响应
 	select {
 	case <-ctx.Done():
@@ -371,28 +371,28 @@ func (c *Client) initialize(ctx context.Context) error {
 			"version": "0.1.29",
 		},
 	}
-	
+
 	resp, err := c.call(ctx, "initialize", params)
 	if err != nil {
 		return err
 	}
-	
+
 	var result struct {
-		ProtocolVersion string                `json:"protocolVersion"`
-		Capabilities    ServerCapabilities    `json:"capabilities"`
+		ProtocolVersion string             `json:"protocolVersion"`
+		Capabilities    ServerCapabilities `json:"capabilities"`
 		ServerInfo      struct {
 			Name    string `json:"name"`
 			Version string `json:"version"`
 		} `json:"serverInfo"`
 	}
-	
+
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		return fmt.Errorf("unmarshal result: %w", err)
 	}
-	
+
 	c.capabilities = result.Capabilities
 	c.initDone = true
-	
+
 	// 发送 initialized 通知
 	notif := &Notification{
 		JSONRPC: "2.0",
@@ -400,7 +400,7 @@ func (c *Client) initialize(ctx context.Context) error {
 	}
 	data, _ := json.Marshal(notif)
 	fmt.Fprintln(c.stdin, string(data))
-	
+
 	return nil
 }
 
@@ -410,15 +410,15 @@ func (c *Client) ListTools(ctx context.Context) ([]Tool, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var result struct {
 		Tools []Tool `json:"tools"`
 	}
-	
+
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		return nil, fmt.Errorf("unmarshal result: %w", err)
 	}
-	
+
 	return result.Tools, nil
 }
 
@@ -428,17 +428,17 @@ func (c *Client) CallTool(ctx context.Context, name string, arguments map[string
 		"name":      name,
 		"arguments": arguments,
 	}
-	
+
 	resp, err := c.call(ctx, "tools/call", params)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var result ToolResult
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		return nil, fmt.Errorf("unmarshal result: %w", err)
 	}
-	
+
 	return &result, nil
 }
 
@@ -448,15 +448,15 @@ func (c *Client) ListResources(ctx context.Context) ([]Resource, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var result struct {
 		Resources []Resource `json:"resources"`
 	}
-	
+
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		return nil, fmt.Errorf("unmarshal result: %w", err)
 	}
-	
+
 	return result.Resources, nil
 }
 
@@ -465,17 +465,17 @@ func (c *Client) ReadResource(ctx context.Context, uri string) (*ResourceContent
 	params := map[string]string{
 		"uri": uri,
 	}
-	
+
 	resp, err := c.call(ctx, "resources/read", params)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var result ResourceContent
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		return nil, fmt.Errorf("unmarshal result: %w", err)
 	}
-	
+
 	return &result, nil
 }
 
@@ -485,15 +485,15 @@ func (c *Client) ListPrompts(ctx context.Context) ([]Prompt, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var result struct {
 		Prompts []Prompt `json:"prompts"`
 	}
-	
+
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		return nil, fmt.Errorf("unmarshal result: %w", err)
 	}
-	
+
 	return result.Prompts, nil
 }
 
@@ -503,17 +503,17 @@ func (c *Client) GetPrompt(ctx context.Context, name string, arguments map[strin
 		"name":      name,
 		"arguments": arguments,
 	}
-	
+
 	resp, err := c.call(ctx, "prompts/get", params)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	var result PromptMessage
 	if err := json.Unmarshal(resp.Result, &result); err != nil {
 		return nil, fmt.Errorf("unmarshal result: %w", err)
 	}
-	
+
 	return &result, nil
 }
 
@@ -554,9 +554,9 @@ type ResourceContent struct {
 
 // Prompt MCP 提示
 type Prompt struct {
-	Name        string      `json:"name"`
-	Description string      `json:"description,omitempty"`
-	Arguments   []Argument  `json:"arguments,omitempty"`
+	Name        string     `json:"name"`
+	Description string     `json:"description,omitempty"`
+	Arguments   []Argument `json:"arguments,omitempty"`
 }
 
 // Argument 参数
@@ -584,12 +584,12 @@ func LoadConfig(path string) (*ServersConfig, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read config: %w", err)
 	}
-	
+
 	var config ServersConfig
 	if err := json.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("unmarshal config: %w", err)
 	}
-	
+
 	return &config, nil
 }
 
@@ -599,7 +599,7 @@ func LoadGlobalConfig() (*ServersConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	configPath := filepath.Join(homeDir, ".mcp.json")
 	return LoadConfig(configPath)
 }

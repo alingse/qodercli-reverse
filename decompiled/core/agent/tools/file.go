@@ -44,33 +44,33 @@ func (t *ReadTool) Execute(ctx context.Context, input string) (string, error) {
 	if err := json.Unmarshal([]byte(input), &params); err != nil {
 		return "", fmt.Errorf("invalid input: %w", err)
 	}
-	
+
 	// 验证路径
 	if !IsSafePath(params.FilePath) {
 		return "", fmt.Errorf("unsafe path: %s", params.FilePath)
 	}
-	
+
 	// 检查文件是否存在
 	info, err := os.Stat(params.FilePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to stat file: %w", err)
 	}
-	
+
 	if info.IsDir() {
 		return "", fmt.Errorf("path is a directory, use LS tool instead")
 	}
-	
+
 	// 检查文件大小
 	if info.Size() > t.maxFileSize {
 		return "", fmt.Errorf("file too large: %d bytes (max %d)", info.Size(), t.maxFileSize)
 	}
-	
+
 	// 读取文件
 	content, err := os.ReadFile(params.FilePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read file: %w", err)
 	}
-	
+
 	// 处理行号
 	lines := strings.Split(string(content), "\n")
 	start := params.Offset
@@ -80,7 +80,7 @@ func (t *ReadTool) Execute(ctx context.Context, input string) (string, error) {
 	if start >= len(lines) {
 		return "", fmt.Errorf("offset exceeds file length")
 	}
-	
+
 	end := len(lines)
 	if params.Limit > 0 {
 		end = start + params.Limit
@@ -88,13 +88,13 @@ func (t *ReadTool) Execute(ctx context.Context, input string) (string, error) {
 			end = len(lines)
 		}
 	}
-	
+
 	// 添加行号
 	var result strings.Builder
 	for i := start; i < end; i++ {
 		result.WriteString(fmt.Sprintf("%d\t%s\n", i+1, lines[i]))
 	}
-	
+
 	return result.String(), nil
 }
 
@@ -139,29 +139,29 @@ func (t *WriteTool) Execute(ctx context.Context, input string) (string, error) {
 	if err := json.Unmarshal([]byte(input), &params); err != nil {
 		return "", fmt.Errorf("invalid input: %w", err)
 	}
-	
+
 	// 验证路径
 	if !IsSafePath(params.FilePath) {
 		return "", fmt.Errorf("unsafe path: %s", params.FilePath)
 	}
-	
+
 	// 创建目录
 	dir := filepath.Dir(params.FilePath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create directory: %w", err)
 	}
-	
+
 	// 原子写入
 	tmpFile := params.FilePath + ".tmp"
 	if err := os.WriteFile(tmpFile, []byte(params.Content), 0644); err != nil {
 		return "", fmt.Errorf("failed to write file: %w", err)
 	}
-	
+
 	if err := os.Rename(tmpFile, params.FilePath); err != nil {
 		os.Remove(tmpFile)
 		return "", fmt.Errorf("failed to rename file: %w", err)
 	}
-	
+
 	return fmt.Sprintf("File written successfully: %s", params.FilePath), nil
 }
 
@@ -197,46 +197,46 @@ func (t *EditTool) Execute(ctx context.Context, input string) (string, error) {
 	if err := json.Unmarshal([]byte(input), &params); err != nil {
 		return "", fmt.Errorf("invalid input: %w", err)
 	}
-	
+
 	// 验证路径
 	if !IsSafePath(params.FilePath) {
 		return "", fmt.Errorf("unsafe path: %s", params.FilePath)
 	}
-	
+
 	// 读取文件
 	content, err := os.ReadFile(params.FilePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to read file: %w", err)
 	}
-	
+
 	// 保存历史
 	t.fileHistory[params.FilePath] = append(t.fileHistory[params.FilePath], string(content))
-	
+
 	// 执行替换
 	oldContent := string(content)
 	var newContent string
-	
+
 	if params.ReplaceAll {
 		newContent = strings.ReplaceAll(oldContent, params.OldString, params.NewString)
 	} else {
 		newContent = strings.Replace(oldContent, params.OldString, params.NewString, 1)
 	}
-	
+
 	if newContent == oldContent {
 		return "", fmt.Errorf("old_string not found in file")
 	}
-	
+
 	// 写入文件
 	tmpFile := params.FilePath + ".tmp"
 	if err := os.WriteFile(tmpFile, []byte(newContent), 0644); err != nil {
 		return "", fmt.Errorf("failed to write file: %w", err)
 	}
-	
+
 	if err := os.Rename(tmpFile, params.FilePath); err != nil {
 		os.Remove(tmpFile)
 		return "", fmt.Errorf("failed to rename file: %w", err)
 	}
-	
+
 	return fmt.Sprintf("File edited successfully: %s", params.FilePath), nil
 }
 
@@ -276,22 +276,22 @@ func (t *DeleteFileTool) Execute(ctx context.Context, input string) (string, err
 	if err := json.Unmarshal([]byte(input), &params); err != nil {
 		return "", fmt.Errorf("invalid input: %w", err)
 	}
-	
+
 	// 验证路径
 	if !IsSafePath(params.FilePath) {
 		return "", fmt.Errorf("unsafe path: %s", params.FilePath)
 	}
-	
+
 	// 检查文件是否存在
 	if _, err := os.Stat(params.FilePath); err != nil {
 		return "", fmt.Errorf("file not found: %w", err)
 	}
-	
+
 	// 删除文件
 	if err := os.Remove(params.FilePath); err != nil {
 		return "", fmt.Errorf("failed to delete file: %w", err)
 	}
-	
+
 	return fmt.Sprintf("File deleted successfully: %s", params.FilePath), nil
 }
 
@@ -323,32 +323,32 @@ func (t *GlobTool) Execute(ctx context.Context, input string) (string, error) {
 	if err := json.Unmarshal([]byte(input), &params); err != nil {
 		return "", fmt.Errorf("invalid input: %w", err)
 	}
-	
+
 	// 设置搜索路径
 	searchPath := params.Path
 	if searchPath == "" {
 		searchPath = "."
 	}
-	
+
 	// 验证路径
 	if !IsSafePath(searchPath) {
 		return "", fmt.Errorf("unsafe path: %s", searchPath)
 	}
-	
+
 	// 执行 glob
 	pattern := filepath.Join(searchPath, params.Pattern)
 	matches, err := filepath.Glob(pattern)
 	if err != nil {
 		return "", fmt.Errorf("glob error: %w", err)
 	}
-	
+
 	// 格式化输出
 	var result strings.Builder
 	for _, match := range matches {
 		result.WriteString(match)
 		result.WriteString("\n")
 	}
-	
+
 	return result.String(), nil
 }
 
@@ -398,25 +398,25 @@ func (t *GrepTool) Execute(ctx context.Context, input string) (string, error) {
 	if err := json.Unmarshal([]byte(input), &params); err != nil {
 		return "", fmt.Errorf("invalid input: %w", err)
 	}
-	
+
 	// 设置搜索路径
 	searchPath := params.Path
 	if searchPath == "" {
 		searchPath = "."
 	}
-	
+
 	// 验证路径
 	if !IsSafePath(searchPath) {
 		return "", fmt.Errorf("unsafe path: %s", searchPath)
 	}
-	
+
 	// 构建 ripgrep 命令
 	args := []string{
 		"--json",
 		"--line-number",
 		"--column",
 	}
-	
+
 	// 输出模式
 	switch params.OutputMode {
 	case "files_with_matches":
@@ -424,17 +424,17 @@ func (t *GrepTool) Execute(ctx context.Context, input string) (string, error) {
 	case "count":
 		args = append(args, "-c")
 	}
-	
+
 	// 限制结果数
 	if params.HeadLimit > 0 {
 		args = append(args, "-m", fmt.Sprintf("%d", params.HeadLimit))
 	}
-	
+
 	// 多行模式
 	if params.Multiline {
 		args = append(args, "--multiline")
 	}
-	
+
 	// 上下文
 	if params.Context > 0 {
 		args = append(args, "-C", fmt.Sprintf("%d", params.Context))
@@ -446,28 +446,28 @@ func (t *GrepTool) Execute(ctx context.Context, input string) (string, error) {
 			args = append(args, "-A", fmt.Sprintf("%d", params.After))
 		}
 	}
-	
+
 	// 文件类型
 	if params.Type != "" {
 		args = append(args, "-t", params.Type)
 	}
-	
+
 	// glob 模式
 	if params.Glob != "" {
 		args = append(args, "-g", params.Glob)
 	}
-	
+
 	// 添加模式和路径
 	args = append(args, params.Pattern, searchPath)
-	
+
 	// 执行 ripgrep
 	cmd := exec.CommandContext(ctx, t.ripgrepPath, args...)
 	output, err := cmd.CombinedOutput()
-	
+
 	if err != nil && cmd.ProcessState.ExitCode() != 1 {
 		return "", fmt.Errorf("grep failed: %w, output: %s", err, string(output))
 	}
-	
+
 	return string(output), nil
 }
 
@@ -480,12 +480,12 @@ func GetRipgrepPath() string {
 		"/opt/homebrew/bin/rg",
 		"/usr/bin/rg",
 	}
-	
+
 	for _, path := range paths {
 		if _, err := exec.LookPath(path); err == nil {
 			return path
 		}
 	}
-	
+
 	return "rg"
 }

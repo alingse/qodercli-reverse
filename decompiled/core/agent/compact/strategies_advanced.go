@@ -11,7 +11,7 @@ import (
 // messageTokenInfo 消息 Token 信息（用于 TokenAwareCompactor）
 type messageTokenInfo struct {
 	message types.Message
-	tokens int
+	tokens  int
 	index   int
 }
 
@@ -37,9 +37,9 @@ func (c *HybridCompactor) Compact(ctx context.Context, messages []types.Message,
 
 	currentTokens := c.EstimateTokens(messages)
 	targetTokens := options.TargetTokens
-	
+
 	if targetTokens <= 0 {
-		targetTokens = currentTokens/ 2
+		targetTokens = currentTokens / 2
 	}
 
 	// 第一阶段：使用截断策略快速减少消息
@@ -48,7 +48,7 @@ func (c *HybridCompactor) Compact(ctx context.Context, messages []types.Message,
 		KeepRecentTurns:    options.KeepRecentTurns,
 		KeepSystemMessages: options.KeepSystemMessages,
 	}
-	
+
 	truncateResult, err := truncateCompactor.Compact(ctx, messages, truncateOpts)
 	if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func (c *TokenAwareCompactor) Compact(ctx context.Context, messages []types.Mess
 
 	if targetTokens <= 0 {
 		// 默认目标是最大 Token 数的 50%
-		targetTokens = maxTokens/ 2
+		targetTokens = maxTokens / 2
 	}
 
 	// 如果当前 Token 数已经小于目标，无需压缩
@@ -134,7 +134,7 @@ func (c *TokenAwareCompactor) Compact(ctx context.Context, messages []types.Mess
 		tokens := c.EstimateTokens([]types.Message{msg})
 		tokenInfo = append(tokenInfo, messageTokenInfo{
 			message: msg,
-			tokens: tokens,
+			tokens:  tokens,
 			index:   i,
 		})
 	}

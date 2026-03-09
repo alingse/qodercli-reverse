@@ -9,8 +9,8 @@ import (
 
 // AttachmentHandler 附件处理器
 type AttachmentHandler struct {
-	attachments        []string
-	highlightedIndex   int
+	attachments      []string
+	highlightedIndex int
 }
 
 // NewAttachmentHandler 创建新的附件处理器

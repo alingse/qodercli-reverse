@@ -6,15 +6,15 @@ import (
 
 // Flags 包含所有 CLI 标志
 type Flags struct {
-	Model            string
-	MaxTokens        int
-	Temperature      float64
-	MaxTurns         int
-	PermissionMode   string
-	OutputFormat     string
-	AllowedTools     []string
-	DisallowedTools  []string
-	Workspace        string
+	Model           string
+	MaxTokens       int
+	Temperature     float64
+	MaxTurns        int
+	PermissionMode  string
+	OutputFormat    string
+	AllowedTools    []string
+	DisallowedTools []string
+	Workspace       string
 }
 
 // LoadConfig 从标志和环境变量加载配置
