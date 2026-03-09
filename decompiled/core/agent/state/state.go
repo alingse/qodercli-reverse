@@ -7,10 +7,20 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/types"
 )
 
+// Stats 会话统计信息
+type Stats struct {
+	TotalInputTokens  int
+	TotalOutputTokens int
+	TotalTokens       int
+	ToolCallCount     int
+	AssistantReplies  int
+}
+
 // State Agent 状态
 type State struct {
 	messages    []types.Message
 	toolResults map[string]*types.ToolResult
+	stats       Stats
 	mu          sync.RWMutex
 }
 
@@ -19,6 +29,7 @@ func New() *State {
 	return &State{
 		messages:    make([]types.Message, 0),
 		toolResults: make(map[string]*types.ToolResult),
+		stats:       Stats{},
 	}
 }
 
@@ -72,4 +83,34 @@ func (s *State) GetToolResult(toolCallID string) *types.ToolResult {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.toolResults[toolCallID]
+}
+
+// UpdateTokenUsage 更新 Token 使用统计
+func (s *State) UpdateTokenUsage(inputTokens, outputTokens int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.stats.TotalInputTokens += inputTokens
+	s.stats.TotalOutputTokens += outputTokens
+	s.stats.TotalTokens += inputTokens + outputTokens
+}
+
+// IncrementToolCallCount 增加工具调用计数
+func (s *State) IncrementToolCallCount() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.stats.ToolCallCount++
+}
+
+// IncrementAssistantReplies 增加助手回复计数
+func (s *State) IncrementAssistantReplies() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.stats.AssistantReplies++
+}
+
+// GetStats 获取统计信息
+func (s *State) GetStats() Stats {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.stats
 }

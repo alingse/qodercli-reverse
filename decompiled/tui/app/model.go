@@ -44,6 +44,12 @@ type appModel struct {
 	width  int
 	height int
 
+	// 上次设置的组件尺寸（用于避免重复调用 SetSize）
+	lastMsgViewWidth  int
+	lastMsgViewHeight int
+	lastEditorWidth   int
+	lastEditorHeight  int
+
 	// 状态
 	quitting      bool
 	processing    bool
@@ -237,6 +243,26 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		atomic.StoreInt32(&m.lastResponseLen, 0)
 		cmds = append(cmds, m.waitForEvents())
 
+	case QuitMsg:
+		// 退出消息：先渲染最后的视图，然后退出
+		m.quitting = true
+		// 使用 Sequence 确保先触发一次渲染，让用户看到统计信息，然后再退出
+		// tea.Sequence 会依次执行命令，等待前一个命令产生的消息处理完成后再执行下一个
+		return m, tea.Sequence(
+			func() tea.Msg {
+				// 触发一次渲染，显示最终的统计信息
+				return renderQuitMsg{}
+			},
+			func() tea.Msg {
+				// 然后执行真正的退出
+				return tea.QuitMsg{}
+			},
+		)
+
+	case renderQuitMsg:
+		// 渲染退出前的最终视图，然后真正退出
+		return m, tea.Quit
+
 	case ResponseMsg:
 		// 保留用于兼容性
 		m.processing = false
@@ -282,6 +308,11 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // handleUserInput 处理用户输入 - 非阻塞启动 Agent
 func (m *appModel) handleUserInput(input string) tea.Cmd {
 	return func() tea.Msg {
+		// 检查是否是斜杠命令
+		if strings.HasPrefix(input, "/") {
+			return m.handleCommand(input)
+		}
+
 		// 重置流式输出计数器
 		atomic.StoreInt32(&m.lastResponseLen, 0)
 
@@ -309,6 +340,55 @@ func (m *appModel) handleUserInput(input string) tea.Cmd {
 		return StartedMsg{}
 	}
 }
+
+// handleCommand 处理斜杠命令
+func (m *appModel) handleCommand(input string) tea.Msg {
+	parts := strings.Fields(input)
+	if len(parts) == 0 {
+		return nil
+	}
+
+	command := parts[0]
+
+	switch command {
+	case "/quit", "/exit":
+		// 先显示用户输入
+		m.msgView.AddUserMessage(input)
+
+		// 获取统计信息
+		stats := m.agent.GetState().GetStats()
+
+		// 构建统计信息消息
+		statsMsg := fmt.Sprintf("\n=== Session Statistics ===\n"+
+			"Total Tokens: %d (Input: %d, Output: %d)\n"+
+			"Tool Calls: %d\n"+
+			"Assistant Replies: %d\n"+
+			"=========================\n",
+			stats.TotalTokens, stats.TotalInputTokens, stats.TotalOutputTokens,
+			stats.ToolCallCount, stats.AssistantReplies)
+
+		// 将统计信息添加到消息视图
+		m.msgView.AddSystemMessage(statsMsg)
+
+		// 设置退出标志
+		m.quitting = true
+
+		// 返回一个消息触发重新渲染
+		return QuitMsg{}
+
+	default:
+		// 其他命令交给 Agent 处理
+		go func() {
+			ctx := context.Background()
+			err := m.agent.ProcessUserInput(ctx, input)
+			if err != nil {
+				log.Error("Command processing error: %v", err)
+			}
+		}()
+		return StartedMsg{}
+	}
+}
+
 
 // waitForEvents 监听 Agent 事件通道
 // 这是关键方法：它返回一个 tea.Cmd，当 channel 有消息时会触发 Update
@@ -456,9 +536,8 @@ func (m *appModel) handleGlobalKeys(msg tea.KeyMsg) tea.Cmd {
 
 // View 渲染视图
 func (m appModel) View() string {
-	if m.quitting {
-		return "Goodbye!\n"
-	}
+	// 注意：不在开头处理 m.quitting，而是走正常渲染流程
+	// 这样可以确保退出前用户能看到完整的历史记录和统计信息
 
 	if m.showHelp {
 		return m.renderHelp()
@@ -479,14 +558,28 @@ func (m appModel) View() string {
 		msgViewHeight = 5
 	}
 
-	// 设置组件尺寸（必须在 View 之前设置）
+	// 只在尺寸真正改变时才调用 SetSize，避免重置 viewport 状态
 	if m.width > 0 {
-		m.msgView.SetSize(m.width, msgViewHeight)
-		m.editor.SetSize(m.width, editorHeight)
+		if m.lastMsgViewWidth != m.width || m.lastMsgViewHeight != msgViewHeight {
+			m.msgView.SetSize(m.width, msgViewHeight)
+			m.lastMsgViewWidth = m.width
+			m.lastMsgViewHeight = msgViewHeight
+		}
+		if m.lastEditorWidth != m.width || m.lastEditorHeight != editorHeight {
+			m.editor.SetSize(m.width, editorHeight)
+			m.lastEditorWidth = m.width
+			m.lastEditorHeight = editorHeight
+		}
 	}
 
 	// 组合视图：消息视图 + 编辑器 + 状态栏
 	var content string
+
+	// 如果正在退出，只显示消息视图（不显示编辑器和状态栏）
+	if m.quitting {
+		return m.msgView.View()
+	}
+
 	content = m.msgView.View()
 
 	// 错误消息
@@ -681,3 +774,9 @@ type AgentErrorMsg struct {
 type AgentFinishMsg struct {
 	Reason types.FinishReason
 }
+
+// QuitMsg 退出消息
+type QuitMsg struct{}
+
+// renderQuitMsg 用于触发退出前的最终渲染
+type renderQuitMsg struct{}

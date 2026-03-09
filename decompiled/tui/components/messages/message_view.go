@@ -126,6 +126,15 @@ func (mv *MessageView) AddAssistantMessage(content string) {
 	mv.AddMessage(msg)
 }
 
+// AddSystemMessage 添加系统消息（用于统计信息等）
+func (mv *MessageView) AddSystemMessage(content string) {
+	msg := &AssistantMessage{
+		Content: content,
+		MsgTime: time.Now(),
+	}
+	mv.AddMessage(msg)
+}
+
 // AppendToLastMessage 追加到最后一条消息
 func (mv *MessageView) AppendToLastMessage(content string) {
 	if len(mv.messages) == 0 {
@@ -272,14 +281,25 @@ func (mv *MessageView) Clear() {
 func (mv *MessageView) SetSize(width, height int) {
 	mv.width = width
 	mv.height = height
+
+	// 保存当前滚动位置（YOffset）
+	oldYOffset := mv.viewport.YOffset
+
 	mv.viewport.Width = width
 	mv.viewport.Height = height
+
+	// 恢复滚动位置，确保内容不会丢失
+	// 但需要确保不超过新的内容范围
+	mv.viewport.YOffset = oldYOffset
 
 	// 更新 glamour 渲染器
 	mv.renderer, _ = glamour.NewTermRenderer(
 		glamour.WithStandardStyle("dark"),
 		glamour.WithWordWrap(width-4),
 	)
+
+	// 重新渲染内容以适应新的宽度
+	mv.renderContent()
 }
 
 // renderContent 渲染内容

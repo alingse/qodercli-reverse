@@ -312,9 +312,16 @@ func (a *Agent) generate(ctx context.Context) error {
 				log.Debug("Event: MessageStop")
 
 			case provider.EventTypeMessageDelta:
-				// 消息增量（包含 finish_reason）
+				// 消息增量（包含 finish_reason 和 token usage）
 				finishReason = event.FinishReason
-				log.Debug("Event: MessageDelta, finish reason: %s", finishReason)
+				// 更新 token 使用统计
+				if event.TokenUsage != nil {
+					a.state.UpdateTokenUsage(event.TokenUsage.InputTokens, event.TokenUsage.OutputTokens)
+					log.Debug("Event: MessageDelta, finish reason: %s, tokens: %d input + %d output",
+						finishReason, event.TokenUsage.InputTokens, event.TokenUsage.OutputTokens)
+				} else {
+					log.Debug("Event: MessageDelta, finish reason: %s", finishReason)
+				}
 
 			case provider.EventTypeError:
 				// 错误
@@ -336,6 +343,8 @@ func (a *Agent) generate(ctx context.Context) error {
 
 		// 保存助手消息
 		a.state.AddMessage(assistantMsg)
+		// 增加助手回复计数
+		a.state.IncrementAssistantReplies()
 		log.Debug("Added assistant message to state, total messages now: %d", len(a.state.GetMessages()))
 
 		// 如果没有工具调用，结束
@@ -351,6 +360,8 @@ func (a *Agent) generate(ctx context.Context) error {
 		log.Debug("Executing %d tool calls for turn %d", len(toolCalls), turnCount)
 		for i, tc := range toolCalls {
 			log.Debug("Executing tool call %d/%d: %s", i+1, len(toolCalls), tc.Name)
+			// 增加工具调用计数
+			a.state.IncrementToolCallCount()
 			if err := a.executeToolCall(ctx, &tc); err != nil {
 				log.Debug("Tool call %d failed: %v", i+1, err)
 				return err
