@@ -196,6 +196,11 @@ const (
 	PromptTypeDataScientist    PromptType = "data_scientist"
 	PromptTypeGuideAgent       PromptType = "guide_agent"
 	PromptTypeQuestHandler     PromptType = "quest_handler"
+	PromptTypeSpecHLDDesigner  PromptType = "spec_hld_designer"
+	PromptTypeSpecLLDDesigner  PromptType = "spec_lld_designer"
+	PromptTypeSpecImplementer  PromptType = "spec_implementer"
+	PromptTypeSpecLeader       PromptType = "spec_leader"
+	PromptTypeExploreAgent     PromptType = "explore_agent"
 
 	// IDE 集成提示词
 	PromptTypeQoderWork        PromptType = "qoderwork"
