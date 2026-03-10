@@ -6,6 +6,7 @@ import (
 	"context"
 	"os"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -68,6 +69,14 @@ type appModel struct {
 
 	// 工具调用信息映射：ID -> {名称, 参数}
 	toolInfoMap map[string]*toolInfo
+
+	// 回调序列化 channel - 确保 Agent 回调按顺序处理
+	callbackChan chan func()
+
+	// 流式内容序列号 - 确保 ToolStart 等待所有 Stream 消息先发送
+	streamSeqNum   int64
+	toolStartSeqNum int64
+	streamSeqMutex sync.Mutex
 }
 
 type toolInfo struct {
@@ -86,16 +95,43 @@ func New(cfg *config.Config, ag *agent.Agent, ps *pubsub.PubSub) *appModel {
 		model:         cfg.Model,
 		eventChan:     make(chan tea.Msg, 100),
 		toolInfoMap:   make(map[string]*toolInfo),
+		callbackChan:  make(chan func(), 1000), // 增大缓冲区避免阻塞
 	}
 
 	// 初始化子组件
 	m.editor = editor.NewEditorComponent(ps)
 	m.msgView = messages.NewMessageView()
 
+	// 启动回调序列化 goroutine - 确保 Agent 回调按顺序处理
+	go m.serializeCallbacks()
+
 	// 设置 Agent 回调
 	m.setupAgentCallbacks()
 
 	return m
+}
+
+// serializeCallbacks 序列化回调处理 goroutine
+// 所有 Agent 回调先发送到这里，然后按顺序发送到 eventChan
+func (m *appModel) serializeCallbacks() {
+	for fn := range m.callbackChan {
+		fn()
+	}
+}
+
+// sendToEventChan 发送消息到事件 channel，带超时避免阻塞
+func (m *appModel) sendToEventChan(msg tea.Msg, block bool) {
+	if block {
+		// 阻塞发送（关键消息）
+		m.eventChan <- msg
+	} else {
+		// 非阻塞发送，避免卡住 Agent
+		select {
+		case m.eventChan <- msg:
+		default:
+			// channel 满了，丢弃消息（流式消息可丢弃）
+		}
+	}
 }
 
 // Init 初始化 Bubble Tea 程序
@@ -321,34 +357,54 @@ func (m *appModel) setupAgentCallbacks() {
 			if len(runes) > int(lastLen) {
 				newRunes := runes[lastLen:]
 				atomic.StoreInt32(&m.lastResponseLen, int32(len(runes)))
-				select {
-				case m.eventChan <- AgentStreamMsg{Content: string(newRunes)}:
-				default:
+				// 通过序列化 channel 发送，增加序列号用于 ToolStart 同步
+				m.streamSeqMutex.Lock()
+				m.streamSeqNum++
+				seq := m.streamSeqNum
+				m.streamSeqMutex.Unlock()
+				content := string(newRunes)
+				m.callbackChan <- func() {
+					m.eventChan <- AgentStreamMsg{Content: content}
+					// 发送完成后更新完成序列号
+					atomic.StoreInt64(&m.toolStartSeqNum, seq)
 				}
 			}
 		},
 		func(call *types.ToolCall) {
-			select {
-			case m.eventChan <- AgentToolStartMsg{ID: call.ID, Name: call.Name, Arguments: call.Arguments}:
-			default:
+			// 确保所有之前的 Stream 消息都已发送，再发送 ToolStart
+			c := *call
+			m.callbackChan <- func() {
+				// 等待所有 stream 消息处理完成
+				for {
+					currentStreamSeq := atomic.LoadInt64(&m.streamSeqNum)
+					completedStreamSeq := atomic.LoadInt64(&m.toolStartSeqNum)
+					if completedStreamSeq >= currentStreamSeq {
+						break
+					}
+					time.Sleep(1 * time.Millisecond)
+				}
+				m.eventChan <- AgentToolStartMsg{ID: c.ID, Name: c.Name, Arguments: c.Arguments}
 			}
 		},
 		func(result *types.ToolResult) {
-			select {
-			case m.eventChan <- AgentToolResultMsg{ToolCallID: result.ToolCallID, Content: result.Content, IsError: result.IsError}:
-			default:
+			// 通过序列化 channel 发送，确保顺序
+			r := *result
+			m.callbackChan <- func() {
+				m.eventChan <- AgentToolResultMsg{ToolCallID: r.ToolCallID, Content: r.Content, IsError: r.IsError}
 			}
 		},
 		func(err error) {
-			select {
-			case m.eventChan <- AgentErrorMsg{Err: err}:
-			default:
+			// 错误消息：必须送达
+			e := err
+			m.callbackChan <- func() {
+				m.eventChan <- AgentErrorMsg{Err: e}
 			}
 		},
 		func(reason types.FinishReason) {
-			select {
-			case m.eventChan <- AgentFinishMsg{Reason: reason}:
-			default:
+			// 完成消息：必须送达
+			r := reason
+			m.callbackChan <- func() {
+				m.eventChan <- AgentFinishMsg{Reason: r}
 			}
 		},
 	)
