@@ -10,6 +10,22 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// getStringValue 安全地从 map 中获取字符串值，支持多种类型
+func getStringValue(m map[string]interface{}, key string) string {
+	if val, ok := m[key]; ok {
+		switch v := val.(type) {
+		case string:
+			return v
+		case []byte:
+			return string(v)
+		default:
+			// 尝试转换为字符串
+			return fmt.Sprintf("%v", v)
+		}
+	}
+	return ""
+}
+
 // UserMessage 用户消息
 type UserMessage struct {
 	Content string
@@ -20,19 +36,18 @@ func (m *UserMessage) Type() MessageType    { return MsgTypeUser }
 func (m *UserMessage) Timestamp() time.Time { return m.MsgTime }
 func (m *UserMessage) Render() string {
 	// 样式：> 用户输入内容（前缀白色）
+	// 注意：内容不应用 lipgloss 样式，避免宽度计算导致换行问题
 	prefixStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("255")) // 白色
-	contentStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("252")) // 亮白色
 
 	return fmt.Sprintf("%s %s",
 		prefixStyle.Render(">"),
-		contentStyle.Render(m.Content))
+		strings.TrimSpace(m.Content))
 }
 
 // String 实现 fmt.Stringer 接口
 func (m *UserMessage) String() string {
-	return m.Content
+	return strings.TrimSpace(m.Content)
 }
 
 // AssistantMessage 助手消息
@@ -44,18 +59,19 @@ type AssistantMessage struct {
 func (m *AssistantMessage) Type() MessageType    { return MsgTypeAssistant }
 func (m *AssistantMessage) Timestamp() time.Time { return m.MsgTime }
 func (m *AssistantMessage) Render() string {
-	// 样式：⏺ 系统输出（白色），与内容在同一行
+	// 样式：⏺ 系统输出（白色前缀）
+	// 注意：内容不应用 lipgloss 样式，避免宽度计算导致换行问题
 	prefixStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("255")) // 白色
 
 	return fmt.Sprintf("%s %s",
 		prefixStyle.Render("⏺"),
-		m.Content)
+		strings.TrimSpace(m.Content))
 }
 
 // String 实现 fmt.Stringer 接口
 func (m *AssistantMessage) String() string {
-	return m.Content
+	return strings.TrimSpace(m.Content)
 }
 
 // TokenUsageMessage Token 使用统计 - 原版在消息末尾显示
@@ -427,29 +443,62 @@ func (m *ToolCallInfo) Render() string {
 		Foreground(lipgloss.Color("252")) // 亮白色
 
 	// 解析参数，提取关键信息用于显示
-	displayContent := m.Arguments
+	displayContent := ""
 	var argsMap map[string]interface{}
-	if err := json.Unmarshal([]byte(m.Arguments), &argsMap); err == nil {
-		// 根据不同工具类型提取关键信息
+	isTodoWrite := m.Name == "TodoWrite"
+	todoLines := []string{}
+
+	if err := json.Unmarshal([]byte(m.Arguments), &argsMap); err == nil && len(argsMap) > 0 {
+		// TodoWrite 特殊处理：显示任务列表
+		if isTodoWrite {
+			if todos, ok := argsMap["todos"].([]interface{}); ok && len(todos) > 0 {
+				for _, todo := range todos {
+					if todoMap, ok := todo.(map[string]interface{}); ok {
+						content, _ := todoMap["content"].(string)
+						status, _ := todoMap["status"].(string)
+						if content != "" {
+							// 使用 [x] 表示完成，[ ] 表示进行中/待办
+							checkmark := "[ ]"
+							if status == "completed" || status == "done" {
+								checkmark = "[x]"
+							}
+							todoLines = append(todoLines, fmt.Sprintf("  %s %s", checkmark, content))
+						}
+					}
+				}
+			}
+		}
+
+		// 首先尝试根据工具类型提取特定字段
 		switch m.Name {
 		case "Bash":
-			if cmd, ok := argsMap["command"].(string); ok && cmd != "" {
+			if cmd := getStringValue(argsMap, "command"); cmd != "" {
 				displayContent = cmd
 			}
 		case "Read", "ReadFile":
-			if path, ok := argsMap["file_path"].(string); ok && path != "" {
+			if path := getStringValue(argsMap, "file_path"); path != "" {
 				displayContent = path
 			}
 		case "Write", "WriteFile":
-			if path, ok := argsMap["file_path"].(string); ok && path != "" {
+			if path := getStringValue(argsMap, "file_path"); path != "" {
 				displayContent = path
 			}
 		case "Update", "UpdateFile":
-			if path, ok := argsMap["file_path"].(string); ok && path != "" {
+			if path := getStringValue(argsMap, "file_path"); path != "" {
 				displayContent = path
 			}
-		default:
-			// 对于其他工具，尝试提取第一个字符串类型的值
+		case "Grep":
+			if pattern := getStringValue(argsMap, "pattern"); pattern != "" {
+				displayContent = pattern
+			}
+		case "Glob":
+			if pattern := getStringValue(argsMap, "pattern"); pattern != "" {
+				displayContent = pattern
+			}
+		}
+
+		// 如果特定字段提取为空，尝试提取任何非空字符串值
+		if displayContent == "" && !isTodoWrite {
 			for _, v := range argsMap {
 				if s, ok := v.(string); ok && s != "" {
 					displayContent = s
@@ -457,16 +506,46 @@ func (m *ToolCallInfo) Render() string {
 				}
 			}
 		}
+
+		// 如果还是为空且不是 TodoWrite，显示 JSON 的精简版本
+		if displayContent == "" && !isTodoWrite {
+			if compactJSON, err := json.Marshal(argsMap); err == nil {
+				displayContent = string(compactJSON)
+			}
+		}
+	} else if m.Arguments != "" && m.Arguments != "{}" {
+		// JSON 解析失败或为空，直接显示原始参数（去掉花括号）
+		displayContent = strings.TrimSpace(m.Arguments)
+		displayContent = strings.TrimPrefix(displayContent, "{")
+		displayContent = strings.TrimSuffix(displayContent, "}")
+		displayContent = strings.TrimSpace(displayContent)
 	}
 
-	// 格式：⏺ ToolName arguments
-	content := fmt.Sprintf("%s %s %s",
-		statusStyle.Render(statusIcon),
-		nameStyle.Render(m.Name),
-		argsStyle.Render(displayContent))
+	// 如果 displayContent 为空且不是 TodoWrite，显示省略号
+	if displayContent == "" && !isTodoWrite {
+		displayContent = "..."
+	} else if !isTodoWrite && len([]rune(displayContent)) > 256 {
+		// 如果内容超过256个字符，截断并显示 ...
+		runes := []rune(displayContent)
+		displayContent = string(runes[:253]) + "..."
+	}
 
-	// 如果有输出，显示在下一行（限制长度）
-	if m.Completed && m.Output != "" {
+	// 构建内容
+	var content string
+	if isTodoWrite && len(todoLines) > 0 {
+		// TodoWrite：显示任务列表，每行一个任务
+		content = fmt.Sprintf("%s %s", statusStyle.Render(statusIcon), nameStyle.Render(m.Name))
+		content += "\n" + argsStyle.Render(strings.Join(todoLines, "\n"))
+	} else {
+		// 其他工具：格式 ⏺ ToolName (arguments)
+		content = fmt.Sprintf("%s %s (%s)",
+			statusStyle.Render(statusIcon),
+			nameStyle.Render(m.Name),
+			argsStyle.Render(displayContent))
+	}
+
+	// 只有在出错时才显示输出（stderr），成功时不显示 stdout
+	if m.Completed && m.IsError && m.Output != "" {
 		output := m.Output
 		// 限制输出行数
 		lines := strings.Split(output, "\n")

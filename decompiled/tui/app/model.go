@@ -66,8 +66,13 @@ type appModel struct {
 	// 事件通道
 	eventChan chan tea.Msg
 
-	// 工具调用 ID 到名称的映射
-	toolCallMap map[string]string
+	// 工具调用信息映射：ID -> {名称, 参数}
+	toolInfoMap map[string]*toolInfo
+}
+
+type toolInfo struct {
+	name      string
+	arguments string
 }
 
 // New 创建新的 TUI 应用模型
@@ -80,7 +85,7 @@ func New(cfg *config.Config, ag *agent.Agent, ps *pubsub.PubSub) *appModel {
 		status:        "Ready",
 		model:         cfg.Model,
 		eventChan:     make(chan tea.Msg, 100),
-		toolCallMap:   make(map[string]string),
+		toolInfoMap:   make(map[string]*toolInfo),
 	}
 
 	// 初始化子组件
@@ -159,25 +164,50 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case AgentToolStartMsg:
 		m.status = "Using tool..."
-		m.toolCallMap[msg.ID] = msg.Name
 		
-		// 打印工具调用开始
-		toolMsg := &messages.ToolCallInfo{
-			ID:        msg.ID,
-			Name:      msg.Name,
-			Arguments: msg.Arguments,
-			Completed: false,
-			MsgTime:   time.Now(),
+		// 顺序控制：在显示工具前，如果流式缓冲区有内容，先刷新显示
+		if m.streamingBuffer != "" {
+			assistantMsg := &messages.AssistantMessage{
+				Content: m.streamingBuffer,
+				MsgTime: time.Now(),
+			}
+			cmds = append(cmds, tea.Printf(assistantMsg.Render()))
+			m.streamingBuffer = ""
+			atomic.StoreInt32(&m.lastResponseLen, 0)
 		}
-		cmds = append(cmds, tea.Printf(toolMsg.Render()))
+		
+		m.toolInfoMap[msg.ID] = &toolInfo{
+			name:      msg.Name,
+			arguments: msg.Arguments,
+		}
+		// 工具开始时只记录状态，不打印，等完成时统一打印最终结果
 		cmds = append(cmds, m.waitForEvents())
 
 	case AgentToolResultMsg:
-		toolName := m.toolCallMap[msg.ToolCallID]
+		// 顺序控制：再次确认流式缓冲区是否为空
+		if m.streamingBuffer != "" {
+			assistantMsg := &messages.AssistantMessage{
+				Content: m.streamingBuffer,
+				MsgTime: time.Now(),
+			}
+			cmds = append(cmds, tea.Printf(assistantMsg.Render()))
+			m.streamingBuffer = ""
+			atomic.StoreInt32(&m.lastResponseLen, 0)
+		}
+		
+		var toolName, toolArgs string
+		if info, ok := m.toolInfoMap[msg.ToolCallID]; ok {
+			toolName = info.name
+			toolArgs = info.arguments
+			// 执行完后清理，释放内存
+			delete(m.toolInfoMap, msg.ToolCallID)
+		}
+		
 		// 打印工具执行结果
 		toolResultMsg := &messages.ToolCallInfo{
 			ID:        msg.ToolCallID,
 			Name:      toolName,
+			Arguments: toolArgs,
 			Output:    msg.Content,
 			IsError:   msg.IsError,
 			Completed: true,
@@ -364,20 +394,29 @@ func (m appModel) View() string {
 			Content: m.streamingBuffer,
 			MsgTime: time.Now(),
 		}
+		// 确保宽度至少为 80，避免内容被压缩换行
+		previewWidth := m.width - 4
+		if previewWidth < 76 {
+			previewWidth = 76
+		}
 		previewStyle := lipgloss.NewStyle().
 			Foreground(lipgloss.Color("246")).
 			Italic(true).
 			Padding(0, 1).
+			Width(previewWidth).
 			Border(lipgloss.NormalBorder(), false, false, false, true).
 			BorderForeground(lipgloss.Color("240"))
 		
 		sections = append(sections, previewStyle.Render(preview.Render()))
 	}
 
-	// 2. 编辑器
+	// 2. 在系统输出和输入框之间添加空行，避免拥挤
+	sections = append(sections, "")
+
+	// 3. 编辑器
 	sections = append(sections, m.editor.View())
 
-	// 3. 状态栏
+	// 4. 状态栏
 	sections = append(sections, m.renderStatusBar())
 
 	return lipgloss.JoinVertical(lipgloss.Left, sections...)
@@ -395,7 +434,11 @@ func (m appModel) renderStatusBar() string {
 	statusStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(statusColor)).Width(20)
 	statusStr := statusStyle.Render("● " + m.status)
 	
-	modelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("248")).Width(m.width - 40)
+	modelWidth := m.width - 40
+	if modelWidth < 0 {
+		modelWidth = 0
+	}
+	modelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("248")).Width(modelWidth)
 	modelStr := modelStyle.Render(m.model)
 
 	barStyle := lipgloss.NewStyle().Background(lipgloss.Color("237")).Padding(0, 1).Width(m.width)
@@ -405,7 +448,11 @@ func (m appModel) renderStatusBar() string {
 
 func (m appModel) renderHelp() string {
 	help := "\nQoder CLI Help\n\nCtrl+C Quit\nEnter Send\nF1 Toggle help\n"
-	style := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Padding(1).Width(m.width - 4)
+	helpWidth := m.width - 4
+	if helpWidth < 20 {
+		helpWidth = 20
+	}
+	style := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Padding(1).Width(helpWidth)
 	return style.Render(help)
 }
 
