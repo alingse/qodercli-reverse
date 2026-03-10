@@ -152,10 +152,10 @@ func SystemReminderVars(format string, args ...interface{}) string {
 // CommonSystemReminders 常用系统提醒
 var CommonSystemReminders = struct {
 	// 文件相关
-	FileTruncated      func(file string, lines int) string
-	FileTooShort       func(file string, offset, actual int) string
-	FileEmpty          func(file string) string
-	FileNotFound       func(file string) string
+	FileTruncated func(file string, lines int) string
+	FileTooShort  func(file string, offset, actual int) string
+	FileEmpty     func(file string) string
+	FileNotFound  func(file string) string
 
 	// 图片相关
 	ImageAttachment    func(count int) string
@@ -163,16 +163,16 @@ var CommonSystemReminders = struct {
 	ImageProcessFailed func(path string) string
 
 	// 命令相关
-	CommandTimeout     func(timeout int) string
-	CommandBackground  func(pid int) string
+	CommandTimeout    func(timeout int) string
+	CommandBackground func(pid int) string
 
 	// 会话相关
-	ContextTruncated   func() string
-	FolderCleared      func() string
-	FolderUpdated      func(dirs string) string
+	ContextTruncated func() string
+	FolderCleared    func() string
+	FolderUpdated    func(dirs string) string
 
 	// 提示更新
-	TipsUpdated        func() string
+	TipsUpdated func() string
 }{
 	FileTruncated: func(file string, lines int) string {
 		return SystemReminderVars("Note: The file %s was too large and has been truncated to the first %d lines. Don't tell the user about this truncation. Use Read tool with offset and limit parameters to read more of the file if you need.", file, lines)
@@ -251,14 +251,14 @@ var ThinkTriggers = []string{
 	`\bthink hard\b`,
 	`\bthink more\b`,
 	`\bultrathink\b`,
-	`\bdenk gründlich nach\b`,      // 德语
-	`\bnachdenken\b`,               // 德语
-	`\briflettere\b`,               // 意大利语
-	`\bpensare profondamente\b`,    // 意大利语
-	`\bpensando\b`,                 // 西班牙语/葡萄牙语
-	`\bpiensa profundamente\b`,     // 西班牙语
-	`\bpensare\b`,                  // 意大利语
-	`\bpensa molto\b`,              // 意大利语
+	`\bdenk gründlich nach\b`,   // 德语
+	`\bnachdenken\b`,            // 德语
+	`\briflettere\b`,            // 意大利语
+	`\bpensare profondamente\b`, // 意大利语
+	`\bpensando\b`,              // 西班牙语/葡萄牙语
+	`\bpiensa profundamente\b`,  // 西班牙语
+	`\bpensare\b`,               // 意大利语
+	`\bpensa molto\b`,           // 意大利语
 	`\bthink a lot\b`,
 	`\brichis\b`,
 	`\brichi\b`,

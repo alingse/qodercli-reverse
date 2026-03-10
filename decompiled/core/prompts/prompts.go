@@ -54,10 +54,10 @@ type TemplateVars struct {
 	DefaultTimeoutMin int
 
 	// 动态内容
-	PlanFilePath     string // Plan 文件路径
-	ContextDirs      string // 上下文目录
-	Language         string // 用户语言
-	PreviousSummary  string // 会话摘要
+	PlanFilePath    string // Plan 文件路径
+	ContextDirs     string // 上下文目录
+	Language        string // 用户语言
+	PreviousSummary string // 会话摘要
 
 	// 自定义变量
 	Custom map[string]string
@@ -171,49 +171,49 @@ type PromptType string
 
 const (
 	// 主 Agent 提示词
-	PromptTypeMainAgent        PromptType = "main_agent"
+	PromptTypeMainAgent            PromptType = "main_agent"
 	PromptTypeMainAgentEducational PromptType = "main_agent_educational"
 	PromptTypeMainAgentPractice    PromptType = "main_agent_practice"
-	PromptTypeGenericTask      PromptType = "generic_task"
+	PromptTypeGenericTask          PromptType = "generic_task"
 
 	// 子 Agent 提示词
-	PromptTypeBrowserSubagent  PromptType = "browser_subagent"
-	PromptTypeCodeImplement    PromptType = "code_implement"
-	PromptTypeTaskExecutor     PromptType = "task_executor"
-	PromptTypeDesignAgent      PromptType = "design_agent"
-	PromptTypeSystemDesign     PromptType = "system_design"
-	PromptTypeSoftwareArchitect PromptType = "software_architect"
-	PromptTypeDesignReview     PromptType = "design_review"
-	PromptTypeRequirements     PromptType = "requirements_analysis"
-	PromptTypeTestAutomation   PromptType = "test_automation"
-	PromptTypeCodeReviewer     PromptType = "code_reviewer"
-	PromptTypeDebugger         PromptType = "debugger"
-	PromptTypeFileSearch       PromptType = "file_search"
+	PromptTypeBrowserSubagent      PromptType = "browser_subagent"
+	PromptTypeCodeImplement        PromptType = "code_implement"
+	PromptTypeTaskExecutor         PromptType = "task_executor"
+	PromptTypeDesignAgent          PromptType = "design_agent"
+	PromptTypeSystemDesign         PromptType = "system_design"
+	PromptTypeSoftwareArchitect    PromptType = "software_architect"
+	PromptTypeDesignReview         PromptType = "design_review"
+	PromptTypeRequirements         PromptType = "requirements_analysis"
+	PromptTypeTestAutomation       PromptType = "test_automation"
+	PromptTypeCodeReviewer         PromptType = "code_reviewer"
+	PromptTypeDebugger             PromptType = "debugger"
+	PromptTypeFileSearch           PromptType = "file_search"
 	PromptTypeWorkflowOrchestrator PromptType = "workflow_orchestrator"
-	PromptTypeBehaviorAnalyzer PromptType = "behavior_analyzer"
-	PromptTypeSkepticalValidator PromptType = "skeptical_validator"
-	PromptTypeSecurityAuditor  PromptType = "security_auditor"
-	PromptTypeDataScientist    PromptType = "data_scientist"
-	PromptTypeGuideAgent       PromptType = "guide_agent"
-	PromptTypeQuestHandler     PromptType = "quest_handler"
-	PromptTypeSpecHLDDesigner  PromptType = "spec_hld_designer"
-	PromptTypeSpecLLDDesigner  PromptType = "spec_lld_designer"
-	PromptTypeSpecImplementer  PromptType = "spec_implementer"
-	PromptTypeSpecLeader       PromptType = "spec_leader"
-	PromptTypeExploreAgent     PromptType = "explore_agent"
+	PromptTypeBehaviorAnalyzer     PromptType = "behavior_analyzer"
+	PromptTypeSkepticalValidator   PromptType = "skeptical_validator"
+	PromptTypeSecurityAuditor      PromptType = "security_auditor"
+	PromptTypeDataScientist        PromptType = "data_scientist"
+	PromptTypeGuideAgent           PromptType = "guide_agent"
+	PromptTypeQuestHandler         PromptType = "quest_handler"
+	PromptTypeSpecHLDDesigner      PromptType = "spec_hld_designer"
+	PromptTypeSpecLLDDesigner      PromptType = "spec_lld_designer"
+	PromptTypeSpecImplementer      PromptType = "spec_implementer"
+	PromptTypeSpecLeader           PromptType = "spec_leader"
+	PromptTypeExploreAgent         PromptType = "explore_agent"
 
 	// IDE 集成提示词
-	PromptTypeQoderWork        PromptType = "qoderwork"
-	PromptTypeQoderStudio      PromptType = "qoder_studio"
-	PromptTypeQoderDesktop     PromptType = "qoder_desktop"
+	PromptTypeQoderWork    PromptType = "qoderwork"
+	PromptTypeQoderStudio  PromptType = "qoder_studio"
+	PromptTypeQoderDesktop PromptType = "qoder_desktop"
 
 	// 专项提示词
 	PromptTypeConversationSummary PromptType = "conversation_summary"
-	PromptTypeAgentArchitect   PromptType = "agent_architect"
-	PromptTypeCommandArchitect PromptType = "command_architect"
-	PromptTypeUnitTestExpert   PromptType = "unit_test_expert"
-	PromptTypeCoordinator      PromptType = "coordinator"
-	PromptTypePlanModeReturn   PromptType = "plan_mode_return"
+	PromptTypeAgentArchitect      PromptType = "agent_architect"
+	PromptTypeCommandArchitect    PromptType = "command_architect"
+	PromptTypeUnitTestExpert      PromptType = "unit_test_expert"
+	PromptTypeCoordinator         PromptType = "coordinator"
+	PromptTypePlanModeReturn      PromptType = "plan_mode_return"
 )
 
 // Prompt 提示词定义
@@ -234,7 +234,7 @@ func (p *Prompt) Render(vars *TemplateVars) (string, error) {
 
 	tmpl, err := template.New(string(p.Type)).
 		Funcs(template.FuncMap{
-			"join": strings.Join,
+			"join":  strings.Join,
 			"upper": strings.ToUpper,
 			"lower": strings.ToLower,
 			"title": strings.Title,

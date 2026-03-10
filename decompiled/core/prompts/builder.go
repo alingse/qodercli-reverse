@@ -24,19 +24,19 @@ type SystemPromptBuilderV2 struct {
 	vars *TemplateVars
 
 	// 组件开关
-	enableRoleDefinition    bool
-	enableToolGuide         bool
-	enablePermissionRules   bool
-	enableEnvironmentInfo   bool
-	enableProjectContext    bool
-	enableCodingStandards   bool
-	enableSystemReminder    bool
-	enableSessionContext    bool
+	enableRoleDefinition  bool
+	enableToolGuide       bool
+	enablePermissionRules bool
+	enableEnvironmentInfo bool
+	enableProjectContext  bool
+	enableCodingStandards bool
+	enableSystemReminder  bool
+	enableSessionContext  bool
 
 	// 收集器
-	envCollector    *EnvironmentCollector
-	projectLoader   *ProjectContextLoader
-	sessionContext  *SessionContext
+	envCollector   *EnvironmentCollector
+	projectLoader  *ProjectContextLoader
+	sessionContext *SessionContext
 
 	// 自定义内容
 	customSections []Section
@@ -54,55 +54,55 @@ type Section struct {
 // EnvironmentInfo 环境信息
 type EnvironmentInfo struct {
 	// 系统信息
-	OS              string
-	Architecture    string
-	Shell           string
-	HomeDir         string
-	WorkingDir      string
-	TempDir         string
+	OS           string
+	Architecture string
+	Shell        string
+	HomeDir      string
+	WorkingDir   string
+	TempDir      string
 
 	// Git 信息
-	GitRepo         bool
-	GitBranch       string
-	GitCommit       string
-	GitRemote       string
-	GitStatus       string
+	GitRepo   bool
+	GitBranch string
+	GitCommit string
+	GitRemote string
+	GitStatus string
 
 	// 开发环境
-	GoVersion       string
-	NodeVersion     string
-	PythonVersion   string
-	JavaVersion     string
-	RustVersion     string
+	GoVersion     string
+	NodeVersion   string
+	PythonVersion string
+	JavaVersion   string
+	RustVersion   string
 
 	// 编辑器/IDE
-	Editor          string
-	EditorVersion   string
+	Editor        string
+	EditorVersion string
 
 	// 时间
-	Timezone        string
-	CurrentTime     string
+	Timezone    string
+	CurrentTime string
 }
 
 // ProjectContext 项目上下文
 type ProjectContext struct {
 	// 项目基本信息
-	Name            string
-	RootPath        string
-	Type            string  // go, node, python, rust, etc.
-	Language        string
+	Name     string
+	RootPath string
+	Type     string // go, node, python, rust, etc.
+	Language string
 
 	// 配置文件
-	HasGoMod        bool
-	HasPackageJSON  bool
-	HasPyProject    bool
-	HasCargoToml    bool
-	HasPomXML       bool
+	HasGoMod       bool
+	HasPackageJSON bool
+	HasPyProject   bool
+	HasCargoToml   bool
+	HasPomXML      bool
 
 	// 项目特定指令
-	AgentsMDContent string
+	AgentsMDContent  string
 	ClaudeDirContent string
-	ReadmeContent   string
+	ReadmeContent    string
 
 	// 编码规范
 	CodingStandards string
@@ -129,9 +129,9 @@ func NewSystemPromptBuilderV2(vars *TemplateVars) *SystemPromptBuilderV2 {
 	}
 
 	return &SystemPromptBuilderV2{
-		vars:            vars,
-		prebuiltParts:   make(map[string]string),
-		customSections:  make([]Section, 0),
+		vars:                  vars,
+		prebuiltParts:         make(map[string]string),
+		customSections:        make([]Section, 0),
 		enableRoleDefinition:  true,
 		enableToolGuide:       true,
 		enablePermissionRules: true,
@@ -414,8 +414,8 @@ func (b *SystemPromptBuilderV2) buildToolGuideSection() *Section {
 
 func (b *SystemPromptBuilderV2) buildPermissionSection() *Section {
 	return &Section{
-		Title:    "Permission Rules",
-		Content:  `Permission Rules:
+		Title: "Permission Rules",
+		Content: `Permission Rules:
 - ALWAYS ask for permission before:
   * Modifying files outside the current working directory
   * Executing commands that modify system state

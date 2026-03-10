@@ -15,10 +15,10 @@ var DefaultManager Manager = NewDefaultManager()
 
 // defaultManager 提示词管理器默认实现
 type defaultManager struct {
-	mu       sync.RWMutex
-	prompts  map[PromptType]*Prompt
-	vars     *TemplateVars
-	dataDir  string // 外部提示词文件目录
+	mu      sync.RWMutex
+	prompts map[PromptType]*Prompt
+	vars    *TemplateVars
+	dataDir string // 外部提示词文件目录
 }
 
 // NewDefaultManager 创建默认提示词管理器

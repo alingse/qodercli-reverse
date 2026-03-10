@@ -11,10 +11,10 @@ import (
 
 // ProjectContextLoader 项目上下文加载器
 type ProjectContextLoader struct {
-	workDir         string
-	maxFileSize     int64
-	maxDepth        int
-	cache           *ProjectContext
+	workDir     string
+	maxFileSize int64
+	maxDepth    int
+	cache       *ProjectContext
 }
 
 // NewProjectContextLoader 创建新的加载器
@@ -121,7 +121,7 @@ func (l *ProjectContextLoader) loadAgentsMD(ctx *ProjectContext) {
 // loadClaudeDir 加载 .claude/ 目录
 func (l *ProjectContextLoader) loadClaudeDir(ctx *ProjectContext) {
 	claudeDir := filepath.Join(l.workDir, ".claude")
-	
+
 	info, err := os.Stat(claudeDir)
 	if err != nil || !info.IsDir() {
 		return
@@ -155,10 +155,10 @@ func (l *ProjectContextLoader) loadClaudeDir(ctx *ProjectContext) {
 				continue
 			}
 			name := entry.Name()
-			if strings.HasSuffix(name, ".md") && 
-			   name != "CLAUDE.md" && 
-			   name != "instructions.md" && 
-			   name != "context.md" {
+			if strings.HasSuffix(name, ".md") &&
+				name != "CLAUDE.md" &&
+				name != "instructions.md" &&
+				name != "context.md" {
 				if content := l.readFileWithLimit(filepath.Join(".claude", name)); content != "" {
 					parts = append(parts, fmt.Sprintf("%s:", name))
 					parts = append(parts, l.extractRelevantSections(content))
@@ -275,7 +275,7 @@ func (l *ProjectContextLoader) fileExists(name string) bool {
 
 func (l *ProjectContextLoader) readFileWithLimit(path string) string {
 	fullPath := filepath.Join(l.workDir, path)
-	
+
 	info, err := os.Stat(fullPath)
 	if err != nil {
 		return ""
@@ -303,13 +303,13 @@ func (l *ProjectContextLoader) extractRelevantSections(content string) string {
 		// 保留标题、列表项和重要段落
 		trimmed := strings.TrimSpace(line)
 		if strings.HasPrefix(trimmed, "#") ||
-		   strings.HasPrefix(trimmed, "-") ||
-		   strings.HasPrefix(trimmed, "*") ||
-		   strings.HasPrefix(trimmed, "1.") ||
-		   strings.HasPrefix(trimmed, "IMPORTANT:") ||
-		   strings.HasPrefix(trimmed, "CRITICAL:") ||
-		   strings.HasPrefix(trimmed, "ALWAYS:") ||
-		   strings.HasPrefix(trimmed, "NEVER:") {
+			strings.HasPrefix(trimmed, "-") ||
+			strings.HasPrefix(trimmed, "*") ||
+			strings.HasPrefix(trimmed, "1.") ||
+			strings.HasPrefix(trimmed, "IMPORTANT:") ||
+			strings.HasPrefix(trimmed, "CRITICAL:") ||
+			strings.HasPrefix(trimmed, "ALWAYS:") ||
+			strings.HasPrefix(trimmed, "NEVER:") {
 			relevant = append(relevant, line)
 		} else if len(trimmed) > 0 && len(relevant) > 0 {
 			// 保留非空行，可能是段落的一部分

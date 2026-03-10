@@ -2,8 +2,9 @@
 //
 // 这些提示词是从官方二进制 qodercli v0.1.29 中提取的
 // 提取方法:
-//   strings /Users/zhihu/.local/bin/qodercli | grep -E "^You are.*\.$"
-//   strings /Users/zhihu/.local/bin/qodercli | grep -E "(IMPORTANT|CRITICAL|ULTRA)"
+//
+//	strings /Users/zhihu/.local/bin/qodercli | grep -E "^You are.*\.$"
+//	strings /Users/zhihu/.local/bin/qodercli | grep -E "(IMPORTANT|CRITICAL|ULTRA)"
 //
 // 参考文档:
 //   - extracted_system_prompts.md
