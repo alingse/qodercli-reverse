@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	// 全局标志变量
+	// 全局标志变量 - 严格对齐官方 qodercli
 	model            string
 	maxTokens        int
 	temperature      float64
@@ -49,7 +49,7 @@ var rootCmd = &cobra.Command{
 	Use:   "qodercli",
 	Short: "Qoder CLI - AI-powered development assistant",
 	Long: `Qoder CLI is an AI-powered development assistant that helps you with coding tasks,
-	file operations, and system interactions through natural language commands.`,
+file operations, and system interactions through natural language commands.`,
 
 	// 不带参数时运行 TUI 模式
 	Run: func(cmd *cobra.Command, args []string) {
@@ -64,29 +64,53 @@ var rootCmd = &cobra.Command{
 		}
 		defer log.Close()
 
+		// 确定工作目录
+		workDir := workspace
+		if workDir == "" {
+			workDir, _ = os.Getwd()
+		}
+
+		// 构建系统提示词
+		// 官方行为：如果用户指定了 --system-prompt，使用用户提供的；否则内部自动构建
+		systemPromptText := systemPrompt
+		if systemPromptText == "" {
+			// 内部自动构建系统提示词
+			var buildErr error
+			systemPromptText, buildErr = utils.BuildSystemPromptAuto(workDir, withClaudeConfig)
+			if buildErr != nil {
+				log.Error("Failed to build system prompt: %v", buildErr)
+				// 回退到默认提示词
+				systemPromptText = utils.GetDefaultSystemPrompt()
+			}
+			log.Debug("Auto-built system prompt, length: %d", len(systemPromptText))
+		} else {
+			log.Debug("Using user-provided system prompt")
+		}
+
 		// 构建 flags 结构
 		flags := &utils.Flags{
-			Model:           model,
-			MaxTokens:       maxTokens,
-			Temperature:     temperature,
-			MaxTurns:        maxTurns,
-			PermissionMode:  permissionMode,
-			OutputFormat:    outputFormat,
-			AllowedTools:    allowedTools,
-			DisallowedTools: disallowedTools,
-			Workspace:       workspace,
+			Model:            model,
+			MaxTokens:        maxTokens,
+			Temperature:      temperature,
+			MaxTurns:         maxTurns,
+			PermissionMode:   permissionMode,
+			OutputFormat:     outputFormat,
+			AllowedTools:     allowedTools,
+			DisallowedTools:  disallowedTools,
+			Workspace:        workspace,
+			WithClaudeConfig: withClaudeConfig,
 		}
 
 		// 如果有 print 参数，运行非交互模式
 		if printMode != "" {
-			if err := print.Run(printMode, flags, quiet, systemPrompt); err != nil {
+			if err := print.Run(printMode, flags, quiet, systemPromptText); err != nil {
 				log.Fatalf("Print mode error: %v", err)
 			}
 			return
 		}
 
 		// 运行 TUI 模式
-		if err := tui.Run(flags, systemPrompt); err != nil {
+		if err := tui.Run(flags, systemPromptText); err != nil {
 			fmt.Fprintf(os.Stderr, "TUI error: %v\n", err)
 			os.Exit(1)
 		}
@@ -102,19 +126,21 @@ func Execute() {
 }
 
 func init() {
-	// 全局标志
+	// 全局标志 - 严格对齐官方
 	rootCmd.PersistentFlags().StringVarP(&model, "model", "", "auto", "Model to use (auto/efficient/gmodel/kmodel/lite/mmodel/performance/q35model/qmodel/ultimate)")
 	rootCmd.PersistentFlags().IntVarP(&maxTokens, "max-tokens", "", 4096, "Maximum tokens for response")
 	rootCmd.PersistentFlags().Float64VarP(&temperature, "temperature", "", 0.7, "Temperature for generation")
 	rootCmd.PersistentFlags().IntVarP(&maxTurns, "max-turns", "", 25, "Maximum turns for agent")
 	rootCmd.PersistentFlags().StringVarP(&permissionMode, "permission-mode", "", "ask", "Permission mode (ask/allow/deny)")
-	rootCmd.PersistentFlags().StringVarP(&systemPrompt, "system-prompt", "", "You are a helpful AI assistant.", "System prompt for the agent")
+
+	// 系统提示词标志 - 官方标准
+	rootCmd.PersistentFlags().StringVarP(&systemPrompt, "system-prompt", "", "", "System prompt for the agent")
 
 	// 日志标志
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "", false, "Enable debug logging")
 	rootCmd.PersistentFlags().StringVarP(&logFile, "log-file", "", "", "Log file path (default: ~/.qoder/qodercli.log)")
 
-	// 主要标志
+	// 主要标志 - 严格对齐官方
 	rootCmd.Flags().StringVarP(&printMode, "print", "p", "", "Non-interactive mode: process single prompt and exit")
 	rootCmd.Flags().BoolVarP(&continueSession, "continue", "c", false, "Continue last conversation")
 	rootCmd.Flags().StringVarP(&resumeSession, "resume", "r", "", "Resume specific session")

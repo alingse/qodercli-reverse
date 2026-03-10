@@ -30,6 +30,21 @@ func Run(input string, flags *utils.Flags, quiet bool, systemPrompt string) erro
 		cfg.Model = modelOverride
 	}
 
+	// 如果没有提供系统提示词，自动构建（官方行为）
+	if systemPrompt == "" {
+		var buildErr error
+		workDir := flags.Workspace
+		if workDir == "" {
+			workDir, _ = os.Getwd()
+		}
+		systemPrompt, buildErr = utils.BuildSystemPromptAuto(workDir, flags.WithClaudeConfig)
+		if buildErr != nil {
+			log.Error("Failed to build system prompt: %v", buildErr)
+			// 使用默认提示词
+			systemPrompt = utils.GetDefaultSystemPrompt()
+		}
+	}
+
 	agentCfg := &agent.Config{
 		Model:          cfg.Model,
 		MaxTokens:      flags.MaxTokens,
