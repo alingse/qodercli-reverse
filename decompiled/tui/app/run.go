@@ -36,7 +36,7 @@ func Run(opts Options) error {
 	}
 
 	// 创建 Bubble Tea 程序
-	// 不使用 AltScreen，这样退出时会保留屏幕输出
+	// 不使用 AltScreen，让输出可以随终端滚动
 	p := tea.NewProgram(model)
 
 	// 运行程序

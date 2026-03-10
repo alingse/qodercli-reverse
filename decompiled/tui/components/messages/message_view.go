@@ -36,7 +36,7 @@ type Message interface {
 	Timestamp() time.Time
 }
 
-// MessageView 消息视图组件 - 1:1 还原原版
+// MessageView 消息视图组件 - 支持无限滚动
 type MessageView struct {
 	viewport viewport.Model
 	messages []Message
@@ -50,6 +50,9 @@ type MessageView struct {
 
 	// 自动滚动
 	autoScroll bool
+
+	// 缓存的渲染内容
+	cachedContent string
 }
 
 // NewMessageView 创建新的消息视图
@@ -92,20 +95,17 @@ func (mv *MessageView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return mv, cmd
 }
 
-// View 渲染视图
+// View 渲染视图 - 直接返回完整内容，不使用 viewport 裁剪
 func (mv *MessageView) View() string {
-	mv.renderContent()
-	return mv.viewport.View()
+	// 直接返回缓存的完整内容，让终端自然滚动
+	return mv.cachedContent
 }
 
 // AddMessage 添加消息
 func (mv *MessageView) AddMessage(msg Message) {
 	mv.messages = append(mv.messages, msg)
-	// 先渲染内容，再滚动到底部
+	// 渲染内容到缓存
 	mv.renderContent()
-	if mv.autoScroll {
-		mv.viewport.GotoBottom()
-	}
 }
 
 // AddUserMessage 添加用户消息
@@ -147,9 +147,6 @@ func (mv *MessageView) AppendToLastMessage(content string) {
 		am.Content += content
 		// 重新渲染内容
 		mv.renderContent()
-		if mv.autoScroll {
-			mv.viewport.GotoBottom()
-		}
 	} else {
 		mv.AddAssistantMessage(content)
 	}
@@ -219,11 +216,8 @@ func (mv *MessageView) CompleteTool(toolID, toolName, output string, isError boo
 					toolInfo.Output = output
 					toolInfo.IsError = isError
 					toolInfo.Completed = true
-					// 重新渲染以更新图标颜色
+					// 重新渲染
 					mv.renderContent()
-					if mv.autoScroll {
-						mv.viewport.GotoBottom()
-					}
 					break
 				}
 			}
@@ -282,8 +276,9 @@ func (mv *MessageView) SetSize(width, height int) {
 	mv.width = width
 	mv.height = height
 
-	// 保存当前滚动位置（YOffset）
+	// 保存当前滚动位置（YOffset）和检查是否在底部
 	oldYOffset := mv.viewport.YOffset
+	wasAtBottom := mv.viewport.AtBottom()
 
 	mv.viewport.Width = width
 	mv.viewport.Height = height
@@ -300,9 +295,14 @@ func (mv *MessageView) SetSize(width, height int) {
 
 	// 重新渲染内容以适应新的宽度
 	mv.renderContent()
+
+	// 如果之前在底部且启用了自动滚动，保持在底部
+	if wasAtBottom && mv.autoScroll {
+		mv.viewport.GotoBottom()
+	}
 }
 
-// renderContent 渲染内容
+// renderContent 渲染内容到缓存
 func (mv *MessageView) renderContent() {
 	var sb strings.Builder
 
@@ -327,50 +327,38 @@ func (mv *MessageView) renderContent() {
 		sb.WriteString(msg.Render())
 	}
 
-	content := sb.String()
-	// 不再使用 glamour 渲染，因为消息已经通过 lipgloss 格式化
-	// glamour 会把 ANSI 转义序列当作普通文本，导致控制符显示出来
-	mv.viewport.SetContent(content)
+	// 保存到缓存，供 View() 方法使用
+	mv.cachedContent = sb.String()
 }
 
-// ScrollToBottom 滚动到底部
+// ScrollToBottom 滚动到底部（无操作，因为使用终端原生滚动）
 func (mv *MessageView) ScrollToBottom() {
-	mv.viewport.GotoBottom()
-	mv.autoScroll = true
+	// 不再需要，内容会自然滚动
 }
 
-// ScrollToTop 滚动到顶部
+// ScrollToTop 滚动到顶部（无操作，因为使用终端原生滚动）
 func (mv *MessageView) ScrollToTop() {
-	mv.viewport.GotoTop()
-	mv.autoScroll = false
+	// 不再需要，使用终端滚动条
 }
 
-// PageUp 向上翻页
+// PageUp 向上翻页（无操作，因为使用终端原生滚动）
 func (mv *MessageView) PageUp() {
-	mv.viewport.HalfPageUp()
-	mv.autoScroll = false
+	// 不再需要，使用终端滚动条
 }
 
-// PageDown 向下翻页
+// PageDown 向下翻页（无操作，因为使用终端原生滚动）
 func (mv *MessageView) PageDown() {
-	mv.viewport.HalfPageDown()
-	if mv.viewport.AtBottom() {
-		mv.autoScroll = true
-	}
+	// 不再需要，使用终端滚动条
 }
 
-// HalfPageUp 向上半页
+// HalfPageUp 向上半页（无操作，因为使用终端原生滚动）
 func (mv *MessageView) HalfPageUp() {
-	mv.viewport.HalfPageUp()
-	mv.autoScroll = false
+	// 不再需要，使用终端滚动条
 }
 
-// HalfPageDown 向下半页
+// HalfPageDown 向下半页（无操作，因为使用终端原生滚动）
 func (mv *MessageView) HalfPageDown() {
-	mv.viewport.HalfPageDown()
-	if mv.viewport.AtBottom() {
-		mv.autoScroll = true
-	}
+	// 不再需要，使用终端滚动条
 }
 
 // GetLastMessage 获取最后一条消息
@@ -421,4 +409,50 @@ func (mv *MessageView) GetTodoList() []state.Todo {
 		}
 	}
 	return nil
+}
+
+// GetAllMessagesText 获取所有消息的纯文本格式（用于退出时输出到终端）
+func (mv *MessageView) GetAllMessagesText() string {
+	var sb strings.Builder
+	for i, msg := range mv.messages {
+		if i > 0 {
+			sb.WriteString("\n\n")
+		}
+		switch m := msg.(type) {
+		case *UserMessage:
+			sb.WriteString(fmt.Sprintf("👤 %s", m.Content))
+		case *AssistantMessage:
+			sb.WriteString(fmt.Sprintf("🤖 %s", m.Content))
+		case *ToolCallInfo:
+			status := "⏺"
+			if m.Completed {
+				if m.IsError {
+					status = "❌"
+				} else {
+					status = "✓"
+				}
+			}
+			sb.WriteString(fmt.Sprintf("%s %s", status, m.Name))
+			if m.Output != "" {
+				sb.WriteString(fmt.Sprintf("\n  %s", m.Output))
+			}
+		case *ErrorMessage:
+			sb.WriteString(fmt.Sprintf("❌ Error: %s", m.ErrStr))
+		case *WelcomeMessage:
+			sb.WriteString(fmt.Sprintf("🚀 Qoder CLI %s\n📁 %s", m.Version, m.Cwd))
+		default:
+			sb.WriteString(msg.Render())
+		}
+	}
+	return sb.String()
+}
+
+// AtTop 检查是否在顶部
+func (mv *MessageView) AtTop() bool {
+	return mv.viewport.AtTop()
+}
+
+// AtBottom 检查是否在底部
+func (mv *MessageView) AtBottom() bool {
+	return mv.viewport.AtBottom()
 }
