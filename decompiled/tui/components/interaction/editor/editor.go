@@ -6,6 +6,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textarea"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -60,6 +61,9 @@ type EditorComponent struct {
 
 	// 事件发布
 	pubsub *pubsub.PubSub
+
+	// 缓存上次行数，用于检测行数变化
+	lastLineCount int
 }
 
 // NewEditorComponent 创建新的编辑器组件
@@ -83,6 +87,13 @@ func NewEditorComponent(ps *pubsub.PubSub) *EditorComponent {
 	ta.FocusedStyle.CursorLine = lipgloss.NewStyle()
 	ta.FocusedStyle.Base = lipgloss.NewStyle()
 
+	// 修复：修改 KeyMap，区分 Enter 和 Shift+Enter
+	// Enter 发送消息，Shift+Enter 插入换行
+	ta.KeyMap.InsertNewline = key.NewBinding(
+		key.WithKeys("shift+enter"),
+		key.WithHelp("shift+enter", "insert newline"),
+	)
+
 	ec := &EditorComponent{
 		textarea:          ta,
 		mode:              ModeInsert,
@@ -94,8 +105,9 @@ func NewEditorComponent(ps *pubsub.PubSub) *EditorComponent {
 		historyHandler:    NewHistoryHandler(),
 		inputCache:        NewInputCache(),
 		// 设置默认尺寸
-		width:  80,
-		height: 3,
+		width:         80,
+		height:        3,
+		lastLineCount: 1, // 初始为1行
 	}
 
 	// 设置 textarea 的默认尺寸
@@ -120,16 +132,19 @@ func (ec *EditorComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	var cmds []tea.Cmd
+	// 标记消息是否被 handleKeyMsg 处理（用于阻止传递给 textarea）
+	keyHandled := false
 
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		ec.SetSize(msg.Width, msg.Height)
 
 	case tea.KeyMsg:
-		cmd := ec.handleKeyMsg(msg)
+		cmd, handled := ec.handleKeyMsg(msg)
 		if cmd != nil {
 			cmds = append(cmds, cmd)
 		}
+		keyHandled = handled
 
 	case tea.MouseMsg:
 		// 处理鼠标事件
@@ -142,8 +157,8 @@ func (ec *EditorComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return ec, nil
 	}
 
-	// 更新 textarea
-	if ec.focused {
+	// 更新 textarea（只有键消息未被处理时才传递）
+	if ec.focused && !keyHandled {
 		newTextarea, cmd := ec.textarea.Update(msg)
 		ec.textarea = newTextarea
 		if cmd != nil {
@@ -151,49 +166,54 @@ func (ec *EditorComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
+	// 检测行数变化，同步更新 textarea 高度
+	// 这确保当用户添加/删除换行时，编辑器高度立即响应
+	ec.syncHeight()
+
 	return ec, tea.Batch(cmds...)
 }
 
 // handleKeyMsg 处理键盘消息 - 原版核心逻辑
-func (ec *EditorComponent) handleKeyMsg(msg tea.KeyMsg) tea.Cmd {
+// 返回值: (命令, 是否已处理) - 如果已处理，消息不会传递给 textarea
+func (ec *EditorComponent) handleKeyMsg(msg tea.KeyMsg) (tea.Cmd, bool) {
 	switch msg.Type {
 	case tea.KeyEsc:
-		return ec.handleEscape()
+		return ec.handleEscape(), true
 
 	case tea.KeyEnter:
-		// 检查 Shift+Enter
+		// 检查 Shift+Enter - 未处理，让 textarea 插入换行
 		if msg.String() == "shift+enter" {
-			return nil // 让 textarea 处理换行
+			return nil, false
 		}
-		// Enter 发送消息
-		return ec.sendMessage()
+		// Enter 发送消息 - 已处理，不传递给 textarea
+		return ec.sendMessage(), true
 
 	case tea.KeyCtrlC:
 		if ec.textarea.Value() == "" {
-			return tea.Quit
+			return tea.Quit, true
 		}
 
 	case tea.KeyUp:
 		if ec.atTopOfInput() {
-			return ec.handleHistoryNavigation(-1)
+			return ec.handleHistoryNavigation(-1), true
 		}
 
 	case tea.KeyDown:
 		if ec.atBottomOfInput() {
-			return ec.handleHistoryNavigation(1)
+			return ec.handleHistoryNavigation(1), true
 		}
 
 	case tea.KeyTab:
-		// Tab: 插入空格
+		// Tab: 插入空格 - 已处理
 		ec.textarea.InsertString("    ")
-		return nil
+		return nil, true
 
 	case tea.KeyPgUp, tea.KeyPgDown:
-		// 页面滚动 - 传递给父组件
-		return nil
+		// 页面滚动 - 未处理，传递给父组件
+		return nil, false
 	}
 
-	return nil
+	return nil, false
 }
 
 // handleEscape 处理 Esc 键
@@ -214,8 +234,10 @@ func (ec *EditorComponent) resetInputs() {
 	ec.textarea.Focus()
 	ec.focused = true
 	ec.attachmentHandler.Reset()
-	// 重置 textarea 高度为单行（1行内容 + 边框）
+	// 重置 textarea 高度为单行（1行内容）
 	ec.textarea.SetHeight(1)
+	// 重置行数缓存
+	ec.lastLineCount = 1
 }
 
 // sendMessage 发送消息 - 核心功能
@@ -280,6 +302,31 @@ func (ec *EditorComponent) atBottomOfInput() bool {
 // GetLineCount 获取当前行数
 func (ec *EditorComponent) GetLineCount() int {
 	return ec.textarea.LineCount()
+}
+
+// syncHeight 同步 textarea 高度与内容行数
+// 当行数变化时立即更新，确保高度变化及时反映
+func (ec *EditorComponent) syncHeight() {
+	currentLines := ec.textarea.LineCount()
+
+	// 如果行数没有变化，跳过
+	if currentLines == ec.lastLineCount {
+		return
+	}
+
+	ec.lastLineCount = currentLines
+
+	// 限制内容行数在 1-5 范围内
+	contentLines := currentLines
+	if contentLines > 5 {
+		contentLines = 5
+	}
+	if contentLines < 1 {
+		contentLines = 1
+	}
+
+	// 设置 textarea 内部高度
+	ec.textarea.SetHeight(contentLines)
 }
 
 // GetPreferredHeight 获取首选高度（根据内容行数 + 边框 + padding）
