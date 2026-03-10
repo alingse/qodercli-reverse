@@ -42,10 +42,6 @@ type appModel struct {
 	width  int
 	height int
 
-	// 上次设置的组件尺寸
-	lastEditorWidth  int
-	lastEditorHeight int
-
 	// 状态
 	quitting      bool
 	processing    bool
@@ -54,9 +50,8 @@ type appModel struct {
 	sessionActive bool
 
 	// 状态栏
-	status     string
-	model      string
-	tokenUsage *types.TokenUsage
+	status string
+	model  string
 
 	// 流式输出追踪
 	lastResponseLen int32 
@@ -116,21 +111,6 @@ func New(cfg *config.Config, ag *agent.Agent, ps *pubsub.PubSub) *appModel {
 func (m *appModel) serializeCallbacks() {
 	for fn := range m.callbackChan {
 		fn()
-	}
-}
-
-// sendToEventChan 发送消息到事件 channel，带超时避免阻塞
-func (m *appModel) sendToEventChan(msg tea.Msg, block bool) {
-	if block {
-		// 阻塞发送（关键消息）
-		m.eventChan <- msg
-	} else {
-		// 非阻塞发送，避免卡住 Agent
-		select {
-		case m.eventChan <- msg:
-		default:
-			// channel 满了，丢弃消息（流式消息可丢弃）
-		}
 	}
 }
 

@@ -49,11 +49,12 @@ type Agent struct {
 	mu     sync.RWMutex
 
 	// 回调
-	onMessage    func(msg *types.Message)
-	onToolCall   func(call *types.ToolCall)
-	onToolResult func(result *types.ToolResult)
-	onError      func(err error)
-	onFinish     func(reason types.FinishReason)
+	onMessage     func(msg *types.Message)
+	onToolCall    func(call *types.ToolCall)
+	onToolResult  func(result *types.ToolResult)
+	onError       func(err error)
+	onFinish      func(reason types.FinishReason)
+	onTurnComplete func() bool // 回合完成回调，返回 true 表示已插入新消息需要立即处理
 }
 
 // Config Agent 配置
@@ -157,12 +158,16 @@ func (a *Agent) SetCallbacks(
 	onToolResult func(result *types.ToolResult),
 	onError func(err error),
 	onFinish func(reason types.FinishReason),
+	onTurnComplete ...func() bool, // 可选参数：回合完成回调
 ) {
 	a.onMessage = onMessage
 	a.onToolCall = onToolCall
 	a.onToolResult = onToolResult
 	a.onError = onError
 	a.onFinish = onFinish
+	if len(onTurnComplete) > 0 {
+		a.onTurnComplete = onTurnComplete[0]
+	}
 }
 
 // SetAskCallback 设置权限询问回调
@@ -369,6 +374,15 @@ func (a *Agent) generate(ctx context.Context) error {
 			log.Debug("Tool call %d completed successfully", i+1)
 		}
 		log.Debug("All tool calls completed for turn %d, will continue to next turn", turnCount)
+
+		// 回合完成回调：给 TUI 机会插入队列中的用户消息
+		if a.onTurnComplete != nil {
+			if shouldBreak := a.onTurnComplete(); shouldBreak {
+				log.Debug("Turn %d interrupted by queued user message, will restart generation", turnCount)
+				// 重置回合计数，因为新消息开启了一个新会话
+				turnCount = 0
+			}
+		}
 	}
 }
 
@@ -490,6 +504,17 @@ func (a *Agent) GetMessages() []types.Message {
 // ClearMessages 清空消息
 func (a *Agent) ClearMessages() {
 	a.state.ClearMessages()
+}
+
+// InjectUserMessage 注入用户消息（用于回合间插入队列消息）
+// 与 SendMessage 不同，此方法不会触发 generate，只添加消息到状态
+func (a *Agent) InjectUserMessage(content string) {
+	msg := &types.Message{
+		Role:    types.RoleUser,
+		Content: []types.ContentPart{{Type: "text", Text: content}},
+	}
+	a.state.AddMessage(msg)
+	log.Debug("Injected user message: %s", content)
 }
 
 // ProcessUserInput 处理用户输入（TUI 入口）
