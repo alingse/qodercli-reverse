@@ -145,6 +145,54 @@ func NewSystemPromptBuilderV2(vars *TemplateVars) *SystemPromptBuilderV2 {
 
 // ==================== 配置方法 ====================
 
+// BuilderOption 构建器选项函数
+type BuilderOption func(*SystemPromptBuilderV2)
+
+// WithOptions 批量应用构建器选项
+func (b *SystemPromptBuilderV2) WithOptions(opts ...BuilderOption) *SystemPromptBuilderV2 {
+	for _, opt := range opts {
+		opt(b)
+	}
+	return b
+}
+
+// 特性选项常量
+const (
+	FeatureRoleDefinition  = 1 << iota // 角色定义
+	FeatureToolGuide                    // 工具指南
+	FeaturePermissionRules              // 权限规则
+	FeatureEnvironmentInfo              // 环境信息
+	FeatureProjectContext               // 项目上下文
+	FeatureCodingStandards              // 编码规范
+	FeatureSessionContext               // 会话上下文
+)
+
+// WithFeatures 按位掩码批量启用/禁用特性
+//
+//	启用特性: WithFeatures(FeatureRoleDefinition | FeatureToolGuide)
+//	禁用特性: WithFeatures(0) - 禁用所有
+func WithFeatures(mask int) BuilderOption {
+	return func(b *SystemPromptBuilderV2) {
+		b.enableRoleDefinition = (mask & FeatureRoleDefinition) != 0
+		b.enableToolGuide = (mask & FeatureToolGuide) != 0
+		b.enablePermissionRules = (mask & FeaturePermissionRules) != 0
+		b.enableEnvironmentInfo = (mask & FeatureEnvironmentInfo) != 0
+		b.enableProjectContext = (mask & FeatureProjectContext) != 0
+		b.enableCodingStandards = (mask & FeatureCodingStandards) != 0
+		b.enableSessionContext = (mask & FeatureSessionContext) != 0
+	}
+}
+
+// WithAllFeatures 启用所有特性
+func WithAllFeatures() BuilderOption {
+	return WithFeatures(0xFF)
+}
+
+// WithMinimalFeatures 仅启用核心特性（角色、工具、权限）
+func WithMinimalFeatures() BuilderOption {
+	return WithFeatures(FeatureRoleDefinition | FeatureToolGuide | FeaturePermissionRules)
+}
+
 // WithRoleDefinition 启用/禁用角色定义
 func (b *SystemPromptBuilderV2) WithRoleDefinition(enable bool) *SystemPromptBuilderV2 {
 	b.enableRoleDefinition = enable
@@ -346,11 +394,7 @@ func (b *SystemPromptBuilderV2) Build() (string, error) {
 
 // BuildMinimal 构建最小化提示词（仅核心组件）
 func (b *SystemPromptBuilderV2) BuildMinimal() (string, error) {
-	b.enableEnvironmentInfo = false
-	b.enableProjectContext = false
-	b.enableCodingStandards = false
-	b.enableSessionContext = false
-	return b.Build()
+	return b.WithOptions(WithMinimalFeatures()).Build()
 }
 
 // BuildForSubagent 为子 Agent 构建提示词

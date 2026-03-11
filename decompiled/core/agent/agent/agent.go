@@ -18,6 +18,12 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/types"
 )
 
+// 工具默认配置常量
+const (
+	DefaultReadToolMaxBytes = 32 * 1024 * 1024 // Read 工具默认最大读取字节数 (32MB)
+	DefaultBashTimeout      = 5 * time.Minute  // Bash 工具默认超时时间
+)
+
 // Agent AI Agent
 type Agent struct {
 	// 配置
@@ -112,7 +118,7 @@ func NewAgent(config *Config, provider provider.Client) (*Agent, error) {
 // registerBuiltinTools 注册内置工具
 func (a *Agent) registerBuiltinTools() error {
 	// 文件工具
-	if err := a.toolRegistry.Register(tools.NewReadTool(32 * 1024 * 1024)); err != nil {
+	if err := a.toolRegistry.Register(tools.NewReadTool(DefaultReadToolMaxBytes)); err != nil {
 		return err
 	}
 	if err := a.toolRegistry.Register(tools.NewWriteTool()); err != nil {
@@ -133,7 +139,7 @@ func (a *Agent) registerBuiltinTools() error {
 
 	// Bash 工具
 	shellManager := tools.NewDefaultShellManager()
-	if err := a.toolRegistry.Register(tools.NewBashTool(shellManager, 5*time.Minute)); err != nil {
+	if err := a.toolRegistry.Register(tools.NewBashTool(shellManager, DefaultBashTimeout)); err != nil {
 		return err
 	}
 	if err := a.toolRegistry.Register(tools.NewBashOutputTool(shellManager)); err != nil {

@@ -22,6 +22,40 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/version"
 )
 
+// 通道缓冲区大小常量
+const (
+	DefaultEventChanSize    = 100  // 事件通道缓冲区大小
+	DefaultCallbackChanSize = 1000 // 回调通道缓冲区大小
+)
+
+// 状态文本常量
+const (
+	StatusReady      = "Ready"
+	StatusThinking   = "Thinking..."
+	StatusUsingTool  = "Using tool..."
+	StatusError      = "Error"
+)
+
+// 颜色代码常量（Lipgloss ANSI 颜色）
+const (
+	ColorGreen       = "82"  // 绿色 - 就绪/完成状态
+	ColorPurple      = "135" // 紫色 - 处理中状态
+	ColorRed         = "203" // 红色 - 错误状态
+	ColorGray        = "248" // 灰色 - 待处理/默认文本
+	ColorGrayLight   = "246" // 浅灰色 - 预览文本
+	ColorWhite       = "255" // 白色 - 高亮文本/默认
+	ColorDarkBg      = "237" // 深色背景
+)
+
+// UI 尺寸常量
+const (
+	StatusBarHeight = 1
+	MinHelpWidth    = 20
+	HelpBorderWidth = 4
+	StatusBarLeftWidth   = 20
+	StatusBarRightMargin = 40
+)
+
 // appModel TUI 应用模型 - 遵循 Bubble Tea 响应式架构
 type appModel struct {
 	// 核心组件
@@ -125,10 +159,10 @@ func New(cfg *config.Config, ag *agent.Agent, ps *pubsub.PubSub) *appModel {
 		agent:         ag,
 		pubsub:        ps,
 		sessionActive: true,
-		status:        "Ready",
+		status:        StatusReady,
 		model:         cfg.Model,
-		eventChan:     make(chan tea.Msg, 100),
-		callbackChan:  make(chan func(), 1000), // 增大缓冲区避免阻塞
+		eventChan:     make(chan tea.Msg, DefaultEventChanSize),
+		callbackChan:  make(chan func(), DefaultCallbackChanSize), // 增大缓冲区避免阻塞
 		hasTurn:       false,
 		currentTurn:   nil,
 	}
@@ -201,7 +235,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case editor.SendMsg:
 		m.processing = true
-		m.status = "Thinking..."
+		m.status = StatusThinking
 
 		// 1. 将用户消息持久化到终端
 		userMsg := &messages.UserMessage{
@@ -237,7 +271,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, m.waitForEvents())
 
 	case AgentToolStartMsg:
-		m.status = "Using tool..."
+		m.status = StatusUsingTool
 
 		if m.hasTurn && m.currentTurn != nil {
 			// 1. 先持久化之前的流式文本（如果有）
@@ -305,13 +339,13 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-		m.status = "Thinking..."
+		m.status = StatusThinking
 		cmds = append(cmds, m.waitForEvents())
 
 	case AgentErrorMsg:
 		m.errorMsg = msg.Err.Error()
 		m.processing = false
-		m.status = "Error"
+		m.status = StatusError
 
 		// 错误时持久化当前回合的部分内容
 		if m.hasTurn && m.currentTurn != nil {
@@ -376,7 +410,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		m.processing = false
-		m.status = "Ready"
+		m.status = StatusReady
 		cmds = append(cmds, m.waitForEvents())
 
 	case QuitMsg:
@@ -571,7 +605,7 @@ func (m appModel) renderCurrentTurn() string {
 
 		// 使用灰色斜体样式表示正在生成的内容
 		previewStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("246")).
+			Foreground(lipgloss.Color(ColorGrayLight)).
 			Italic(true)
 
 		// 直接渲染内容，添加 ⏺ 前缀
@@ -594,15 +628,15 @@ func (m appModel) renderCurrentTurn() string {
 		var color string
 		switch toolCall.Status {
 		case ToolCallStatusPending:
-			color = "248" // 灰色
+			color = ColorGray // 灰色
 		case ToolCallStatusRunning:
-			color = "255" // 白色
+			color = ColorWhite // 白色
 		case ToolCallStatusCompleted:
-			color = "82" // 绿色
+			color = ColorGreen // 绿色
 		case ToolCallStatusError:
-			color = "203" // 红色
+			color = ColorRed // 红色
 		default:
-			color = "255" // 默认白色
+			color = ColorWhite // 默认白色
 		}
 
 		style := lipgloss.NewStyle().Foreground(lipgloss.Color(color))
@@ -615,36 +649,36 @@ func (m appModel) renderCurrentTurn() string {
 func (m appModel) renderStatusBar() string {
 	var statusColor string
 	switch m.status {
-	case "Ready":
-		statusColor = "82"
-	case "Thinking...", "Using tool...":
-		statusColor = "135"
-	case "Error":
-		statusColor = "203"
+	case StatusReady:
+		statusColor = ColorGreen
+	case StatusThinking, StatusUsingTool:
+		statusColor = ColorPurple
+	case StatusError:
+		statusColor = ColorRed
 	default:
-		statusColor = "248"
+		statusColor = ColorGray
 	}
 
-	statusStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(statusColor)).Width(20)
+	statusStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(statusColor)).Width(StatusBarLeftWidth)
 	statusStr := statusStyle.Render("● " + m.status)
 
-	modelWidth := m.width - 40
+	modelWidth := m.width - StatusBarRightMargin
 	if modelWidth < 0 {
 		modelWidth = 0
 	}
-	modelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("248")).Width(modelWidth)
+	modelStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(ColorGray)).Width(modelWidth)
 	modelStr := modelStyle.Render(m.model)
 
-	barStyle := lipgloss.NewStyle().Background(lipgloss.Color("237")).Padding(0, 1).Width(m.width)
+	barStyle := lipgloss.NewStyle().Background(lipgloss.Color(ColorDarkBg)).Padding(0, 1).Width(m.width)
 	content := lipgloss.JoinHorizontal(lipgloss.Left, statusStr, modelStr)
 	return barStyle.Render(content)
 }
 
 func (m appModel) renderHelp() string {
 	help := "\nQoder CLI Help\n\nCtrl+C Quit\nEnter Send\nF1 Toggle help\n"
-	helpWidth := m.width - 4
-	if helpWidth < 20 {
-		helpWidth = 20
+	helpWidth := m.width - HelpBorderWidth
+	if helpWidth < MinHelpWidth {
+		helpWidth = MinHelpWidth
 	}
 	style := lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).Padding(1).Width(helpWidth)
 	return style.Render(help)
