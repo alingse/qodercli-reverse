@@ -1,24 +1,53 @@
 # qodercli 逆向分析项目
 
-本项目对 Qoder CLI (v0.1.29) 进行深度逆向分析，还原其代码架构、模块设计和运行机制。
+> **注意**: qodercli 是阿里巴巴内部的闭源项目。本项目通过逆向分析还原其架构，反编译结果可编译运行，仅供学习和研究使用。
 
 ## 项目目标
 
 - **分析对象**: qodercli v0.1.29 (Mach-O arm64 Go binary, ~37MB)
 - **分析方法**: 符号表分析、字符串提取、行为观察、配置分析
 - **输出物**: 完整架构文档 + 反编译代码示例
+- **反编译成果**: 成功还原核心架构，反编译代码可编译运行
 
-## 当前进展
+## 项目状态概览
 
-已完成全部逆向分析任务：
+本项目已完成核心架构逆向分析，主要功能模块实现状态如下：
 
-| Phase | 任务 | 状态 |
-|-------|------|------|
-| Phase 1 | 基础信息提取（包结构、依赖图） | ✅ |
-| Phase 2 | 核心模块分析（CLI/AI/MCP/Tools/Session/Permission/GitHub/SubAgent） | ✅ |
-| Phase 3 | 整合输出（架构概览文档） | ✅ |
+### ✅ 已完整实现
+- **核心架构分析**: 完整架构文档已生成
+- **Agent 核心系统**: 消息循环、工具调用、权限控制
+- **TUI 交互界面**: Bubble Tea 框架 + Markdown 渲染
+- **基础工具集**: Read/Write/Edit/Grep/Bash/Glob/Delete 等 9 个工具
+- **权限安全系统**: 细粒度规则引擎，Hook 拦截机制
+
+### 🔄 部分实现（核心功能可用）
+- **多 Provider 支持**: Qoder + OpenAI 可用，支持扩展其他 Provider
+- **MCP 协议集成**: Client 库已实现，支持 stdio/SSE 传输
+- **CLI 命令框架**: 基础 CLI 功能可用，支持交互模式
+- **配置管理系统**: 基础配置结构，支持模型选择和基础设置
+- **运行模式支持**: 交互模式完整，其他模式待完善
+
+### ⏳ 待实现功能
+- **会话管理**: 会话持久化、恢复功能
+- **高级工具扩展**: WebFetch/WebSearch/Task/TodoWrite/Skill 等
+- **MCP 管理功能**: CLI 子命令、服务器管理、OAuth 认证
+- **Jobs 并发系统**: worktree 任务管理
+- **SubAgent 系统**: 子代理调度和执行
+- **GitHub 集成**: PR 创建、代码审查、Actions 集成
+
+**详细差距分析**: 参见 [反编译差距分析文档](docs/11-decompiled-gap-analysis.md)
 
 **完成时间**: 2026-03-09
+
+## 完成效果展示
+
+以下是 qodercli 的实际运行界面截图，展示了逆向分析项目的完成效果：
+
+### 截图 1: qodercli 交互界面 (1014×536)
+![qodercli 交互界面](qodercli.1.png)
+
+### 截图 2: qodercli 工具使用界面 (960×909)
+![qodercli 工具使用界面](qodercli.2.png)
 
 ## 文档目录
 
@@ -86,16 +115,7 @@ decompiled/
 └────────┬────────┘
 ```
 
-## 关键发现
 
-| 模块 | 说明 |
-|------|------|
-| **多 Provider** | 支持 Qoder/OpenAI/Anthropic/IdeaLab/DashScope |
-| **工具系统** | Bash/Read/Write/Edit/Grep/Glob/Delete 等 |
-| **MCP 协议** | stdio/SSE 传输，可扩展工具资源 |
-| **权限系统** | 细粒度规则引擎，Hook 拦截 |
-| **GitHub 集成** | PR 创建、Actions、Code Review |
-| **运行模式** | 交互/非交互/SDK/容器化 |
 
 ## 开发工作流程
 
@@ -167,30 +187,71 @@ code.alibaba-inc.com/qoder-core/qodercli/
 3. **深入模块**: 阅读对应模块文档 (01-11)
 4. **参考代码**: 查看 `decompiled/` 中的反编译示例
 
-## 重构计划
+## 实现计划（基于差距分析）
 
-当前 `decompiled/cmd/root.go` 包含 600+ 行代码，混合了多种职责。参考 `docs/official-architecture.md` 中的官方架构，建议进行以下重构：
+根据 [反编译差距分析文档](docs/11-decompiled-gap-analysis.md)，以下是建议的实现优先级：
 
-**重要**: 每个 Phase 开始前，必须先执行"开发工作流程"中的逆向分析步骤：
-- 使用 `which qodercli` 定位官方二进制
-- 使用 `nm`、`strings`、`go tool objdump` 分析官方实现
-- 对照官方架构规划方案
+### Phase 1: 核心可用性 (P0 - 最高优先级)
 
-### 重构阶段
+1. **引入 Cobra CLI 框架**
+   - 搭建完整的 `cmd/` 目录结构
+   - 实现所有 flags 和子命令绑定
+   - 解决当前硬编码的 CLI 逻辑
 
-1. **Phase 1**: 提取 Print Mode 逻辑到 `cmd/print/` 包
-   - 分析官方 `cmd/start/` 和 `cmd/message_io/` 的实现
-   - 提取格式化和流式输出逻辑
+2. **完善配置系统**
+   - 支持多层配置加载（环境变量、全局配置、项目配置）
+   - 实现完整的 Config 结构体
+   - 添加 Claude 配置兼容性
 
-2. **Phase 2**: 分离 TUI 初始化到 `cmd/tui/` 包
-   - 分析官方 TUI 启动流程
-   - 分离交互模式和非交互模式
+3. **实现会话管理**
+   - 会话持久化存储
+   - 支持 `-c` (continue) 和 `-r` (resume) 功能
+   - 会话恢复机制
 
-3. **Phase 3**: 提取工具函数到 `cmd/utils/` 包
-   - 对照官方 `cmd/utils/` 包结构
-   - 提取 Provider 创建和配置加载逻辑
+4. **构建 System Prompt Builder**
+   - 动态生成系统提示
+   - 集成工具描述、环境信息、权限规则
 
-详见 [官方架构文档](docs/official-architecture.md) 和 [差距分析](docs/11-decompiled-gap-analysis.md)。
+### Phase 2: 功能完善 (P1 - 中等优先级)
+
+5. **补全缺失工具**
+   - WebFetch、WebSearch、Task、TodoWrite、AskUserQuestion
+   - 将 MCP 工具动态注册到 Agent
+
+6. **实现 MCP 子命令系统**
+   - `mcp add/get/list/remove/auth` 子命令
+   - MCP 服务器配置管理
+   - OAuth 认证流程
+
+7. **实现非交互 Print 模式**
+   - `-p` 参数支持
+   - 多种输出格式 (text/json/stream-json)
+   - 流式输出处理
+
+### Phase 3: 高级功能 (P2 - 较低优先级)
+
+8. **Worktree/Jobs 系统**
+   - Git worktree 并发任务管理
+   - `jobs` 和 `rm` 子命令
+   - Kubernetes 集成支持
+
+9. **SubAgent 和 Skill 系统**
+   - 子代理调度和执行
+   - 技能调用和管理
+   - 内置 SubAgent 类型实现
+
+10. **GitHub 集成**
+    - PR 创建和代码审查
+    - GitHub Actions 集成
+    - 代码搜索和仓库管理
+
+11. **其他缺失功能**
+    - 自动更新 (`update` 子命令)
+    - 反馈系统 (`feedback` 子命令)
+    - 状态检查 (`status` 子命令)
+    - Shell 自动补全
+
+**详细实现指南**: 参考 [官方架构文档](docs/official-architecture.md) 和 [差距分析](docs/11-decompiled-gap-analysis.md) 中的具体实现建议。
 
 ## 注意事项
 
