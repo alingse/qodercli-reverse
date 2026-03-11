@@ -82,10 +82,10 @@ const (
 type ToolCallStatus int
 
 const (
-	ToolCallStatusPending ToolCallStatus = iota // 等待执行
-	ToolCallStatusRunning                       // 执行中
-	ToolCallStatusCompleted                     // 执行成功
-	ToolCallStatusError                         // 执行失败
+	ToolCallStatusPending   ToolCallStatus = iota // 等待执行
+	ToolCallStatusRunning                         // 执行中
+	ToolCallStatusCompleted                       // 执行成功
+	ToolCallStatusError                           // 执行失败
 )
 
 // TurnToolCall 表示回合中的一个工具调用
