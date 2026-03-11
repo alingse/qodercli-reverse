@@ -15,6 +15,9 @@ import (
 // Run 运行 TUI 模式
 func Run(flags *utils.Flags, systemPrompt string) error {
 	log.Info("Starting qodercli in TUI mode")
+	if flags.Debug {
+		log.Info("Debug mode enabled - streaming trace will be saved to /tmp")
+	}
 
 	cfg := utils.LoadConfig(flags)
 	prov, modelOverride, err := utils.CreateProvider()
@@ -66,6 +69,7 @@ func Run(flags *utils.Flags, systemPrompt string) error {
 		Config: cfg,
 		Agent:  ag,
 		PubSub: ps,
+		Debug:  flags.Debug,
 	}
 
 	if err := app.Run(opts); err != nil {

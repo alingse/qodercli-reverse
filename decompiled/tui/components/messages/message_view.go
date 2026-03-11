@@ -8,9 +8,10 @@ import (
 	"time"
 
 	"github.com/alingse/qodercli-reverse/decompiled/core/agent/state"
+	"github.com/alingse/qodercli-reverse/decompiled/core/utils/markdown"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/glamour"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // MessageType 消息类型
@@ -36,11 +37,11 @@ type Message interface {
 	Timestamp() time.Time
 }
 
-// MessageView 消息视图组件 - 支持无限滚动
+// MessageView 消息视图组件 - 支持无限滚动和 Markdown 渲染
 type MessageView struct {
 	viewport viewport.Model
 	messages []Message
-	renderer *glamour.TermRenderer
+	renderer *markdown.Renderer
 
 	width  int
 	height int
@@ -62,10 +63,8 @@ func NewMessageView() *MessageView {
 	// 启用鼠标支持，确保可以滚动
 	vp.MouseWheelEnabled = true
 
-	renderer, _ := glamour.NewTermRenderer(
-		glamour.WithStandardStyle("dark"),
-		glamour.WithWordWrap(76),
-	)
+	// 创建 markdown 渲染器，自动检测终端主题
+	renderer, _ := markdown.NewRenderer(76, "")
 
 	return &MessageView{
 		viewport:        vp,
@@ -144,7 +143,7 @@ func (mv *MessageView) AppendToLastMessage(content string) {
 
 	lastMsg := mv.messages[len(mv.messages)-1]
 	if am, ok := lastMsg.(*AssistantMessage); ok {
-		am.Content += content
+		am.AppendContent(content) // 使用 AppendContent 方法，自动标记需要重新渲染
 		// 重新渲染内容
 		mv.renderContent()
 	} else {
@@ -287,11 +286,10 @@ func (mv *MessageView) SetSize(width, height int) {
 	// 但需要确保不超过新的内容范围
 	mv.viewport.YOffset = oldYOffset
 
-	// 更新 glamour 渲染器
-	mv.renderer, _ = glamour.NewTermRenderer(
-		glamour.WithStandardStyle("dark"),
-		glamour.WithWordWrap(width-4),
-	)
+	// 更新 markdown 渲染器尺寸
+	if mv.renderer != nil {
+		mv.renderer.SetSize(width - 4) // 留边距
+	}
 
 	// 重新渲染内容以适应新的宽度
 	mv.renderContent()
@@ -324,11 +322,121 @@ func (mv *MessageView) renderContent() {
 				}
 			}
 		}
-		sb.WriteString(msg.Render())
+
+		// 根据消息类型选择渲染方式
+		switch m := msg.(type) {
+		case *AssistantMessage:
+			// 使用 markdown 渲染器渲染助手消息
+			rendered := m.RenderMarkdown(mv.renderer)
+			sb.WriteString(rendered)
+		case *UserMessage:
+			// 用户消息使用简单格式
+			sb.WriteString(mv.renderUserMessage(m))
+		case *LogItem:
+			// 日志消息支持 Markdown 渲染（保留原有的颜色前缀）
+			sb.WriteString(mv.renderLogMessage(m))
+		case *SystemMessage, *ErrorMessage, *CompactResult:
+			// 系统消息、错误消息、压缩结果支持 Markdown 渲染
+			sb.WriteString(mv.renderWithMarkdown(msg.Render()))
+		case *ToolResult:
+			// 工具结果支持 Markdown 渲染
+			sb.WriteString(mv.renderToolResultWithMarkdown(m))
+		default:
+			// 其他消息类型使用默认渲染
+			sb.WriteString(msg.Render())
+		}
 	}
 
 	// 保存到缓存，供 View() 方法使用
 	mv.cachedContent = sb.String()
+}
+
+// renderUserMessage 渲染用户消息
+func (mv *MessageView) renderUserMessage(m *UserMessage) string {
+	// 使用 lipgloss 为用户消息添加样式
+	prefixStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("252")).
+		Bold(true)
+
+	return fmt.Sprintf("%s %s",
+		prefixStyle.Render(">"),
+		strings.TrimSpace(m.Content))
+}
+
+// renderLogMessage 渲染日志消息，支持 Markdown
+func (mv *MessageView) renderLogMessage(m *LogItem) string {
+	// 保留原有的颜色级别前缀
+	var color string
+	switch m.Level {
+	case "DEBUG":
+		color = "248"
+	case "INFO":
+		color = "75"
+	case "WARN":
+		color = "215"
+	case "ERROR":
+		color = "203"
+	default:
+		color = "248"
+	}
+
+	prefixStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(color))
+
+	// 使用 markdown 渲染器渲染消息内容
+	var content string
+	if mv.renderer != nil {
+		rendered, err := mv.renderer.Render(m.Msg)
+		if err == nil {
+			content = rendered
+		} else {
+			content = m.Msg
+		}
+	} else {
+		content = m.Msg
+	}
+
+	// 在内容前添加 ANSI 重置序列，避免样式污染
+	// \x1b[0m 重置所有样式到默认状态
+	return prefixStyle.Render(fmt.Sprintf("[%s]", m.Level)) + " \x1b[0m" + content
+}
+
+// renderWithMarkdown 使用 Markdown 渲染器渲染内容
+// 用于系统消息、错误消息等需要 Markdown 支持的场景
+func (mv *MessageView) renderWithMarkdown(content string) string {
+	if mv.renderer != nil {
+		rendered, err := mv.renderer.Render(content)
+		if err == nil {
+			return rendered
+		}
+	}
+	return content
+}
+
+// renderToolResultWithMarkdown 渲染工具结果，支持 Markdown
+func (mv *MessageView) renderToolResultWithMarkdown(m *ToolResult) string {
+	// 先获取基本的渲染内容（包含工具名称、状态等）
+	baseContent := m.Render()
+
+	// 如果有结果内容且不是 Bash 工具，尝试 Markdown 渲染
+	if m.Result != "" && m.Name != "Bash" && !strings.Contains(m.Name, "bash") {
+		var renderedResult string
+		if mv.renderer != nil {
+			rendered, err := mv.renderer.Render(m.Result)
+			if err == nil {
+				renderedResult = rendered
+			} else {
+				renderedResult = m.Result
+			}
+		} else {
+			renderedResult = m.Result
+		}
+
+		// 返回基础内容 + Markdown 渲染后的结果
+		return baseContent + "\n" + renderedResult
+	}
+
+	return baseContent
 }
 
 // ScrollToBottom 滚动到底部（无操作，因为使用终端原生滚动）

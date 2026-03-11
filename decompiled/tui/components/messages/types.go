@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/alingse/qodercli-reverse/decompiled/core/agent/state"
+	"github.com/alingse/qodercli-reverse/decompiled/core/utils/markdown"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -45,18 +46,58 @@ func (m *UserMessage) String() string {
 	return strings.TrimSpace(m.Content)
 }
 
-// AssistantMessage 助手消息
+// AssistantMessage 助手消息 - 支持 Markdown 渲染
 type AssistantMessage struct {
-	Content string
-	MsgTime time.Time
+	Content     string
+	Rendered    string // 缓存渲染后的内容
+	NeedsRender bool   // 是否需要重新渲染
+	MsgTime     time.Time
 }
 
 func (m *AssistantMessage) Type() MessageType    { return MsgTypeAssistant }
 func (m *AssistantMessage) Timestamp() time.Time { return m.MsgTime }
+
+// Render 返回原始内容（供 MessageView 统一处理）
 func (m *AssistantMessage) Render() string {
-	// 样式：⏺ 系统输出（白色前缀）
-	// 使用纯文本前缀，避免 lipgloss 宽度计算导致换行问题
-	return fmt.Sprintf("⏺ %s", strings.TrimSpace(m.Content))
+	return m.Content
+}
+
+// RenderMarkdown 渲染 markdown 内容
+// 由 MessageView 调用，传入 markdown 渲染器
+func (m *AssistantMessage) RenderMarkdown(renderer *markdown.Renderer) string {
+	// 如果内容为空，直接返回
+	if strings.TrimSpace(m.Content) == "" {
+		return ""
+	}
+
+	// 如果已经渲染过且不需要重新渲染，返回缓存
+	if !m.NeedsRender && m.Rendered != "" {
+		return m.Rendered
+	}
+
+	// 如果没有渲染器，返回原始内容
+	if renderer == nil {
+		m.Rendered = m.Content
+		m.NeedsRender = false
+		return m.Rendered
+	}
+
+	// 渲染 markdown
+	rendered, err := renderer.Render(m.Content)
+	if err != nil {
+		// 渲染失败时回退到原始内容
+		m.Rendered = m.Content
+	} else {
+		m.Rendered = rendered
+	}
+	m.NeedsRender = false
+	return m.Rendered
+}
+
+// AppendContent 追加内容并标记需要重新渲染
+func (m *AssistantMessage) AppendContent(content string) {
+	m.Content += content
+	m.NeedsRender = true
 }
 
 // String 实现 fmt.Stringer 接口
@@ -488,11 +529,19 @@ func (m *ToolCallInfo) Render() string {
 		}
 
 		// 如果特定字段提取为空，尝试提取任何非空字符串值
+		// 但跳过可能包含大量文本的字段（如 content, output 等）
 		if displayContent == "" && !isTodoWrite {
-			for _, v := range argsMap {
-				if s, ok := v.(string); ok && s != "" {
-					displayContent = s
-					break
+			skipFields := map[string]bool{
+				"content": true, "output": true, "result": true,
+				"stdout": true, "stderr": true, "data": true,
+			}
+			for k, v := range argsMap {
+				if !skipFields[k] {
+					if s, ok := v.(string); ok && s != "" && len(s) < 100 {
+						// 只使用短字符串作为显示内容
+						displayContent = fmt.Sprintf("%s: %s", k, s)
+						break
+					}
 				}
 			}
 		}

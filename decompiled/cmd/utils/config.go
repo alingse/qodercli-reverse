@@ -18,6 +18,7 @@ type Flags struct {
 
 	// 官方标志
 	WithClaudeConfig bool // Load .claude configuration
+	Debug            bool // 启用调试模式
 }
 
 // LoadConfig 从标志和环境变量加载配置

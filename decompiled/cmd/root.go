@@ -99,6 +99,7 @@ file operations, and system interactions through natural language commands.`,
 			DisallowedTools:  disallowedTools,
 			Workspace:        workspace,
 			WithClaudeConfig: withClaudeConfig,
+			Debug:            debug,
 		}
 
 		// 如果有 print 参数，运行非交互模式

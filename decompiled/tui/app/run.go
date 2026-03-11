@@ -18,12 +18,13 @@ type Options struct {
 	Agent    *agent.Agent
 	PubSub   *pubsub.PubSub
 	ResumeID string
+	Debug    bool // 启用调试模式和流式输出追踪
 }
 
 // Run 启动 TUI 应用
 func Run(opts Options) error {
 	// 创建应用模型
-	model := New(opts.Config, opts.Agent, opts.PubSub)
+	model := New(opts.Config, opts.Agent, opts.PubSub, opts.Debug)
 
 	// 如果有恢复会话 ID
 	if opts.ResumeID != "" {

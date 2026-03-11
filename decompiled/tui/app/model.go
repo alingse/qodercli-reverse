@@ -17,6 +17,7 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/log"
 	"github.com/alingse/qodercli-reverse/decompiled/core/pubsub"
 	"github.com/alingse/qodercli-reverse/decompiled/core/types"
+	"github.com/alingse/qodercli-reverse/decompiled/core/utils/markdown"
 	"github.com/alingse/qodercli-reverse/decompiled/tui/components/interaction/editor"
 	"github.com/alingse/qodercli-reverse/decompiled/tui/components/messages"
 	"github.com/alingse/qodercli-reverse/decompiled/version"
@@ -62,6 +63,9 @@ type appModel struct {
 	editor  *editor.EditorComponent
 	msgView *messages.MessageView // 保留用于格式化消息
 
+	// Markdown 渲染器
+	markdownRenderer *markdown.Renderer
+
 	// 配置
 	config *config.Config
 
@@ -98,6 +102,9 @@ type appModel struct {
 
 	// 回调序列化 channel - 确保 Agent 回调按顺序处理
 	callbackChan chan func()
+
+	// 流式输出追踪器（调试用）
+	streamingTracker *StreamingTracker
 }
 
 // === 回合管理数据结构 ===
@@ -153,23 +160,40 @@ type TurnContent struct {
 }
 
 // New 创建新的 TUI 应用模型
-func New(cfg *config.Config, ag *agent.Agent, ps *pubsub.PubSub) *appModel {
+func New(cfg *config.Config, ag *agent.Agent, ps *pubsub.PubSub, debug bool) *appModel {
+	// 创建流式输出追踪器（如果启用调试）
+	tracker, err := NewStreamingTracker(debug)
+	if err != nil {
+		log.Warnf("Failed to create streaming tracker: %v", err)
+		tracker, _ = NewStreamingTracker(false) // 创建禁用的 tracker
+	}
+
 	m := &appModel{
-		config:        cfg,
-		agent:         ag,
-		pubsub:        ps,
-		sessionActive: true,
-		status:        StatusReady,
-		model:         cfg.Model,
-		eventChan:     make(chan tea.Msg, DefaultEventChanSize),
-		callbackChan:  make(chan func(), DefaultCallbackChanSize), // 增大缓冲区避免阻塞
-		hasTurn:       false,
-		currentTurn:   nil,
+		config:           cfg,
+		agent:            ag,
+		pubsub:           ps,
+		sessionActive:    true,
+		status:           StatusReady,
+		model:            cfg.Model,
+		eventChan:        make(chan tea.Msg, DefaultEventChanSize),
+		callbackChan:     make(chan func(), DefaultCallbackChanSize), // 增大缓冲区避免阻塞
+		hasTurn:          false,
+		currentTurn:      nil,
+		streamingTracker: tracker,
 	}
 
 	// 初始化子组件
 	m.editor = editor.NewEditorComponent(ps)
 	m.msgView = messages.NewMessageView()
+
+	// 初始化 Markdown 渲染器
+	renderer, err := markdown.NewRenderer(76, cfg.Markdown.Style)
+	if err != nil {
+		log.Warnf("Failed to create markdown renderer: %v", err)
+		// 使用默认渲染器
+		renderer, _ = markdown.NewRenderer(76, "dark")
+	}
+	m.markdownRenderer = renderer
 
 	// 启动回调序列化 goroutine - 确保 Agent 回调按顺序处理
 	go m.serializeCallbacks()
@@ -257,16 +281,58 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case AgentStreamMsg:
 		// 更新当前回合的流式文本（完整内容，不是增量）
 		if m.hasTurn && m.currentTurn != nil {
+			// 使用 rune 切片来正确处理 UTF-8 多字节字符
+			contentRunes := []rune(msg.Content)
+			contentRuneCount := len(contentRunes)
+
+			// 调试日志：输出完整内容和关键长度
+			log.Debugf("[StreamMsg] BEGIN - FullContent runes=%d, PersistedRuneLen=%d",
+				contentRuneCount, m.currentTurn.PersistedTextLength)
+
+			// 显示原始内容的前 50 个字符（用于调试）
+			if len(contentRunes) > 0 {
+				prefixLen := 50
+				if len(contentRunes) < prefixLen {
+					prefixLen = len(contentRunes)
+				}
+				log.Debugf("[StreamMsg] FullContent prefix=%q", string(contentRunes[:prefixLen]))
+			}
+
 			// 跳过已持久化的部分，只显示新增的文本
-			if len(msg.Content) > m.currentTurn.PersistedTextLength {
-				newContent := msg.Content[m.currentTurn.PersistedTextLength:]
+			// 使用 rune 索引而不是字节索引来正确处理 UTF-8
+			if contentRuneCount > m.currentTurn.PersistedTextLength {
+				// 使用 rune 切片获取新内容
+				newRunes := contentRunes[m.currentTurn.PersistedTextLength:]
+				newContent := string(newRunes)
+				log.Debugf("[StreamMsg] newContent runes=%d, bytes=%d",
+					len(newRunes), len(newContent))
+
+				// 显示新内容的前 50 个字符（用于调试）
+				if len(newRunes) > 0 {
+					prefixLen := 50
+					if len(newRunes) < prefixLen {
+						prefixLen = len(newRunes)
+					}
+					log.Debugf("[StreamMsg] newContent prefix=%q", string(newRunes[:prefixLen]))
+				}
+
+				// 记录到追踪器
+				m.streamingTracker.LogStreamMsg(
+					msg.Content,
+					m.currentTurn.PersistedTextLength,
+					newContent,
+					len(newRunes),
+				)
+
 				m.currentTurn.StreamingText.Reset()
 				m.currentTurn.StreamingText.WriteString(newContent)
 			} else {
 				// 如果没有新内容，清空 StreamingText
+				log.Debugf("[StreamMsg] No new content, clearing StreamingText")
 				m.currentTurn.StreamingText.Reset()
 			}
 			m.currentTurn.Status = TurnStatusStreaming
+			log.Debugf("[StreamMsg] END - StreamingText.Len=%d", m.currentTurn.StreamingText.Len())
 		}
 		cmds = append(cmds, m.waitForEvents())
 
@@ -277,17 +343,44 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// 1. 先持久化之前的流式文本（如果有）
 			if m.currentTurn.StreamingText.Len() > 0 {
 				content := m.currentTurn.StreamingText.String()
-				assistantMsg := &messages.AssistantMessage{
-					Content: content,
-					MsgTime: time.Now(),
-				}
-				cmds = append(cmds, tea.Printf(assistantMsg.Render()))
+				contentRuneCount := len([]rune(content))
+				contentByteLen := len(content)
 
-				// 记录已持久化的文本长度
-				m.currentTurn.PersistedTextLength += len(content)
+				log.Debugf("[ToolStart] BEGIN - Persisting streaming text")
+				log.Debugf("[ToolStart] content runes=%d, bytes=%d", contentRuneCount, contentByteLen)
+
+				// 显示持久化内容的前 50 个字符（用于调试）
+				contentRunes := []rune(content)
+				if len(contentRunes) > 0 {
+					prefixLen := 50
+					if len(contentRunes) < prefixLen {
+						prefixLen = len(contentRunes)
+					}
+					log.Debugf("[ToolStart] content prefix=%q", string(contentRunes[:prefixLen]))
+				}
+
+				log.Debugf("[ToolStart] PersistedRuneLen before=%d", m.currentTurn.PersistedTextLength)
+
+				// 记录到追踪器（持久化前）
+				m.streamingTracker.LogToolStart(
+					content,
+					m.currentTurn.PersistedTextLength,
+					m.currentTurn.PersistedTextLength+contentRuneCount,
+				)
+
+				cmds = append(cmds, tea.Printf(m.renderAssistantMessage(content)))
+
+				// 记录已持久化的文本长度（使用 rune 计数）
+				m.currentTurn.PersistedTextLength += contentRuneCount
+				log.Debugf("[ToolStart] PersistedRuneLen after=%d (added %d runes)",
+					m.currentTurn.PersistedTextLength, contentRuneCount)
 
 				// 清空流式文本缓冲区
 				m.currentTurn.StreamingText.Reset()
+				log.Debugf("[ToolStart] END - StreamingText cleared")
+			} else {
+				log.Debugf("[ToolStart] No streaming text to persist (StreamingText.Len=%d)",
+					m.currentTurn.StreamingText.Len())
 			}
 
 			// 2. 添加工具调用到当前回合
@@ -351,11 +444,8 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.hasTurn && m.currentTurn != nil {
 			// 持久化已有的流式文本
 			if m.currentTurn.StreamingText.Len() > 0 {
-				assistantMsg := &messages.AssistantMessage{
-					Content: m.currentTurn.StreamingText.String(),
-					MsgTime: time.Now(),
-				}
-				cmds = append(cmds, tea.Printf(assistantMsg.Render()))
+				content := m.currentTurn.StreamingText.String()
+				cmds = append(cmds, tea.Printf(m.renderAssistantMessage(content)))
 			}
 
 			// 持久化正在运行的工具调用（如果有）
@@ -397,11 +487,8 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// 只需要持久化剩余的流式文本（如果有）
 			// 工具调用已经在 ToolResult 时持久化了
 			if m.currentTurn.StreamingText.Len() > 0 {
-				assistantMsg := &messages.AssistantMessage{
-					Content: m.currentTurn.StreamingText.String(),
-					MsgTime: time.Now(),
-				}
-				cmds = append(cmds, tea.Printf(assistantMsg.Render()))
+				content := m.currentTurn.StreamingText.String()
+				cmds = append(cmds, tea.Printf(m.renderAssistantMessage(content)))
 			}
 
 			// 清理当前回合
@@ -415,6 +502,10 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case QuitMsg:
 		m.quitting = true
+		// 清理追踪器
+		if trackerFile, err := m.streamingTracker.Close(); err == nil && trackerFile != "" {
+			log.Infof("Streaming trace saved to: %s", trackerFile)
+		}
 		return m, tea.Quit
 	}
 
@@ -593,6 +684,19 @@ func (m appModel) renderCurrentTurn() string {
 	// 1. 渲染流式文本（如果有）
 	if m.currentTurn.StreamingText.Len() > 0 {
 		content := m.currentTurn.StreamingText.String()
+		contentRunes := len([]rune(content))
+		log.Debugf("[RenderCurrentTurn] StreamingText runes=%d, bytes=%d",
+			contentRunes, len(content))
+
+		// 显示前 50 个字符
+		if contentRunes > 0 {
+			runes := []rune(content)
+			prefixLen := 50
+			if contentRunes < prefixLen {
+				prefixLen = contentRunes
+			}
+			log.Debugf("[RenderCurrentTurn] StreamingText prefix=%q", string(runes[:prefixLen]))
+		}
 
 		// 限制预览区的高度，避免占用太多屏幕空间
 		// 最多显示 10 行，超出部分用 "..." 表示
@@ -672,6 +776,49 @@ func (m appModel) renderStatusBar() string {
 	barStyle := lipgloss.NewStyle().Background(lipgloss.Color(ColorDarkBg)).Padding(0, 1).Width(m.width)
 	content := lipgloss.JoinHorizontal(lipgloss.Left, statusStr, modelStr)
 	return barStyle.Render(content)
+}
+
+// renderAssistantMessage 渲染助手消息，支持 Markdown
+func (m appModel) renderAssistantMessage(content string) string {
+	// 调试日志：记录渲染前的内容
+	log.Debugf("[Render] Input content runes=%d, bytes=%d", len([]rune(content)), len(content))
+
+	// 如果没有渲染器或 Markdown 被禁用，返回原始内容
+	if m.markdownRenderer == nil || !m.config.Markdown.Enabled {
+		// 记录到追踪器（未渲染）
+		m.streamingTracker.LogRender(content, content, "none")
+		return content
+	}
+
+	// 创建 AssistantMessage 并使用渲染器渲染
+	assistantMsg := &messages.AssistantMessage{
+		Content: content,
+		MsgTime: time.Now(),
+	}
+
+	// 使用 markdown 渲染器进行 Markdown 渲染
+	// RenderMarkdown 只返回一个值（string），不会返回错误
+	rendered := assistantMsg.RenderMarkdown(m.markdownRenderer)
+
+	// 调试日志：记录渲染后的内容
+	log.Debugf("[Render] Output content runes=%d, bytes=%d", len([]rune(rendered)), len(rendered))
+	if len([]rune(rendered)) > 0 {
+		// 检查前 10 个字符
+		renderedRunes := []rune(rendered)
+		prefix := ""
+		if len(renderedRunes) > 10 {
+			prefix = string(renderedRunes[:10])
+		} else {
+			prefix = string(renderedRunes)
+		}
+		log.Debugf("[Render] Output prefix=%q", prefix)
+	}
+
+	// 记录到追踪器
+	style := m.markdownRenderer.GetStyle()
+	m.streamingTracker.LogRender(content, rendered, style)
+
+	return rendered
 }
 
 func (m appModel) renderHelp() string {
