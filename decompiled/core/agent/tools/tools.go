@@ -160,6 +160,7 @@ func (e *Executor) Execute(ctx context.Context, call *ToolCall) (*ToolResult, er
 	if err != nil {
 		return &ToolResult{
 			ToolCallID: call.ID,
+			Name:       call.Name,
 			Content:    fmt.Sprintf("Tool %s not found: %v", call.Name, err),
 			IsError:    true,
 		}, nil
@@ -169,6 +170,7 @@ func (e *Executor) Execute(ctx context.Context, call *ToolCall) (*ToolResult, er
 	if err != nil {
 		return &ToolResult{
 			ToolCallID: call.ID,
+			Name:       call.Name,
 			Content:    err.Error(),
 			IsError:    true,
 		}, nil
@@ -176,6 +178,7 @@ func (e *Executor) Execute(ctx context.Context, call *ToolCall) (*ToolResult, er
 
 	return &ToolResult{
 		ToolCallID: call.ID,
+		Name:       call.Name,
 		Content:    content,
 		IsError:    false,
 	}, nil
@@ -189,6 +192,7 @@ func (e *Executor) ExecuteBatch(ctx context.Context, calls []*ToolCall) ([]*Tool
 		if err != nil {
 			results[i] = &ToolResult{
 				ToolCallID: call.ID,
+				Name:       call.Name,
 				Content:    err.Error(),
 				IsError:    true,
 			}
