@@ -2,9 +2,12 @@
 package markdown
 
 import (
+	"os"
 	"sync"
 
+	"github.com/alingse/qodercli-reverse/decompiled/core/log"
 	"github.com/charmbracelet/glamour"
+	"github.com/charmbracelet/glamour/ansi"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -22,37 +25,92 @@ func NewRenderer(width int, style string) (*Renderer, error) {
 		style = DetectStyle()
 	}
 
+	// 输出详细的调试信息
+	log.Debugf("markdown.NewRenderer: width=%d, requested style=%s", width, style)
+
+	// 检测终端背景
+	hasDarkBg := lipgloss.HasDarkBackground()
+	log.Debugf("markdown lipgloss.HasDarkBackground() = %v", hasDarkBg)
+
+	// 输出终端配置信息（可能影响背景检测）
+	log.Debugf("markdown COLORFGBG env = %q", getEnv("COLORFGBG"))
+	log.Debugf("markdown TERM_PROGRAM env = %q", getEnv("TERM_PROGRAM"))
+	log.Debugf("markdown TERM env = %q", getEnv("TERM"))
+	log.Debugf("markdown ITERM_PROFILE env = %q", getEnv("ITERM_PROFILE"))
+
 	// 确保宽度合理
 	if width <= 0 {
 		width = 80
 	}
 
-	// 对于深色背景，使用 ASCII 样式避免颜色问题
-	// ASCII 样式只使用基本格式（加粗、下划线），不使用颜色
-	var r *glamour.TermRenderer
-	var err error
+	// 使用高级配色方案
+	// 参考 GitHub 的暗色主题配色，更加舒适和专业
+	trueVal := true
+	falseVal := false
 
-	if style == "dark" {
-		// 使用 ASCII 样式：没有颜色，只有格式
-		r, err = glamour.NewTermRenderer(
-			glamour.WithStandardStyle("ascii"),
-		)
-	} else {
-		// 使用标准主题
-		r, err = glamour.NewTermRenderer(
-			glamour.WithStandardStyle(style),
-		)
-	}
+	// 高级配色方案
+	// 文本：柔和的白色 (252) 而不是刺眼的纯白
+	// 标题：带点青色 (86) 让标题更突出
+	// 强调：紫色 (141) 让关键词醒目
+	// 链接：蓝色 (75) 符合习惯
+	textColor := "252"      // 柔和白 - 正文
+	headingColor := "86"    // 青色 - 标题
+	emphColor := "141"      // 淡紫 - 强调
+	linkColor := "75"       // 蓝色 - 链接
+	codeColor := "228"      // 暖黄 - 代码
+
+	boldStyle := ansi.StylePrimitive{Bold: &trueVal, Color: &headingColor}
+	textStyle := ansi.StylePrimitive{Color: &textColor}
+	emphStyle := ansi.StylePrimitive{Italic: &trueVal, Color: &emphColor}
+	strongStyle := ansi.StylePrimitive{Bold: &trueVal, Color: &emphColor}
+	linkStyle := ansi.StylePrimitive{Color: &linkColor, Underline: &falseVal}
+	codeStyle := ansi.StylePrimitive{Color: &codeColor}
+
+	log.Debugf("markdown: using premium color scheme - text:%s heading:%s emph:%s link:%s code:%s",
+		textColor, headingColor, emphColor, linkColor, codeColor)
+
+	r, err := glamour.NewTermRenderer(
+		glamour.WithStyles(ansi.StyleConfig{
+			Document:   ansi.StyleBlock{StylePrimitive: textStyle},
+			Paragraph:  ansi.StyleBlock{StylePrimitive: textStyle},
+			BlockQuote: ansi.StyleBlock{StylePrimitive: emphStyle},
+
+			Heading:    ansi.StyleBlock{StylePrimitive: boldStyle},
+			H1:         ansi.StyleBlock{StylePrimitive: boldStyle},
+			H2:         ansi.StyleBlock{StylePrimitive: boldStyle},
+			H3:         ansi.StyleBlock{StylePrimitive: boldStyle},
+			H4:         ansi.StyleBlock{StylePrimitive: boldStyle},
+			H5:         ansi.StyleBlock{StylePrimitive: boldStyle},
+			H6:         ansi.StyleBlock{StylePrimitive: boldStyle},
+
+			Emph:       emphStyle,
+			Strong:     strongStyle,
+
+			Link:       linkStyle,
+			LinkText:   linkStyle,
+
+			List:       ansi.StyleList{},
+			CodeBlock:  ansi.StyleCodeBlock{StyleBlock: ansi.StyleBlock{StylePrimitive: codeStyle}},
+		}),
+	)
 
 	if err != nil {
+		log.Errorf("markdown: failed to create renderer: %v", err)
 		return nil, err
 	}
+
+	log.Debugf("markdown: renderer created successfully")
 
 	return &Renderer{
 		renderer: r,
 		width:    width,
 		style:    style,
 	}, nil
+}
+
+// getEnv 获取环境变量的辅助函数
+func getEnv(key string) string {
+	return os.Getenv(key)
 }
 
 // Render 渲染 markdown 为终端可显示的格式
@@ -94,10 +152,48 @@ func (r *Renderer) SetSize(width int) error {
 	}
 
 	r.width = width
+
 	// 禁用 WithWordWrap 以避免中文换行问题
+	// 使用与 NewRenderer 相同的高级配色方案
+	trueVal := true
+	falseVal := false
+
+	textColor := "252"
+	headingColor := "86"
+	emphColor := "141"
+	linkColor := "75"
+	codeColor := "228"
+
+	boldStyle := ansi.StylePrimitive{Bold: &trueVal, Color: &headingColor}
+	textStyle := ansi.StylePrimitive{Color: &textColor}
+	emphStyle := ansi.StylePrimitive{Italic: &trueVal, Color: &emphColor}
+	strongStyle := ansi.StylePrimitive{Bold: &trueVal, Color: &emphColor}
+	linkStyle := ansi.StylePrimitive{Color: &linkColor, Underline: &falseVal}
+	codeStyle := ansi.StylePrimitive{Color: &codeColor}
+
 	newRenderer, err := glamour.NewTermRenderer(
-		glamour.WithStandardStyle(r.style),
-		// glamour.WithWordWrap(width), // 禁用：会导致中文换行时字符破坏
+		glamour.WithStyles(ansi.StyleConfig{
+			Document:   ansi.StyleBlock{StylePrimitive: textStyle},
+			Paragraph:  ansi.StyleBlock{StylePrimitive: textStyle},
+			BlockQuote: ansi.StyleBlock{StylePrimitive: emphStyle},
+
+			Heading:    ansi.StyleBlock{StylePrimitive: boldStyle},
+			H1:         ansi.StyleBlock{StylePrimitive: boldStyle},
+			H2:         ansi.StyleBlock{StylePrimitive: boldStyle},
+			H3:         ansi.StyleBlock{StylePrimitive: boldStyle},
+			H4:         ansi.StyleBlock{StylePrimitive: boldStyle},
+			H5:         ansi.StyleBlock{StylePrimitive: boldStyle},
+			H6:         ansi.StyleBlock{StylePrimitive: boldStyle},
+
+			Emph:       emphStyle,
+			Strong:     strongStyle,
+
+			Link:       linkStyle,
+			LinkText:   linkStyle,
+
+			List:       ansi.StyleList{},
+			CodeBlock:  ansi.StyleCodeBlock{StyleBlock: ansi.StyleBlock{StylePrimitive: codeStyle}},
+		}),
 	)
 	if err != nil {
 		return err

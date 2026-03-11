@@ -115,9 +115,8 @@ type TokenUsageMessage struct {
 func (m *TokenUsageMessage) Type() MessageType    { return MsgTypeSystem }
 func (m *TokenUsageMessage) Timestamp() time.Time { return m.MsgTime }
 func (m *TokenUsageMessage) Render() string {
-	// 原版格式：Input token usage: xxx | Output token usage: xxx
+	// 不设置颜色，使用终端默认颜色，只保留斜体样式
 	style := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("248")). // 灰色
 		Italic(true)
 
 	return style.Render(fmt.Sprintf(
@@ -139,8 +138,8 @@ type SystemMessage struct {
 func (m *SystemMessage) Type() MessageType    { return MsgTypeSystem }
 func (m *SystemMessage) Timestamp() time.Time { return m.MsgTime }
 func (m *SystemMessage) Render() string {
+	// 不设置颜色，使用终端默认颜色，只保留斜体样式
 	style := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("248")).
 		Italic(true)
 	return style.Render(fmt.Sprintf("*System: %s*", m.Content))
 }
@@ -355,8 +354,8 @@ type CompactResult struct {
 func (m *CompactResult) Type() MessageType    { return MsgTypeCompact }
 func (m *CompactResult) Timestamp() time.Time { return m.MsgTime }
 func (m *CompactResult) Render() string {
+	// 不设置颜色，使用终端默认颜色，只保留斜体样式
 	style := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("248")).
 		Italic(true)
 	return style.Render(fmt.Sprintf("[Compacted: %s]", m.Content))
 }
