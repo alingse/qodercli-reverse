@@ -55,7 +55,7 @@ var defaultLogger *Logger
 
 // Init 初始化日志系统
 // logFile: 日志文件路径，如果为空则只输出到 stderr
-// level: 日志级别（控制写入文件的级别，以及 debug 模式下 stderr 的级别）
+// level: 日志级别（控制写入文件的级别）
 func Init(logFile string, level Level) error {
 	var file *os.File
 	var filePath string
@@ -75,13 +75,8 @@ func Init(logFile string, level Level) error {
 		filePath = logFile
 	}
 
-	// 根据 level 决定 stderr 的最小输出级别
-	// 如果是 debug 模式 (LevelDebug)，则 stderr 输出所有级别
-	// 否则，stderr 只输出 ERROR 及以上级别
+	// stderr 只输出 ERROR 及以上级别，debug 消息只写入文件
 	stderrMinLevel := LevelError
-	if level == LevelDebug {
-		stderrMinLevel = LevelDebug
-	}
 
 	defaultLogger = &Logger{
 		level:          level,

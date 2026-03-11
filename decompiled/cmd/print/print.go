@@ -87,26 +87,21 @@ func Run(input string, flags *utils.Flags, quiet bool, systemPrompt string) erro
 			}
 		},
 		func(call *types.ToolCall) {
-			toolCallNames[call.ID] = call.Name // 保存映射
+			toolCallNames[call.ID] = call.Name
 			log.Debug("Tool call: %s", call.Name)
-			if !quiet && log.GetLevel() == log.LevelDebug {
-				fmt.Fprintf(os.Stderr, "\n● %s\n", call.Name)
-				formattedArgs := formatToolCallArgs(call.Name, call.Arguments)
-				if formattedArgs != "" {
-					fmt.Fprintf(os.Stderr, "  ⎿ %s\n", formattedArgs)
-				}
+			formattedArgs := formatToolCallArgs(call.Name, call.Arguments)
+			if formattedArgs != "" {
+				log.Debug("  ⎿ %s: %s", call.Name, formattedArgs)
 			}
 		},
 		func(result *types.ToolResult) {
-			toolName := toolCallNames[result.ToolCallID] // 获取工具名
+			toolName := toolCallNames[result.ToolCallID]
 			log.Debug("Tool result: %s", result.ToolCallID)
-			if !quiet && log.GetLevel() == log.LevelDebug {
-				formattedResult := formatToolResult(toolName, result.Content, result.IsError)
-				if formattedResult != "" {
-					fmt.Fprintf(os.Stderr, "  ⎿ %s\n", formattedResult)
-				}
+			formattedResult := formatToolResult(toolName, result.Content, result.IsError)
+			if formattedResult != "" {
+				log.Debug("  ⎿ %s result: %s", toolName, formattedResult)
 			}
-			delete(toolCallNames, result.ToolCallID) // 清理
+			delete(toolCallNames, result.ToolCallID)
 		},
 		func(err error) {
 			log.Error("Callback error: %v", err)
@@ -118,6 +113,16 @@ func Run(input string, flags *utils.Flags, quiet bool, systemPrompt string) erro
 			log.Info("Request completed with finish reason: %s", reason)
 		},
 	)
+
+	// 设置新一轮 LLM 生成开始回调：重置已打印字符计数，并在不同 generation 之间添加换行
+	ag.SetGenerationStartCallback(func() {
+		log.Debug("[PrintMode] New generation started, lastPrintedRuneCount=%d", lastPrintedRuneCount)
+		// 如果之前有输出，添加换行来分隔不同的 generation
+		if lastPrintedRuneCount > 0 && !quiet {
+			fmt.Println()
+		}
+		lastPrintedRuneCount = 0
+	})
 
 	ctx := context.Background()
 	if err := ag.ProcessUserInput(ctx, input); err != nil {

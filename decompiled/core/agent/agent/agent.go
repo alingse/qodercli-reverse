@@ -55,12 +55,13 @@ type Agent struct {
 	mu     sync.RWMutex
 
 	// 回调
-	onMessage      func(msg *types.Message)
-	onToolCall     func(call *types.ToolCall)
-	onToolResult   func(result *types.ToolResult)
-	onError        func(err error)
-	onFinish       func(reason types.FinishReason)
-	onTurnComplete func() bool // 回合完成回调，返回 true 表示已插入新消息需要立即处理
+	onMessage        func(msg *types.Message)
+	onToolCall       func(call *types.ToolCall)
+	onToolResult     func(result *types.ToolResult)
+	onError          func(err error)
+	onFinish         func(reason types.FinishReason)
+	onGenerationStart func() // 新一轮 LLM 生成开始回调
+	onTurnComplete   func() bool // 回合完成回调，返回 true 表示已插入新消息需要立即处理
 }
 
 // Config Agent 配置
@@ -176,6 +177,11 @@ func (a *Agent) SetCallbacks(
 	}
 }
 
+// SetGenerationStartCallback 设置新一轮 LLM 生成开始回调
+func (a *Agent) SetGenerationStartCallback(callback func()) {
+	a.onGenerationStart = callback
+}
+
 // SetAskCallback 设置权限询问回调
 func (a *Agent) SetAskCallback(callback func(ctx context.Context, req *permission.Request) (permission.Decision, error)) {
 	a.permissionCoordinator.SetAskCallback(callback)
@@ -273,8 +279,11 @@ func (a *Agent) generate(ctx context.Context) error {
 		for event := range eventChan {
 			switch event.Type {
 			case provider.EventTypeMessageStart:
-				// 消息开始
+				// 消息开始 - 标记新一轮 LLM 生成开始
 				log.Debug("Event: MessageStart")
+				if a.onGenerationStart != nil {
+					a.onGenerationStart()
+				}
 
 			case provider.EventTypeContentBlockDelta:
 				// 内容增量 - 累积到最后一个文本 ContentPart

@@ -278,6 +278,14 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// 3. 启动 Agent
 		cmds = append(cmds, m.handleUserInput(msg.Content))
 
+	case AgentGenerationStartMsg:
+		// 新一轮 LLM 生成开始：重置持久化计数器
+		if m.hasTurn && m.currentTurn != nil {
+			log.Debug("[GenerationStart] New generation started, resetting PersistedTextLength")
+			m.currentTurn.PersistedTextLength = 0
+		}
+		cmds = append(cmds, m.waitForEvents())
+
 	case AgentStreamMsg:
 		// 更新当前回合的流式文本（完整内容，不是增量）
 		if m.hasTurn && m.currentTurn != nil {
@@ -616,6 +624,13 @@ func (m *appModel) setupAgentCallbacks() {
 			}
 		},
 	)
+
+	// onGenerationStart: 新一轮 LLM 生成开始
+	m.agent.SetGenerationStartCallback(func() {
+		m.callbackChan <- func() {
+			m.eventChan <- AgentGenerationStartMsg{}
+		}
+	})
 }
 
 // handleGlobalKeys 处理全局快捷键
@@ -836,6 +851,7 @@ func (m appModel) renderHelp() string {
 type InitMsg struct{}
 type StartedMsg struct{}
 type AgentStreamMsg struct{ Content string }
+type AgentGenerationStartMsg struct{} // 新增：新一轮 LLM 生成开始
 type AgentToolStartMsg struct{ ID, Name, Arguments string }
 type AgentToolResultMsg struct {
 	ToolCallID, Content string
