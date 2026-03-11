@@ -4,10 +4,9 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strings"
-	"sync"
-	"sync/atomic"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -53,30 +52,70 @@ type appModel struct {
 	status string
 	model  string
 
-	// 流式输出追踪
-	lastResponseLen int32 
-	
-	// 流式预览缓冲区 - 用于在 View 中实时显示正在生成的 AI 回复
-	streamingBuffer string
+	// === 回合管理 ===
+	// 当前回合内容（在 View 中临时渲染）
+	currentTurn *TurnContent
+
+	// 是否有活跃的回合
+	hasTurn bool
 
 	// 事件通道
 	eventChan chan tea.Msg
 
-	// 工具调用信息映射：ID -> {名称, 参数}
-	toolInfoMap map[string]*toolInfo
-
 	// 回调序列化 channel - 确保 Agent 回调按顺序处理
 	callbackChan chan func()
-
-	// 流式内容序列号 - 确保 ToolStart 等待所有 Stream 消息先发送
-	streamSeqNum   int64
-	toolStartSeqNum int64
-	streamSeqMutex sync.Mutex
 }
 
-type toolInfo struct {
-	name      string
-	arguments string
+// === 回合管理数据结构 ===
+
+// TurnStatus 回合状态
+type TurnStatus int
+
+const (
+	TurnStatusStreaming TurnStatus = iota // 正在流式输出文本
+	TurnStatusTooling                     // 正在执行工具
+	TurnStatusCompleted                   // 回合完成
+	TurnStatusError                       // 回合出错
+)
+
+// ToolCallStatus 工具调用状态
+type ToolCallStatus int
+
+const (
+	ToolCallStatusPending ToolCallStatus = iota // 等待执行
+	ToolCallStatusRunning                       // 执行中
+	ToolCallStatusCompleted                     // 执行成功
+	ToolCallStatusError                         // 执行失败
+)
+
+// TurnToolCall 表示回合中的一个工具调用
+type TurnToolCall struct {
+	ID        string
+	Name      string
+	Arguments string
+	Output    string
+	IsError   bool
+	Status    ToolCallStatus
+	StartTime time.Time
+	EndTime   time.Time
+}
+
+// TurnContent 表示一个完整的 Agent 回合内容
+type TurnContent struct {
+	// 流式文本内容（Assistant 消息）
+	StreamingText strings.Builder
+
+	// 工具调用列表（按顺序）
+	ToolCalls []TurnToolCall
+
+	// 回合状态
+	Status TurnStatus
+
+	// 开始时间
+	StartTime time.Time
+
+	// 已持久化的文本长度
+	PersistedTextLength int
 }
 
 // New 创建新的 TUI 应用模型
@@ -89,8 +128,9 @@ func New(cfg *config.Config, ag *agent.Agent, ps *pubsub.PubSub) *appModel {
 		status:        "Ready",
 		model:         cfg.Model,
 		eventChan:     make(chan tea.Msg, 100),
-		toolInfoMap:   make(map[string]*toolInfo),
 		callbackChan:  make(chan func(), 1000), // 增大缓冲区避免阻塞
+		hasTurn:       false,
+		currentTurn:   nil,
 	}
 
 	// 初始化子组件
@@ -162,75 +202,109 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case editor.SendMsg:
 		m.processing = true
 		m.status = "Thinking..."
-		
+
 		// 1. 将用户消息持久化到终端
 		userMsg := &messages.UserMessage{
 			Content: msg.Content,
 			MsgTime: time.Now(),
 		}
 		cmds = append(cmds, tea.Printf(userMsg.Render()))
-		
-		// 2. 启动 Agent
+
+		// 2. 初始化新回合
+		m.hasTurn = true
+		m.currentTurn = &TurnContent{
+			Status:    TurnStatusStreaming,
+			StartTime: time.Now(),
+		}
+
+		// 3. 启动 Agent
 		cmds = append(cmds, m.handleUserInput(msg.Content))
 
 	case AgentStreamMsg:
-		// 更新预览区
-		m.streamingBuffer += msg.Content
+		// 更新当前回合的流式文本（完整内容，不是增量）
+		if m.hasTurn && m.currentTurn != nil {
+			// 跳过已持久化的部分，只显示新增的文本
+			if len(msg.Content) > m.currentTurn.PersistedTextLength {
+				newContent := msg.Content[m.currentTurn.PersistedTextLength:]
+				m.currentTurn.StreamingText.Reset()
+				m.currentTurn.StreamingText.WriteString(newContent)
+			} else {
+				// 如果没有新内容，清空 StreamingText
+				m.currentTurn.StreamingText.Reset()
+			}
+			m.currentTurn.Status = TurnStatusStreaming
+		}
 		cmds = append(cmds, m.waitForEvents())
 
 	case AgentToolStartMsg:
 		m.status = "Using tool..."
-		
-		// 顺序控制：在显示工具前，如果流式缓冲区有内容，先刷新显示
-		if m.streamingBuffer != "" {
-			assistantMsg := &messages.AssistantMessage{
-				Content: m.streamingBuffer,
-				MsgTime: time.Now(),
+
+		if m.hasTurn && m.currentTurn != nil {
+			// 1. 先持久化之前的流式文本（如果有）
+			if m.currentTurn.StreamingText.Len() > 0 {
+				content := m.currentTurn.StreamingText.String()
+				assistantMsg := &messages.AssistantMessage{
+					Content: content,
+					MsgTime: time.Now(),
+				}
+				cmds = append(cmds, tea.Printf(assistantMsg.Render()))
+
+				// 记录已持久化的文本长度
+				m.currentTurn.PersistedTextLength += len(content)
+
+				// 清空流式文本缓冲区
+				m.currentTurn.StreamingText.Reset()
 			}
-			cmds = append(cmds, tea.Printf(assistantMsg.Render()))
-			m.streamingBuffer = ""
-			atomic.StoreInt32(&m.lastResponseLen, 0)
+
+			// 2. 添加工具调用到当前回合
+			m.currentTurn.Status = TurnStatusTooling
+			m.currentTurn.ToolCalls = append(m.currentTurn.ToolCalls, TurnToolCall{
+				ID:        msg.ID,
+				Name:      msg.Name,
+				Arguments: msg.Arguments,
+				Status:    ToolCallStatusRunning,
+				StartTime: time.Now(),
+			})
 		}
-		
-		m.toolInfoMap[msg.ID] = &toolInfo{
-			name:      msg.Name,
-			arguments: msg.Arguments,
-		}
-		// 工具开始时只记录状态，不打印，等完成时统一打印最终结果
 		cmds = append(cmds, m.waitForEvents())
 
 	case AgentToolResultMsg:
-		// 顺序控制：再次确认流式缓冲区是否为空
-		if m.streamingBuffer != "" {
-			assistantMsg := &messages.AssistantMessage{
-				Content: m.streamingBuffer,
-				MsgTime: time.Now(),
+		if m.hasTurn && m.currentTurn != nil {
+			// 查找对应的工具调用
+			for i := range m.currentTurn.ToolCalls {
+				if m.currentTurn.ToolCalls[i].ID == msg.ToolCallID {
+					// 更新工具调用信息
+					m.currentTurn.ToolCalls[i].Output = msg.Content
+					m.currentTurn.ToolCalls[i].IsError = msg.IsError
+					if msg.IsError {
+						m.currentTurn.ToolCalls[i].Status = ToolCallStatusError
+					} else {
+						m.currentTurn.ToolCalls[i].Status = ToolCallStatusCompleted
+					}
+					m.currentTurn.ToolCalls[i].EndTime = time.Now()
+
+					// 立即持久化这个工具调用
+					toolMsg := &messages.ToolCallInfo{
+						ID:        m.currentTurn.ToolCalls[i].ID,
+						Name:      m.currentTurn.ToolCalls[i].Name,
+						Arguments: m.currentTurn.ToolCalls[i].Arguments,
+						Output:    m.currentTurn.ToolCalls[i].Output,
+						IsError:   m.currentTurn.ToolCalls[i].IsError,
+						Completed: true,
+						MsgTime:   m.currentTurn.ToolCalls[i].EndTime,
+					}
+					cmds = append(cmds, tea.Printf(toolMsg.Render()))
+
+					// 从 ToolCalls 中移除（因为已经持久化了）
+					m.currentTurn.ToolCalls = append(
+						m.currentTurn.ToolCalls[:i],
+						m.currentTurn.ToolCalls[i+1:]...,
+					)
+					break
+				}
 			}
-			cmds = append(cmds, tea.Printf(assistantMsg.Render()))
-			m.streamingBuffer = ""
-			atomic.StoreInt32(&m.lastResponseLen, 0)
 		}
-		
-		var toolName, toolArgs string
-		if info, ok := m.toolInfoMap[msg.ToolCallID]; ok {
-			toolName = info.name
-			toolArgs = info.arguments
-			// 执行完后清理，释放内存
-			delete(m.toolInfoMap, msg.ToolCallID)
-		}
-		
-		// 打印工具执行结果
-		toolResultMsg := &messages.ToolCallInfo{
-			ID:        msg.ToolCallID,
-			Name:      toolName,
-			Arguments: toolArgs,
-			Output:    msg.Content,
-			IsError:   msg.IsError,
-			Completed: true,
-			MsgTime:   time.Now(),
-		}
-		cmds = append(cmds, tea.Printf(toolResultMsg.Render()))
-		
+
 		m.status = "Thinking..."
 		cmds = append(cmds, m.waitForEvents())
 
@@ -238,31 +312,71 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.errorMsg = msg.Err.Error()
 		m.processing = false
 		m.status = "Error"
-		
+
+		// 错误时持久化当前回合的部分内容
+		if m.hasTurn && m.currentTurn != nil {
+			// 持久化已有的流式文本
+			if m.currentTurn.StreamingText.Len() > 0 {
+				assistantMsg := &messages.AssistantMessage{
+					Content: m.currentTurn.StreamingText.String(),
+					MsgTime: time.Now(),
+				}
+				cmds = append(cmds, tea.Printf(assistantMsg.Render()))
+			}
+
+			// 持久化正在运行的工具调用（如果有）
+			// 注意：已完成的工具调用应该已经在 ToolResult 时持久化了
+			// 这里只需要持久化还在运行中的工具调用
+			for _, toolCall := range m.currentTurn.ToolCalls {
+				if toolCall.Status == ToolCallStatusRunning {
+					toolMsg := &messages.ToolCallInfo{
+						ID:        toolCall.ID,
+						Name:      toolCall.Name,
+						Arguments: toolCall.Arguments,
+						Output:    "Interrupted by error",
+						IsError:   true,
+						Completed: true,
+						MsgTime:   time.Now(),
+					}
+					cmds = append(cmds, tea.Printf(toolMsg.Render()))
+				}
+			}
+		}
+
+		// 持久化错误消息
 		errMsg := &messages.ErrorMessage{
 			ErrStr:  m.errorMsg,
 			MsgTime: time.Now(),
 		}
 		cmds = append(cmds, tea.Printf(errMsg.Render()))
-		
-		m.streamingBuffer = ""
-		atomic.StoreInt32(&m.lastResponseLen, 0)
+
+		// 清理回合
+		m.hasTurn = false
+		m.currentTurn = nil
 		cmds = append(cmds, m.waitForEvents())
 
 	case AgentFinishMsg:
-		// 任务完成：将预览内容固化
-		if m.streamingBuffer != "" {
-			assistantMsg := &messages.AssistantMessage{
-				Content: m.streamingBuffer,
-				MsgTime: time.Now(),
+		// 回合完成：持久化剩余内容
+		if m.hasTurn && m.currentTurn != nil {
+			m.currentTurn.Status = TurnStatusCompleted
+
+			// 只需要持久化剩余的流式文本（如果有）
+			// 工具调用已经在 ToolResult 时持久化了
+			if m.currentTurn.StreamingText.Len() > 0 {
+				assistantMsg := &messages.AssistantMessage{
+					Content: m.currentTurn.StreamingText.String(),
+					MsgTime: time.Now(),
+				}
+				cmds = append(cmds, tea.Printf(assistantMsg.Render()))
 			}
-			cmds = append(cmds, tea.Printf(assistantMsg.Render()))
-			m.streamingBuffer = "" 
+
+			// 清理当前回合
+			m.hasTurn = false
+			m.currentTurn = nil
 		}
-		
+
 		m.processing = false
 		m.status = "Ready"
-		atomic.StoreInt32(&m.lastResponseLen, 0)
 		cmds = append(cmds, m.waitForEvents())
 
 	case QuitMsg:
@@ -287,7 +401,6 @@ func (m *appModel) handleUserInput(input string) tea.Cmd {
 			return m.handleCommand(input)
 		}
 
-		atomic.StoreInt32(&m.lastResponseLen, 0)
 		go func() {
 			ctx := context.Background()
 			m.agent.ProcessUserInput(ctx, input)
@@ -299,8 +412,10 @@ func (m *appModel) handleUserInput(input string) tea.Cmd {
 // handleCommand 处理斜杠命令
 func (m *appModel) handleCommand(input string) tea.Msg {
 	parts := strings.Fields(input)
-	if len(parts) == 0 { return nil }
-	
+	if len(parts) == 0 {
+		return nil
+	}
+
 	command := parts[0]
 	switch command {
 	case "/quit", "/exit":
@@ -324,6 +439,7 @@ func (m *appModel) waitForEvents() tea.Cmd {
 // setupAgentCallbacks 设置 Agent 回调
 func (m *appModel) setupAgentCallbacks() {
 	m.agent.SetCallbacks(
+		// onMessage: 处理流式文本（完整内容）
 		func(msg *types.Message) {
 			var fullContent strings.Builder
 			for _, part := range msg.Content {
@@ -332,56 +448,43 @@ func (m *appModel) setupAgentCallbacks() {
 				}
 			}
 			fullStr := fullContent.String()
-			runes := []rune(fullStr)
-			lastLen := atomic.LoadInt32(&m.lastResponseLen)
-			if len(runes) > int(lastLen) {
-				newRunes := runes[lastLen:]
-				atomic.StoreInt32(&m.lastResponseLen, int32(len(runes)))
-				// 通过序列化 channel 发送，增加序列号用于 ToolStart 同步
-				m.streamSeqMutex.Lock()
-				m.streamSeqNum++
-				seq := m.streamSeqNum
-				m.streamSeqMutex.Unlock()
-				content := string(newRunes)
-				m.callbackChan <- func() {
-					m.eventChan <- AgentStreamMsg{Content: content}
-					// 发送完成后更新完成序列号
-					atomic.StoreInt64(&m.toolStartSeqNum, seq)
-				}
+
+			// 通过序列化 channel 发送
+			m.callbackChan <- func() {
+				m.eventChan <- AgentStreamMsg{Content: fullStr}
 			}
 		},
+		// onToolCall: 工具调用开始
 		func(call *types.ToolCall) {
-			// 确保所有之前的 Stream 消息都已发送，再发送 ToolStart
 			c := *call
 			m.callbackChan <- func() {
-				// 等待所有 stream 消息处理完成
-				for {
-					currentStreamSeq := atomic.LoadInt64(&m.streamSeqNum)
-					completedStreamSeq := atomic.LoadInt64(&m.toolStartSeqNum)
-					if completedStreamSeq >= currentStreamSeq {
-						break
-					}
-					time.Sleep(1 * time.Millisecond)
+				m.eventChan <- AgentToolStartMsg{
+					ID:        c.ID,
+					Name:      c.Name,
+					Arguments: c.Arguments,
 				}
-				m.eventChan <- AgentToolStartMsg{ID: c.ID, Name: c.Name, Arguments: c.Arguments}
 			}
 		},
+		// onToolResult: 工具调用结果
 		func(result *types.ToolResult) {
-			// 通过序列化 channel 发送，确保顺序
 			r := *result
 			m.callbackChan <- func() {
-				m.eventChan <- AgentToolResultMsg{ToolCallID: r.ToolCallID, Content: r.Content, IsError: r.IsError}
+				m.eventChan <- AgentToolResultMsg{
+					ToolCallID: r.ToolCallID,
+					Content:    r.Content,
+					IsError:    r.IsError,
+				}
 			}
 		},
+		// onError: 错误处理
 		func(err error) {
-			// 错误消息：必须送达
 			e := err
 			m.callbackChan <- func() {
 				m.eventChan <- AgentErrorMsg{Err: e}
 			}
 		},
+		// onFinish: 回合完成
 		func(reason types.FinishReason) {
-			// 完成消息：必须送达
 			r := reason
 			m.callbackChan <- func() {
 				m.eventChan <- AgentFinishMsg{Reason: r}
@@ -415,38 +518,25 @@ func (m appModel) View() string {
 	}
 
 	editorHeight := m.editor.GetPreferredHeight()
-	if editorHeight < 3 { editorHeight = 3 }
-	if editorHeight > 7 { editorHeight = 7 }
-	
+	if editorHeight < 3 {
+		editorHeight = 3
+	}
+	if editorHeight > 7 {
+		editorHeight = 7
+	}
+
 	if m.width > 0 {
 		m.editor.SetSize(m.width, editorHeight)
 	}
 
 	var sections []string
 
-	// 1. 正在流式输出的预览区
-	if m.streamingBuffer != "" {
-		preview := &messages.AssistantMessage{
-			Content: m.streamingBuffer,
-			MsgTime: time.Now(),
-		}
-		// 确保宽度至少为 80，避免内容被压缩换行
-		previewWidth := m.width - 4
-		if previewWidth < 76 {
-			previewWidth = 76
-		}
-		previewStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("246")).
-			Italic(true).
-			Padding(0, 1).
-			Width(previewWidth).
-			Border(lipgloss.NormalBorder(), false, false, false, true).
-			BorderForeground(lipgloss.Color("240"))
-		
-		sections = append(sections, previewStyle.Render(preview.Render()))
+	// 1. 当前回合预览区（如果有活跃回合）
+	if m.hasTurn && m.currentTurn != nil {
+		sections = append(sections, m.renderCurrentTurn())
 	}
 
-	// 2. 在系统输出和输入框之间添加空行，避免拥挤
+	// 2. 空行分隔
 	sections = append(sections, "")
 
 	// 3. 编辑器
@@ -458,18 +548,86 @@ func (m appModel) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left, sections...)
 }
 
+// renderCurrentTurn 渲染当前回合的完整内容（临时预览）
+func (m appModel) renderCurrentTurn() string {
+	if m.currentTurn == nil {
+		return ""
+	}
+
+	var sections []string
+
+	// 1. 渲染流式文本（如果有）
+	if m.currentTurn.StreamingText.Len() > 0 {
+		content := m.currentTurn.StreamingText.String()
+
+		// 限制预览区的高度，避免占用太多屏幕空间
+		// 最多显示 10 行，超出部分用 "..." 表示
+		lines := strings.Split(content, "\n")
+		maxLines := 10
+		if len(lines) > maxLines {
+			lines = lines[len(lines)-maxLines:]
+			content = "...\n" + strings.Join(lines, "\n")
+		}
+
+		// 使用灰色斜体样式表示正在生成的内容
+		previewStyle := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("246")).
+			Italic(true)
+
+		// 直接渲染内容，添加 ⏺ 前缀
+		sections = append(sections, previewStyle.Render(fmt.Sprintf("⏺ %s", strings.TrimSpace(content))))
+	}
+
+	// 2. 渲染工具调用（如果有）
+	for _, toolCall := range m.currentTurn.ToolCalls {
+		toolMsg := &messages.ToolCallInfo{
+			ID:        toolCall.ID,
+			Name:      toolCall.Name,
+			Arguments: toolCall.Arguments,
+			Output:    toolCall.Output,
+			IsError:   toolCall.IsError,
+			Completed: toolCall.Status == ToolCallStatusCompleted || toolCall.Status == ToolCallStatusError,
+			MsgTime:   time.Now(),
+		}
+
+		// 使用不同的颜色表示不同状态
+		var color string
+		switch toolCall.Status {
+		case ToolCallStatusPending:
+			color = "248" // 灰色
+		case ToolCallStatusRunning:
+			color = "255" // 白色
+		case ToolCallStatusCompleted:
+			color = "82" // 绿色
+		case ToolCallStatusError:
+			color = "203" // 红色
+		default:
+			color = "255" // 默认白色
+		}
+
+		style := lipgloss.NewStyle().Foreground(lipgloss.Color(color))
+		sections = append(sections, style.Render(toolMsg.Render()))
+	}
+
+	return strings.Join(sections, "\n")
+}
+
 func (m appModel) renderStatusBar() string {
 	var statusColor string
 	switch m.status {
-	case "Ready": statusColor = "82"
-	case "Thinking...", "Using tool...": statusColor = "135"
-	case "Error": statusColor = "203"
-	default: statusColor = "248"
+	case "Ready":
+		statusColor = "82"
+	case "Thinking...", "Using tool...":
+		statusColor = "135"
+	case "Error":
+		statusColor = "203"
+	default:
+		statusColor = "248"
 	}
 
 	statusStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(statusColor)).Width(20)
 	statusStr := statusStyle.Render("● " + m.status)
-	
+
 	modelWidth := m.width - 40
 	if modelWidth < 0 {
 		modelWidth = 0
@@ -496,9 +654,12 @@ func (m appModel) renderHelp() string {
 
 type InitMsg struct{}
 type StartedMsg struct{}
-type AgentStreamMsg struct { Content string }
-type AgentToolStartMsg struct { ID, Name, Arguments string }
-type AgentToolResultMsg struct { ToolCallID, Content string; IsError bool }
-type AgentErrorMsg struct { Err error }
-type AgentFinishMsg struct { Reason types.FinishReason }
+type AgentStreamMsg struct{ Content string }
+type AgentToolStartMsg struct{ ID, Name, Arguments string }
+type AgentToolResultMsg struct {
+	ToolCallID, Content string
+	IsError             bool
+}
+type AgentErrorMsg struct{ Err error }
+type AgentFinishMsg struct{ Reason types.FinishReason }
 type QuitMsg struct{}

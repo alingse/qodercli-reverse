@@ -36,13 +36,8 @@ func (m *UserMessage) Type() MessageType    { return MsgTypeUser }
 func (m *UserMessage) Timestamp() time.Time { return m.MsgTime }
 func (m *UserMessage) Render() string {
 	// 样式：> 用户输入内容（前缀白色）
-	// 注意：内容不应用 lipgloss 样式，避免宽度计算导致换行问题
-	prefixStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("255")) // 白色
-
-	return fmt.Sprintf("%s %s",
-		prefixStyle.Render(">"),
-		strings.TrimSpace(m.Content))
+	// 使用纯文本前缀，避免 lipgloss 宽度计算导致换行问题
+	return fmt.Sprintf("> %s", strings.TrimSpace(m.Content))
 }
 
 // String 实现 fmt.Stringer 接口
@@ -60,13 +55,8 @@ func (m *AssistantMessage) Type() MessageType    { return MsgTypeAssistant }
 func (m *AssistantMessage) Timestamp() time.Time { return m.MsgTime }
 func (m *AssistantMessage) Render() string {
 	// 样式：⏺ 系统输出（白色前缀）
-	// 注意：内容不应用 lipgloss 样式，避免宽度计算导致换行问题
-	prefixStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("255")) // 白色
-
-	return fmt.Sprintf("%s %s",
-		prefixStyle.Render("⏺"),
-		strings.TrimSpace(m.Content))
+	// 使用纯文本前缀，避免 lipgloss 宽度计算导致换行问题
+	return fmt.Sprintf("⏺ %s", strings.TrimSpace(m.Content))
 }
 
 // String 实现 fmt.Stringer 接口

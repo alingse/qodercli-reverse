@@ -49,11 +49,11 @@ type Agent struct {
 	mu     sync.RWMutex
 
 	// 回调
-	onMessage     func(msg *types.Message)
-	onToolCall    func(call *types.ToolCall)
-	onToolResult  func(result *types.ToolResult)
-	onError       func(err error)
-	onFinish      func(reason types.FinishReason)
+	onMessage      func(msg *types.Message)
+	onToolCall     func(call *types.ToolCall)
+	onToolResult   func(result *types.ToolResult)
+	onError        func(err error)
+	onFinish       func(reason types.FinishReason)
 	onTurnComplete func() bool // 回合完成回调，返回 true 表示已插入新消息需要立即处理
 }
 
@@ -271,22 +271,34 @@ func (a *Agent) generate(ctx context.Context) error {
 				log.Debug("Event: MessageStart")
 
 			case provider.EventTypeContentBlockDelta:
-				// 内容增量 - 只打印新增的文本
-				assistantMsg.Content = append(assistantMsg.Content, types.ContentPart{
-					Type: "text",
-					Text: event.Content,
-				})
+				// 内容增量 - 累积到最后一个文本 ContentPart
+				if len(assistantMsg.Content) > 0 && assistantMsg.Content[len(assistantMsg.Content)-1].Type == "text" {
+					// 如果最后一个 ContentPart 是文本类型，追加到它
+					assistantMsg.Content[len(assistantMsg.Content)-1].Text += event.Content
+				} else {
+					// 否则创建新的 ContentPart
+					assistantMsg.Content = append(assistantMsg.Content, types.ContentPart{
+						Type: "text",
+						Text: event.Content,
+					})
+				}
 				if a.onMessage != nil {
 					a.onMessage(assistantMsg)
 				}
 				log.Debug("Event: ContentBlockDelta, content length: %d", len(event.Content))
 
 			case provider.EventTypeThinkingDelta:
-				// 思考增量
-				assistantMsg.Content = append(assistantMsg.Content, types.ContentPart{
-					Type:     "thinking",
-					Thinking: event.Thinking,
-				})
+				// 思考增量 - 累积到最后一个 thinking ContentPart
+				if len(assistantMsg.Content) > 0 && assistantMsg.Content[len(assistantMsg.Content)-1].Type == "thinking" {
+					// 如果最后一个 ContentPart 是 thinking 类型，追加到它
+					assistantMsg.Content[len(assistantMsg.Content)-1].Thinking += event.Thinking
+				} else {
+					// 否则创建新的 ContentPart
+					assistantMsg.Content = append(assistantMsg.Content, types.ContentPart{
+						Type:     "thinking",
+						Thinking: event.Thinking,
+					})
+				}
 				log.Debug("Event: ThinkingDelta")
 
 			case provider.EventTypeToolUseStart:

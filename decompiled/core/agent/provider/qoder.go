@@ -3,6 +3,7 @@
 package provider
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -222,9 +223,9 @@ func (c *QoderClient) buildHeaders() map[string]string {
 
 // processSSEStream 处理 SSE 流
 func (c *QoderClient) processSSEStream(ctx context.Context, reader io.Reader, eventChan chan<- Event) {
-	decoder := json.NewDecoder(reader)
+	scanner := bufio.NewScanner(reader)
 
-	for {
+	for scanner.Scan() {
 		select {
 		case <-ctx.Done():
 			eventChan <- Event{
@@ -238,19 +239,21 @@ func (c *QoderClient) processSSEStream(ctx context.Context, reader io.Reader, ev
 		default:
 		}
 
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || !strings.HasPrefix(line, "data:") {
+			continue
+		}
+
+		data := strings.TrimPrefix(line, "data:")
+		data = strings.TrimSpace(data)
+
+		if data == "[DONE]" {
+			break
+		}
+
 		var sseEvent sseEvent
-		if err := decoder.Decode(&sseEvent); err != nil {
-			if err == io.EOF {
-				return
-			}
-			eventChan <- Event{
-				Type: EventTypeError,
-				Error: &ErrorData{
-					Type:    "decode_error",
-					Message: err.Error(),
-				},
-			}
-			return
+		if err := json.Unmarshal([]byte(data), &sseEvent); err != nil {
+			continue
 		}
 
 		event := c.parseSSEEvent(&sseEvent)

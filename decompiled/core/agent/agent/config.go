@@ -29,15 +29,15 @@ type AgentConfig struct {
 	EnableEnhancedCompact bool
 
 	// 提示词配置
-	PromptType         prompts.PromptType    // 使用内置提示词类型
-	PromptVars         *prompts.TemplateVars // 提示词模板变量
-	CustomPrompt       string                // 自定义提示词（覆盖内置）
-	PromptOptions      PromptOptions         // 提示词选项
+	PromptType    prompts.PromptType    // 使用内置提示词类型
+	PromptVars    *prompts.TemplateVars // 提示词模板变量
+	CustomPrompt  string                // 自定义提示词（覆盖内置）
+	PromptOptions PromptOptions         // 提示词选项
 
 	// 子 Agent 配置
-	IsSubagent         bool
-	SubagentType       string
-	ParentAgentName    string
+	IsSubagent      bool
+	SubagentType    string
+	ParentAgentName string
 }
 
 // PromptOptions 提示词选项
