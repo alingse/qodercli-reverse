@@ -449,6 +449,7 @@ func (a *Agent) executeToolCall(ctx context.Context, tc *types.ToolCall) error {
 	if permResult.Decision == permission.DecisionDeny {
 		result := &types.ToolResult{
 			ToolCallID: tc.ID,
+			Name:       tc.Name,
 			Content:    fmt.Sprintf("Permission denied: %s", permResult.Reason),
 			IsError:    true,
 		}
@@ -479,6 +480,7 @@ func (a *Agent) executeToolCall(ctx context.Context, tc *types.ToolCall) error {
 	if err != nil {
 		result = &tools.ToolResult{
 			ToolCallID: tc.ID,
+			Name:       tc.Name,
 			Content:    err.Error(),
 			IsError:    true,
 		}
@@ -493,6 +495,7 @@ func (a *Agent) executeToolCall(ctx context.Context, tc *types.ToolCall) error {
 	// 转换结果
 	toolResult := &types.ToolResult{
 		ToolCallID: result.ToolCallID,
+		Name:       tc.Name,
 		Content:    result.Content,
 		IsError:    result.IsError,
 	}

@@ -139,6 +139,7 @@ type ToolCall struct {
 // ToolResult 工具结果
 type ToolResult struct {
 	ToolCallID string `json:"tool_call_id"`
+	Name       string `json:"name,omitempty"` // 工具名称，用于 OpenAI API
 	Content    string `json:"content"`
 	IsError    bool   `json:"is_error"`
 }

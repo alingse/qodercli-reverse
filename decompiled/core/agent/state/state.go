@@ -48,8 +48,10 @@ func (s *State) AddToolResult(result *types.ToolResult) {
 
 	// 同时将工具结果作为 tool 角色的消息添加到消息列表
 	// 这样 API 才能正确识别工具调用的响应
+	// 注意：OpenAI API 要求工具响应消息必须包含 name 字段
 	toolMsg := types.Message{
 		Role:       types.RoleTool,
+		Name:       result.Name,
 		Content:    []types.ContentPart{{Type: "text", Text: result.Content}},
 		ToolCallID: result.ToolCallID,
 	}
