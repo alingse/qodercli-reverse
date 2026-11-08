@@ -360,6 +360,8 @@ func (m *WebFetchRuleMatcher) Match(url string) (Decision, string) {
 func isProtectedPath(path string) bool {
 	protected := []string{
 		".qoder",
+		".qodercli",
+		".qodercli-reverse",
 		".mcp.json",
 		"settings.json",
 		"settings.local.json",

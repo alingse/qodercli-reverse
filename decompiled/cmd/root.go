@@ -139,7 +139,7 @@ func init() {
 
 	// 日志标志
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "", false, "Enable debug logging")
-	rootCmd.PersistentFlags().StringVarP(&logFile, "log-file", "", "", "Log file path (default: ~/.qoder/qodercli.log)")
+	rootCmd.PersistentFlags().StringVarP(&logFile, "log-file", "", "", "Log file path (default: ~/.qodercli-reverse/qodercli.log)")
 
 	// 主要标志 - 严格对齐官方
 	rootCmd.Flags().StringVarP(&printMode, "print", "p", "", "Non-interactive mode: process single prompt and exit")
