@@ -1,0 +1,51 @@
+name: Go CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: decompiled/go.mod
+          cache-dependency-path: decompiled/go.sum
+
+      - name: Check formatting
+        working-directory: decompiled
+        run: |
+          if [ -n "$(gofmt -l .)" ]; then
+            echo "gofmt issues:"
+            gofmt -l .
+            exit 1
+          fi
+
+      - name: Verify modules
+        working-directory: decompiled
+        run: go mod verify
+
+      - name: Run tests
+        working-directory: decompiled
+        run: go test ./...
+
+      - name: Run vet
+        working-directory: decompiled
+        run: go vet ./...
+
+      - name: Build
+        working-directory: decompiled
+        run: go build ./...
+
+      - name: Race tests
+        working-directory: decompiled
+        run: go test -race ./...
