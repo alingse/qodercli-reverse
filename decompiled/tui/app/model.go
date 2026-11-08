@@ -254,7 +254,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Cwd:     cwd,
 			MsgTime: time.Now(),
 		}
-		cmds = append(cmds, tea.Printf(welcome.Render()))
+		cmds = append(cmds, tea.Printf("%s", welcome.Render()))
 		cmds = append(cmds, m.waitForEvents())
 
 	case editor.SendMsg:
@@ -266,7 +266,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			Content: msg.Content,
 			MsgTime: time.Now(),
 		}
-		cmds = append(cmds, tea.Printf(userMsg.Render()))
+		cmds = append(cmds, tea.Printf("%s", userMsg.Render()))
 
 		// 2. 初始化新回合
 		m.hasTurn = true
@@ -376,7 +376,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.currentTurn.PersistedTextLength+contentRuneCount,
 				)
 
-				cmds = append(cmds, tea.Printf(m.renderAssistantMessage(content)))
+				cmds = append(cmds, tea.Printf("%s", m.renderAssistantMessage(content)))
 
 				// 记录已持久化的文本长度（使用 rune 计数）
 				m.currentTurn.PersistedTextLength += contentRuneCount
@@ -428,7 +428,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						Completed: true,
 						MsgTime:   m.currentTurn.ToolCalls[i].EndTime,
 					}
-					cmds = append(cmds, tea.Printf(toolMsg.Render()))
+					cmds = append(cmds, tea.Printf("%s", toolMsg.Render()))
 
 					// 从 ToolCalls 中移除（因为已经持久化了）
 					m.currentTurn.ToolCalls = append(
@@ -453,7 +453,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// 持久化已有的流式文本
 			if m.currentTurn.StreamingText.Len() > 0 {
 				content := m.currentTurn.StreamingText.String()
-				cmds = append(cmds, tea.Printf(m.renderAssistantMessage(content)))
+				cmds = append(cmds, tea.Printf("%s", m.renderAssistantMessage(content)))
 			}
 
 			// 持久化正在运行的工具调用（如果有）
@@ -470,7 +470,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						Completed: true,
 						MsgTime:   time.Now(),
 					}
-					cmds = append(cmds, tea.Printf(toolMsg.Render()))
+					cmds = append(cmds, tea.Printf("%s", toolMsg.Render()))
 				}
 			}
 		}
@@ -480,7 +480,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			ErrStr:  m.errorMsg,
 			MsgTime: time.Now(),
 		}
-		cmds = append(cmds, tea.Printf(errMsg.Render()))
+		cmds = append(cmds, tea.Printf("%s", errMsg.Render()))
 
 		// 清理回合
 		m.hasTurn = false
@@ -496,7 +496,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// 工具调用已经在 ToolResult 时持久化了
 			if m.currentTurn.StreamingText.Len() > 0 {
 				content := m.currentTurn.StreamingText.String()
-				cmds = append(cmds, tea.Printf(m.renderAssistantMessage(content)))
+				cmds = append(cmds, tea.Printf("%s", m.renderAssistantMessage(content)))
 			}
 
 			// 清理当前回合
