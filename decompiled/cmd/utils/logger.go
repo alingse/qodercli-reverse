@@ -42,7 +42,7 @@ func GetDefaultLogFile() string {
 		return "qodercli.log"
 	}
 
-	logDir := filepath.Join(homeDir, ".qoder")
+	logDir := filepath.Join(homeDir, ".qodercli-reverse")
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		return "qodercli.log"
 	}
@@ -57,7 +57,7 @@ func GetDebugLogFile() string {
 		return "debug.log"
 	}
 
-	logDir := filepath.Join(homeDir, ".qoder")
+	logDir := filepath.Join(homeDir, ".qodercli-reverse")
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		return "debug.log"
 	}
