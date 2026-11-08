@@ -1,22 +1,13 @@
 name: Go Attestation
 
 on:
-  workflow_run:
-    workflows: ["Go Release"]
-    types: [completed]
+  workflow_dispatch:
 
 permissions:
   contents: read
-  id-token: write
-  attestations: write
 
 jobs:
-  attest:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  info:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/attest-build-provenance@v1
-        with:
-          subject-name: qodercli-reverse
-          subject-digest: sha256:${{ github.sha }}
+      - run: echo "Attestation is performed in go-release.yml using actions/attest-build-provenance with subject-path."

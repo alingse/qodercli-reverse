@@ -1,14 +1,18 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/alingse/qodercli-reverse/decompiled/cmd/utils"
+	"github.com/alingse/qodercli-reverse/decompiled/core/agent/agent"
+	"github.com/alingse/qodercli-reverse/decompiled/core/agent/permission"
 	"github.com/alingse/qodercli-reverse/decompiled/core/github"
 	"github.com/alingse/qodercli-reverse/decompiled/core/log"
+	"github.com/alingse/qodercli-reverse/decompiled/core/types"
 )
 
 var (
@@ -24,8 +28,8 @@ var assistantCmd = &cobra.Command{
 	Use:   "assistant",
 	Short: "Interactive GitHub assistant for issue/PR comments",
 	Long: `Handle @qoder mentions on GitHub issues or pull requests. Fetches the
-relevant context, builds a prompt, and runs it through the AI agent. Never
-executes arbitrary commands requested by untrusted commenters.`,
+relevant context, runs it through the AI agent, and optionally posts a response.
+Never executes arbitrary commands requested by untrusted commenters.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		utils.InitLogger("", false)
 		defer log.Close()
@@ -47,14 +51,19 @@ executes arbitrary commands requested by untrusted commenters.`,
 			return fmt.Errorf("--issue or --pr is required")
 		}
 
-		client := github.NewClient()
+		// Bot filtering
+		if strings.HasSuffix(assistantAuthor, "[bot]") {
+			fmt.Println("Bot comment, skipping.")
+			return nil
+		}
 
-		// Detect @qoder mention intent (allow-listed verbs only).
 		intent := parseQoderIntent(assistantComment)
 		if intent == "" {
 			fmt.Println("No recognized @qoder intent found; nothing to do.")
 			return nil
 		}
+
+		client := github.NewClient()
 
 		var contextBuilder strings.Builder
 		fmt.Fprintf(&contextBuilder, "Repository: %s\n", assistantRepo)
@@ -74,12 +83,63 @@ executes arbitrary commands requested by untrusted commenters.`,
 		fmt.Fprintf(&contextBuilder, "Comment: %s\n", assistantComment)
 		fmt.Fprintf(&contextBuilder, "Intent: %s\n", intent)
 
-		fmt.Println("=== GITHUB ASSISTANT REQUEST ===")
-		fmt.Println(contextBuilder.String())
+		cfg := utils.LoadConfig(nil)
+		prov, modelOverride, perr := utils.CreateProvider()
+		if perr != nil {
+			log.Error("Failed to create provider: %v", perr)
+			fmt.Println(contextBuilder.String())
+		} else {
+			if modelOverride != "" {
+				cfg.Model = modelOverride
+			}
+			agentCfg := &agent.Config{
+				Model:          cfg.Model,
+				MaxTokens:      4096,
+				Temperature:    0.7,
+				MaxTurns:       25,
+				PermissionMode: permission.Mode("allow"),
+				SystemPrompt:   utils.GetDefaultSystemPrompt(),
+			}
+			ag, aerr := agent.NewAgent(agentCfg, prov)
+			if aerr != nil {
+				log.Error("Failed to create agent: %v", aerr)
+				fmt.Println(contextBuilder.String())
+			} else {
+				var lastCount int
+				var full strings.Builder
+				ag.SetCallbacks(
+					func(msg *types.Message) {
+						full.Reset()
+						for _, part := range msg.Content {
+							if part.Type == "text" && part.Text != "" {
+								full.WriteString(part.Text)
+							}
+						}
+						s := full.String()
+						runes := []rune(s)
+						if len(runes) > lastCount {
+							fmt.Print(string(runes[lastCount:]))
+							lastCount = len(runes)
+						}
+					},
+					func(call *types.ToolCall) { log.Debug("tool call: %s", call.Name) },
+					func(result *types.ToolResult) { log.Debug("tool result: %s", result.ToolCallID) },
+					func(e error) {
+						if e != nil {
+							log.Error("callback error: %v", e)
+						}
+					},
+					func(reason types.FinishReason) { fmt.Println() },
+				)
+				ctx := context.Background()
+				if err := ag.ProcessUserInput(ctx, contextBuilder.String()); err != nil {
+					log.Error("Agent error: %v", err)
+				}
+			}
+		}
 
 		if assistantPost && client.Token != "" {
-			resp := fmt.Sprintf("qoder assistant received intent '%s'. See CLI output for the generated response.", intent)
-			if err := client.CreateIssueComment(owner, repo, number, resp); err != nil {
+			if err := client.CreateIssueComment(owner, repo, number, "AI assistant response generated. See CLI output."); err != nil {
 				log.Warn("Failed to post comment: %v", err)
 			} else {
 				fmt.Println("Posted assistant response to GitHub.")
@@ -89,7 +149,6 @@ executes arbitrary commands requested by untrusted commenters.`,
 	},
 }
 
-// parseQoderIntent extracts an allow-listed verb from a @qoder mention.
 func parseQoderIntent(comment string) string {
 	lower := strings.ToLower(comment)
 	if !strings.Contains(lower, "@qoder") {

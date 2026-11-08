@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -8,8 +9,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/alingse/qodercli-reverse/decompiled/cmd/utils"
+	"github.com/alingse/qodercli-reverse/decompiled/core/agent/agent"
+	"github.com/alingse/qodercli-reverse/decompiled/core/agent/permission"
 	"github.com/alingse/qodercli-reverse/decompiled/core/github"
 	"github.com/alingse/qodercli-reverse/decompiled/core/log"
+	"github.com/alingse/qodercli-reverse/decompiled/core/types"
 )
 
 var (
@@ -87,11 +91,62 @@ and for posting comments.`,
 		b.WriteString("\nProvide a structured review: potential bugs, security issues, performance, missing tests, architectural concerns. ")
 		b.WriteString("Cite file paths and line numbers. Avoid speculative findings; mark uncertain items as 'possible'.\n")
 
-		fmt.Println("=== PR REVIEW REQUEST ===")
-		fmt.Println(b.String())
+		// Execute through the real agent runtime
+		cfg := utils.LoadConfig(nil)
+		prov, modelOverride, perr := utils.CreateProvider()
+		if perr != nil {
+			log.Error("Failed to create provider: %v", perr)
+		} else {
+			if modelOverride != "" {
+				cfg.Model = modelOverride
+			}
+			agentCfg := &agent.Config{
+				Model:          cfg.Model,
+				MaxTokens:      4096,
+				Temperature:    0.7,
+				MaxTurns:       25,
+				PermissionMode: permission.Mode("allow"),
+				SystemPrompt:   utils.GetDefaultSystemPrompt(),
+			}
+			ag, aerr := agent.NewAgent(agentCfg, prov)
+			if aerr != nil {
+				log.Error("Failed to create agent: %v", aerr)
+			} else {
+				var lastCount int
+				var full strings.Builder
+				ag.SetCallbacks(
+					func(msg *types.Message) {
+						full.Reset()
+						for _, part := range msg.Content {
+							if part.Type == "text" && part.Text != "" {
+								full.WriteString(part.Text)
+							}
+						}
+						s := full.String()
+						runes := []rune(s)
+						if len(runes) > lastCount {
+							fmt.Print(string(runes[lastCount:]))
+							lastCount = len(runes)
+						}
+					},
+					func(call *types.ToolCall) { log.Debug("tool call: %s", call.Name) },
+					func(result *types.ToolResult) { log.Debug("tool result: %s", result.ToolCallID) },
+					func(e error) {
+						if e != nil {
+							log.Error("callback error: %v", e)
+						}
+					},
+					func(reason types.FinishReason) { fmt.Println() },
+				)
+				ctx := context.Background()
+				if err := ag.ProcessUserInput(ctx, b.String()); err != nil {
+					log.Error("Agent error: %v", err)
+				}
+			}
+		}
 
 		if reviewPost && client.Token != "" {
-			if err := client.CreateIssueComment(owner, repo, reviewPR, "AI review generated locally. See CLI output for details."); err != nil {
+			if err := client.CreateIssueComment(owner, repo, reviewPR, "AI review generated. See CLI output for details."); err != nil {
 				log.Warn("Failed to post comment: %v", err)
 			} else {
 				fmt.Println("Posted review comment to PR.")
