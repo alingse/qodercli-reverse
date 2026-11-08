@@ -1,0 +1,57 @@
+name: Go Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: decompiled/go.mod
+
+      - name: Build matrix
+        working-directory: decompiled
+        run: |
+          VERSION="${GITHUB_REF_NAME:-${{ inputs.tag }}}"
+          COMMIT="$(git rev-parse HEAD)"
+          BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          LDFLAGS="-X github.com/alingse/qodercli-reverse/decompiled/version.Version=${VERSION} -X main.commit=${COMMIT} -X main.buildTime=${BUILD_TIME}"
+          for os in darwin linux windows; do
+            for arch in amd64 arm64; do
+              if [ "$os" = "windows" ] && [ "$arch" = "arm64" ]; then continue; fi
+              ext=""
+              if [ "$os" = "windows" ]; then ext=".exe"; fi
+              out="qodercli-reverse_${os}_${arch}${ext}"
+              GOOS=$os GOARCH=$arch go build -ldflags "$LDFLAGS" -o "$out" .
+              if [ "$os" = "windows" ]; then
+                zip "${out}.zip" "$out"
+              else
+                tar czf "${out}.tar.gz" "$out"
+              fi
+            done
+          done
+          sha256sum * > SHA256SUMS
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            decompiled/qodercli-reverse_*
+            decompiled/SHA256SUMS
+          generate_release_notes: true

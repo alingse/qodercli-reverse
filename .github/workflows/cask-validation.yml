@@ -1,0 +1,23 @@
+name: Cask Validation
+
+on:
+  pull_request:
+    paths:
+      - 'Casks/**'
+  push:
+    paths:
+      - 'Casks/**'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Ruby syntax
+        run: |
+          for f in Casks/*.rb; do
+            ruby -c "$f"
+          done
