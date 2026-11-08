@@ -39,16 +39,6 @@ The core architecture reverse engineering is complete. Implementation status of 
 
 **Completion date**: 2026-03-09
 
-## Results Showcase
-
-The following screenshots show the actual running interface of qodercli-reverse, demonstrating the completed reverse engineering project:
-
-### Screenshot 1: qodercli-reverse Interactive Interface (1014x536)
-![qodercli-reverse Interactive Interface](qodercli-reverse.1.png)
-
-### Screenshot 2: qodercli-reverse Tool Usage Interface (960x909)
-![qodercli-reverse Tool Usage Interface](qodercli-reverse.2.png)
-
 ## Documentation Directory
 
 ```
