@@ -101,7 +101,9 @@ type ProjectContext struct {
 
 	// Project-specific instructions
 	AgentsMDContent  string
+	AgentsMdVariants map[string]string // filename -> content
 	ClaudeDirContent string
+	QoderDirContent  string
 	ReadmeContent    string
 
 	// Coding standards
@@ -558,6 +560,13 @@ func (b *SystemPromptBuilderV2) buildProjectSection() *Section {
 		parts = append(parts, "")
 		parts = append(parts, "Project Configuration (from .claude/):")
 		parts = append(parts, ctx.ClaudeDirContent)
+	}
+
+	// .qoder/ content
+	if ctx.QoderDirContent != "" {
+		parts = append(parts, "")
+		parts = append(parts, "Project Configuration (from .qoder/):")
+		parts = append(parts, ctx.QoderDirContent)
 	}
 
 	if len(parts) == 0 {

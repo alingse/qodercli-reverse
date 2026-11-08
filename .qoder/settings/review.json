@@ -1,0 +1,5 @@
+{
+  "max_changed_lines": 5000,
+  "ignore_docs_only": true,
+  "timeout_seconds": 300
+}

@@ -15,6 +15,9 @@ import (
 
 // Run runs non-interactive print mode
 func Run(input string, flags *utils.Flags, quiet bool, systemPrompt string) error {
+	if flags != nil && flags.OutputFormat == "stream-json" {
+		return RunStreamJSON(input, flags, systemPrompt)
+	}
 	log.Info("Starting qodercli-reverse in print mode")
 	log.Debug("Input: %s", input)
 

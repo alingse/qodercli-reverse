@@ -39,6 +39,21 @@ The core architecture reverse engineering is complete. Implementation status of 
 
 **Completion date**: 2026-03-09
 
+## GitHub Integration
+
+This fork adds native GitHub collaboration capabilities:
+
+- `qodercli-reverse review-pr --repo owner/repo --pr 123` — AI-assisted PR review
+- `qodercli-reverse assistant --repo owner/repo --issue 42 --comment "@qoder fix this" --post` — interactive GitHub assistant
+- `qodercli-reverse commands` — list discovered slash commands and subagents
+- `--output-format stream-json` — newline-delimited JSON events for CI/CD
+
+Project context is loaded from `AGENTS.md`, `Agents.md`, `.claude/`, and `.qoder/` (commands, subagents, settings).
+
+GitHub authentication uses `GITHUB_TOKEN` or `GH_TOKEN` environment variables (never hardcoded).
+
+See `.github/workflows/` for ready-to-use GitHub Actions.
+
 ## Documentation Directory
 
 ```

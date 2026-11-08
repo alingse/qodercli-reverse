@@ -51,6 +51,9 @@ func (l *ProjectContextLoader) Load() (*ProjectContext, error) {
 	// load AGENTS.md
 	l.loadAgentsMD(ctx)
 
+	// load .qoder/ directory
+	l.loadQoderDir(ctx)
+
 	// load .claude/ directory
 	l.loadClaudeDir(ctx)
 
@@ -105,16 +108,19 @@ func (l *ProjectContextLoader) detectProjectType(ctx *ProjectContext) {
 	}
 }
 
-// loadAgentsMD loads the AGENTS.md file.
+// loadAgentsMD loads the AGENTS.md file (and case variants).
 func (l *ProjectContextLoader) loadAgentsMD(ctx *ProjectContext) {
-	content := l.readFileWithLimit("AGENTS.md")
-	if content == "" {
-		// try lowercase version
-		content = l.readFileWithLimit("agents.md")
-	}
-
-	if content != "" {
-		ctx.AgentsMDContent = l.extractRelevantSections(content)
+	variants := []string{"AGENTS.md", "Agents.md", "agents.md"}
+	ctx.AgentsMdVariants = make(map[string]string)
+	for _, name := range variants {
+		content := l.readFileWithLimit(name)
+		if content == "" {
+			continue
+		}
+		ctx.AgentsMdVariants[name] = l.extractRelevantSections(content)
+		if ctx.AgentsMDContent == "" {
+			ctx.AgentsMDContent = ctx.AgentsMdVariants[name]
+		}
 	}
 }
 
@@ -169,6 +175,77 @@ func (l *ProjectContextLoader) loadClaudeDir(ctx *ProjectContext) {
 
 	if len(parts) > 0 {
 		ctx.ClaudeDirContent = strings.Join(parts, "\n\n")
+	}
+}
+
+// loadQoderDir loads the .qoder/ directory (commands, subagents, settings, instructions).
+func (l *ProjectContextLoader) loadQoderDir(ctx *ProjectContext) {
+	qoderDir := filepath.Join(l.workDir, ".qoder")
+	info, err := os.Stat(qoderDir)
+	if err != nil || !info.IsDir() {
+		return
+	}
+
+	var parts []string
+
+	// Project-level instructions
+	for _, name := range []string{"AGENTS.md", "instructions.md", "context.md", "README.md"} {
+		if content := l.readFileWithLimit(filepath.Join(".qoder", name)); content != "" {
+			parts = append(parts, fmt.Sprintf("%s:", name))
+			parts = append(parts, l.extractRelevantSections(content))
+		}
+	}
+
+	// commands/
+	if entries, err := os.ReadDir(filepath.Join(qoderDir, "commands")); err == nil {
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			name := entry.Name()
+			if !strings.HasSuffix(name, ".md") {
+				continue
+			}
+			if content := l.readFileWithLimit(filepath.Join(".qoder", "commands", name)); content != "" {
+				parts = append(parts, fmt.Sprintf("command %s:", name))
+				parts = append(parts, l.extractRelevantSections(content))
+			}
+		}
+	}
+
+	// subagents/
+	if entries, err := os.ReadDir(filepath.Join(qoderDir, "subagents")); err == nil {
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			name := entry.Name()
+			if !strings.HasSuffix(name, ".md") && !strings.HasSuffix(name, ".json") {
+				continue
+			}
+			if content := l.readFileWithLimit(filepath.Join(".qoder", "subagents", name)); content != "" {
+				parts = append(parts, fmt.Sprintf("subagent %s:", name))
+				parts = append(parts, l.extractRelevantSections(content))
+			}
+		}
+	}
+
+	// settings/
+	if entries, err := os.ReadDir(filepath.Join(qoderDir, "settings")); err == nil {
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			name := entry.Name()
+			if content := l.readFileWithLimit(filepath.Join(".qoder", "settings", name)); content != "" {
+				parts = append(parts, fmt.Sprintf("setting %s:", name))
+				parts = append(parts, l.truncateString(content, 1000))
+			}
+		}
+	}
+
+	if len(parts) > 0 {
+		ctx.QoderDirContent = strings.Join(parts, "\n\n")
 	}
 }
 

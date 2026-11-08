@@ -54,8 +54,8 @@ func TestTokenEstimation(t *testing.T) {
 		expected int
 	}{
 		{"", 0},
-		{"Hello", 2},      // 5 chars / 3 ≈ 2
-		{"Ni hao", 3},       // 2 words * 1.3 ≈ 3
+		{"Hello", 2},         // 5 chars / 3 ≈ 2
+		{"Ni hao", 3},        // 2 words * 1.3 ≈ 3
 		{"Hello, world!", 2}, // mixed text (actual calculation)
 	}
 
