@@ -1,38 +1,38 @@
 package editor
 
-// InputCache 输入缓存
+// InputCache input cache
 type InputCache struct {
 	currentInput string
 	savedInput   string
 }
 
-// NewInputCache 创建新的输入缓存
+// NewInputCache creates a new input cache
 func NewInputCache() *InputCache {
 	return &InputCache{}
 }
 
-// SetInput 设置当前输入
+// SetInput sets current input
 func (ic *InputCache) SetInput(input string) {
 	ic.currentInput = input
 }
 
-// GetInput 获取当前输入
+// GetInput gets current input
 func (ic *InputCache) GetInput() string {
 	return ic.currentInput
 }
 
-// Reset 重置缓存
+// Reset resets the cache
 func (ic *InputCache) Reset() {
 	ic.currentInput = ""
 	ic.savedInput = ""
 }
 
-// SaveInput 保存输入（用于临时切换）
+// SaveInput saves input (for temporary switching)
 func (ic *InputCache) SaveInput() {
 	ic.savedInput = ic.currentInput
 }
 
-// RestoreInput 恢复保存的输入
+// RestoreInput restores saved input
 func (ic *InputCache) RestoreInput() string {
 	return ic.savedInput
 }

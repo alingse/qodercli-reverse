@@ -1,454 +1,454 @@
-# qodercli 包结构与依赖分析
+# qodercli-reverse Package Structure and Dependency Analysis
 
-## 1. 内部 Go Module 路径
-
-```
-code.alibaba-inc.com/qoder-core/qodercli
-```
-
-> 这是 qodercli 的内部 Go module 路径，表明项目托管在阿里巴巴内部 GitLab 上。
-
-## 2. 完整包结构树
-
-以下是从二进制符号表中提取的完整内部包列表（共约 250+ 子包）：
+## 1. Internal Go Module Path
 
 ```
-code.alibaba-inc.com/qoder-core/qodercli/
+code.alibaba-inc.com/qoder-core/qodercli-reverse
+```
+
+> This is the internal Go module path of qodercli-reverse, indicating the project is hosted on Alibaba's internal GitLab.
+
+## 2. Full Package Structure Tree
+
+The following is the complete internal package list extracted from the binary symbol table (approximately 250+ subpackages):
+
+```
+code.alibaba-inc.com/qoder-core/qodercli-reverse/
 │
-├── cmd/                                    # CLI 命令层 (入口)
-│   ├── root/                              # 根命令定义
-│   ├── start/                             # 启动命令
-│   │   ├── cleanup/                       # 资源清理
-│   │   ├── job_startup/                   # Job 启动
-│   │   ├── output_format/                 # 输出格式化
-│   │   ├── start_container/               # 容器模式启动
-│   │   ├── start_kubernetes/              # Kubernetes 模式启动
-│   │   ├── start_local/                   # 本地模式启动
-│   │   ├── start_worktree/                # Git worktree 模式启动
-│   │   └── subscriptions/                 # 事件订阅
-│   ├── update/                            # 自更新命令
-│   │   ├── auto/                          # 自动更新
-│   │   ├── common/                        # 更新公共逻辑
-│   │   ├── curlbash_updater/              # curl|bash 方式更新
-│   │   ├── homebrew_updater/              # Homebrew 方式更新
-│   │   ├── npm_updater/                   # NPM 方式更新
-│   │   └── update/                        # 更新入口
-│   ├── mcp/                               # MCP 服务器管理命令
-│   │   ├── add/                           # 添加 MCP 服务器
-│   │   ├── auth/                          # MCP OAuth 认证
-│   │   ├── get/                           # 获取 MCP 服务器信息
-│   │   ├── list/                          # 列出 MCP 服务器
-│   │   ├── mcp/                           # MCP 命令入口
-│   │   └── remove/                        # 移除 MCP 服务器
-│   ├── jobs/                              # 远程 Job 管理命令
-│   │   ├── attach/                        # 附加到 Job
-│   │   ├── fetch/                         # 获取 Job
-│   │   ├── jobs/                          # Jobs 命令入口
-│   │   ├── rm/                            # 删除 Job
-│   │   └── stop/                          # 停止 Job
-│   ├── feedback/                          # 反馈命令
+├── cmd/                                    # CLI command layer (entry point)
+│   ├── root/                              # Root command definition
+│   ├── start/                             # Start command
+│   │   ├── cleanup/                       # Resource cleanup
+│   │   ├── job_startup/                   # Job startup
+│   │   ├── output_format/                 # Output formatting
+│   │   ├── start_container/               # Container mode startup
+│   │   ├── start_kubernetes/              # Kubernetes mode startup
+│   │   ├── start_local/                   # Local mode startup
+│   │   ├── start_worktree/                # Git worktree mode startup
+│   │   └── subscriptions/                 # Event subscriptions
+│   ├── update/                            # Self-update command
+│   │   ├── auto/                          # Automatic update
+│   │   ├── common/                        # Update common logic
+│   │   ├── curlbash_updater/              # curl|bash update method
+│   │   ├── homebrew_updater/              # Homebrew update method
+│   │   ├── npm_updater/                   # NPM update method
+│   │   └── update/                        # Update entry point
+│   ├── mcp/                               # MCP server management command
+│   │   ├── add/                           # Add MCP server
+│   │   ├── auth/                          # MCP OAuth authentication
+│   │   ├── get/                           # Get MCP server info
+│   │   ├── list/                          # List MCP servers
+│   │   ├── mcp/                           # MCP command entry point
+│   │   └── remove/                        # Remove MCP server
+│   ├── jobs/                              # Remote Job management command
+│   │   ├── attach/                        # Attach to Job
+│   │   ├── fetch/                         # Fetch Job
+│   │   ├── jobs/                          # Jobs command entry point
+│   │   ├── rm/                            # Remove Job
+│   │   └── stop/                          # Stop Job
+│   ├── feedback/                          # Feedback command
 │   │   └── feedback/
-│   ├── machineinfo/                       # 机器信息命令
+│   ├── machineinfo/                       # Machine info command
 │   │   └── machine_info/
-│   ├── status/                            # 状态命令
+│   ├── status/                            # Status command
 │   │   └── status/
-│   ├── message_io/                        # 消息输入输出 (SDK 模式)
-│   │   ├── out/                           # 输出处理
-│   │   ├── streaming/                     # 流式处理
-│   │   └── transform/                     # 消息转换
-│   └── utils/                             # 命令工具
-│       ├── archive/                       # 压缩归档
-│       ├── docker/                        # Docker 工具
-│       ├── flags/                         # 命令行 Flag
-│       ├── git/                           # Git 工具
-│       ├── hash/                          # 哈希工具
-│       ├── initializer/                   # 初始化器
-│       └── kubernetes/                    # Kubernetes 工具
+│   ├── message_io/                        # Message I/O (SDK mode)
+│   │   ├── out/                           # Output handling
+│   │   ├── streaming/                     # Streaming handling
+│   │   └── transform/                     # Message transformation
+│   └── utils/                             # Command utilities
+│       ├── archive/                       # Archive/compression
+│       ├── docker/                        # Docker utilities
+│       ├── flags/                         # Command-line flags
+│       ├── git/                           # Git utilities
+│       ├── hash/                          # Hash utilities
+│       ├── initializer/                   # Initializer
+│       └── kubernetes/                    # Kubernetes utilities
 │
-├── core/                                   # 核心业务逻辑层
-│   ├── account/                           # 账户管理
+├── core/                                   # Core business logic layer
+│   ├── account/                           # Account management
 │   │   └── account/
-│   ├── agent/                             # AI Agent 核心
-│   │   ├── agent/                         # Agent 入口和主循环
-│   │   ├── agent_stop_hook/               # Agent 停止钩子
-│   │   ├── command/                       # Agent 命令处理
-│   │   ├── compact/                       # 上下文压缩
-│   │   ├── generate/                      # 推理生成
-│   │   ├── hooks/                         # Hook 系统
-│   │   │   ├── agent_stop/               # Agent 停止时 Hook
-│   │   │   │   ├── empty_reply_checker/  # 空回复检查
-│   │   │   │   ├── external/             # 外部停止 Hook
-│   │   │   │   └── task_completion_checker/ # 任务完成检查
-│   │   │   ├── post_tool_use/            # 工具使用后 Hook
-│   │   │   │   ├── external/             # 外部 Hook
-│   │   │   │   ├── result_persister/     # 结果持久化
-│   │   │   │   └── result_truncator/     # 结果截断
-│   │   │   ├── pre_tool_use/             # 工具使用前 Hook
-│   │   │   │   ├── code_reviewer_checker/ # 代码审查检查
-│   │   │   │   └── external/             # 外部 Hook
-│   │   │   ├── session_start/            # 会话启动 Hook
+│   ├── agent/                             # AI Agent core
+│   │   ├── agent/                         # Agent entry point and main loop
+│   │   ├── agent_stop_hook/               # Agent stop hook
+│   │   ├── command/                       # Agent command handling
+│   │   ├── compact/                       # Context compaction
+│   │   ├── generate/                      # Inference generation
+│   │   ├── hooks/                         # Hook system
+│   │   │   ├── agent_stop/               # Agent stop hooks
+│   │   │   │   ├── empty_reply_checker/  # Empty reply checker
+│   │   │   │   ├── external/             # External stop hook
+│   │   │   │   └── task_completion_checker/ # Task completion checker
+│   │   │   ├── post_tool_use/            # Post-tool-use hook
+│   │   │   │   ├── external/             # External hook
+│   │   │   │   ├── result_persister/     # Result persister
+│   │   │   │   └── result_truncator/     # Result truncator
+│   │   │   ├── pre_tool_use/             # Pre-tool-use hook
+│   │   │   │   ├── code_reviewer_checker/ # Code review checker
+│   │   │   │   └── external/             # External hook
+│   │   │   ├── session_start/            # Session start hook
 │   │   │   │   └── external/
-│   │   │   └── user_prompt_submit/       # 用户提交 Hook
+│   │   │   └── user_prompt_submit/       # User prompt submit hook
 │   │   │       └── external/
-│   │   ├── mcp/                          # Agent 内 MCP 集成
-│   │   ├── option/                       # Agent 配置选项
+│   │   ├── mcp/                          # Agent-internal MCP integration
+│   │   ├── option/                       # Agent configuration options
 │   │   │   └── options/
-│   │   ├── options/                      # 备选项
-│   │   ├── permission/                   # 权限系统
-│   │   │   ├── bash_permission_gitignore/ # Bash gitignore 权限
-│   │   │   ├── bash_rule_matcher/        # Bash 规则匹配
-│   │   │   ├── file_rule_matcher/        # 文件规则匹配
-│   │   │   ├── mcp_rule_matcher/         # MCP 规则匹配
-│   │   │   ├── path_checker/             # 路径检查
-│   │   │   ├── permission_checker/       # 权限检查器
-│   │   │   ├── permission_coordinator/   # 权限协调器
-│   │   │   ├── permission_mode/          # 权限模式
-│   │   │   └── webfetch_rule_matcher/    # Web 获取规则匹配
-│   │   ├── prompt/                       # Prompt 管理
-│   │   │   ├── coder/                    # Coder 模式 Prompt
-│   │   │   ├── quest/                    # Quest 模式 Prompt
-│   │   │   ├── summarizer/              # 摘要 Prompt
-│   │   │   ├── task/                     # Task 模式 Prompt
-│   │   │   └── utils/                    # Prompt 工具
-│   │   ├── provider/                     # LLM Provider 层
+│   │   ├── options/                      # Alternative options
+│   │   ├── permission/                   # Permission system
+│   │   │   ├── bash_permission_gitignore/ # Bash gitignore permission
+│   │   │   ├── bash_rule_matcher/        # Bash rule matcher
+│   │   │   ├── file_rule_matcher/        # File rule matcher
+│   │   │   ├── mcp_rule_matcher/         # MCP rule matcher
+│   │   │   ├── path_checker/             # Path checker
+│   │   │   ├── permission_checker/       # Permission checker
+│   │   │   ├── permission_coordinator/   # Permission coordinator
+│   │   │   ├── permission_mode/          # Permission mode
+│   │   │   └── webfetch_rule_matcher/    # Web fetch rule matcher
+│   │   ├── prompt/                       # Prompt management
+│   │   │   ├── coder/                    # Coder mode prompt
+│   │   │   ├── quest/                    # Quest mode prompt
+│   │   │   ├── summarizer/              # Summarizer prompt
+│   │   │   ├── task/                     # Task mode prompt
+│   │   │   └── utils/                    # Prompt utilities
+│   │   ├── provider/                     # LLM Provider layer
 │   │   │   ├── idealab/                  # IdeaLab Provider
 │   │   │   ├── openai/                   # OpenAI Provider
-│   │   │   ├── options/                  # Provider 选项
-│   │   │   ├── provider/                 # Provider 接口
-│   │   │   ├── qoder/                    # Qoder 自有 Provider
-│   │   │   └── think/                    # 思考/推理层
-│   │   ├── settings/                     # Agent 设置
-│   │   ├── state/                        # Agent 状态管理
-│   │   │   ├── active/                   # 活跃状态
-│   │   │   ├── context/                  # 上下文状态
-│   │   │   ├── file/                     # 文件状态
-│   │   │   │   ├── file_state/           # 文件状态管理
-│   │   │   │   ├── snapshot/             # 文件快照
-│   │   │   │   └── storage/              # 文件存储
-│   │   │   ├── max/                      # 最大限制
-│   │   │   ├── memory/                   # Memory 管理
-│   │   │   │   ├── memory/               # Memory 入口
-│   │   │   │   ├── memory_state/         # Memory 状态
-│   │   │   │   └── qoder_rule/           # Qoder 规则
-│   │   │   ├── message/                  # 消息管理
-│   │   │   │   ├── cache/                # 消息缓存
-│   │   │   │   ├── message/              # 消息核心
-│   │   │   │   └── storage/              # 消息存储
-│   │   │   ├── session/                  # 会话状态
-│   │   │   │   ├── cache/                # 会话缓存
-│   │   │   │   ├── options/              # 会话选项
-│   │   │   │   ├── session/              # 会话核心
-│   │   │   │   └── storage/              # 会话存储
-│   │   │   ├── shell/                    # Shell 管理
-│   │   │   │   ├── adapt_unix/           # Unix 适配
-│   │   │   │   ├── background_shell/     # 后台 Shell
-│   │   │   │   ├── grep/                 # Grep 工具
-│   │   │   │   │   ├── grep_darwin_arm64/ # arm64 平台 grep
-│   │   │   │   │   └── grep_resource/   # grep 资源
-│   │   │   │   ├── manager/              # Shell 管理器
-│   │   │   │   ├── quote/                # 引号处理
-│   │   │   │   ├── shell/                # Shell 核心
-│   │   │   │   └── snapshot/             # Shell 快照
-│   │   │   ├── state/                    # 状态核心
-│   │   │   ├── state_execution/          # 执行状态
-│   │   │   ├── state_quest/              # Quest 状态
-│   │   │   ├── state_shell/              # Shell 状态
-│   │   │   ├── state_todo/               # Todo 状态
-│   │   │   └── state_vars/               # 状态变量
-│   │   ├── task/                         # SubAgent Task 调度
-│   │   ├── title/                        # 标题生成
-│   │   └── tools/                        # 内置工具
-│   │       ├── abstract/                 # 工具抽象基类
-│   │       ├── ask_user_question/        # AskUserQuestion 工具
-│   │       ├── bash/                     # Bash 工具
-│   │       ├── bashkill/                 # BashKill (KillBash) 工具
-│   │       ├── bashoutput/               # BashOutput 工具
-│   │       ├── check_runtime/            # CheckRuntime 工具
-│   │       ├── edit/                     # Edit 工具
-│   │       ├── enter_plan_in_quest/      # Quest 进入 Plan 模式
-│   │       ├── exit_plan_in_quest/       # Quest 退出 Plan 模式
-│   │       ├── glob/                     # Glob 工具
-│   │       ├── grep/                     # Grep 工具
-│   │       ├── imagegen/                 # ImageGen 工具
-│   │       ├── ls/                       # LS 工具
-│   │       ├── multiedit/                # MultiEdit 工具
-│   │       ├── read/                     # Read 工具
-│   │       ├── skill/                    # Skill 工具
-│   │       ├── task/                     # Task (SubAgent) 工具
-│   │       ├── todowrite/                # TodoWrite 工具
-│   │       ├── utils/                    # 工具通用工具
-│   │       │   ├── file/                 # 文件工具
-│   │       │   ├── format/               # 格式化工具
-│   │       │   └── repair/               # 修复工具
-│   │       ├── webfetch/                 # WebFetch 工具
-│   │       ├── webfetch_trusted/         # WebFetch (受信任) 工具
-│   │       ├── websearch/                # WebSearch 工具
-│   │       └── write/                    # Write 工具
-│   ├── auth/                             # 认证模块
-│   │   ├── default/                      # 默认认证
-│   │   └── model/                        # 模型认证
-│   │       ├── anthropic/                # Anthropic 认证
-│   │       ├── dashscope/                # DashScope 认证
-│   │       ├── filter/                   # 模型过滤
-│   │       ├── idealab/                  # IdeaLab 认证
-│   │       ├── models/                   # 模型列表
-│   │       ├── openai/                   # OpenAI 认证
-│   │       └── qoder/                    # Qoder 认证
-│   ├── config/                           # 配置管理
-│   │   ├── config/                       # 配置核心
-│   │   ├── qoder/                        # Qoder 配置
-│   │   └── settings/                     # 设置管理
-│   ├── generator/                        # 生成器
-│   │   ├── command/                      # 命令生成器
-│   │   └── subagent/                     # SubAgent 生成器
-│   ├── logging/                          # 日志系统
-│   │   ├── broker/                       # 日志中间件
-│   │   ├── config/                       # 日志配置
-│   │   └── logger/                       # 日志核心
-│   ├── monitoring/                       # 监控
-│   │   └── run/                          # 运行监控
-│   ├── pubsub/                           # 发布/订阅
-│   │   └── broker/                       # 消息代理
-│   ├── resource/                         # 资源管理
-│   │   ├── command/                      # 斜杠命令
-│   │   │   ├── builtin/                  # 内置命令
-│   │   │   └── commands/                 # 命令列表
-│   │   ├── hook/                         # Hook 系统
-│   │   │   ├── executor/                 # Hook 执行器
-│   │   │   ├── hook/                     # Hook 核心
-│   │   │   ├── hooks/                    # Hook 列表
-│   │   │   └── log/                      # Hook 日志
-│   │   ├── mcp/                          # MCP 资源
-│   │   │   ├── mcp/                      # MCP 核心
-│   │   │   ├── mcp_ipc_client_unix/      # Unix IPC 客户端
-│   │   │   ├── mcps/                     # MCP 列表
-│   │   │   ├── process/                  # MCP 进程管理
-│   │   │   └── token_store/              # MCP Token 存储
-│   │   ├── output_style/                 # 输出样式
-│   │   │   ├── built_in/                 # 内置样式
-│   │   │   └── output_style/             # 样式核心
-│   │   ├── plugin/                       # 插件系统
-│   │   │   ├── bootstrap/                # 插件引导
-│   │   │   ├── config/                   # 插件配置
-│   │   │   ├── errors/                   # 插件错误
-│   │   │   ├── integration/              # 插件集成
-│   │   │   ├── loader/                   # 插件加载
-│   │   │   ├── manifest/                 # 插件清单
-│   │   │   ├── registry/                 # 插件注册
-│   │   │   └── resolver/                 # 插件解析
-│   │   ├── skill/                        # Skill 系统
-│   │   │   ├── builtin/                  # 内置 Skill
-│   │   │   └── skills/                   # Skill 列表
-│   │   └── subagent/                     # SubAgent 系统
-│   │       ├── builtin/                  # 内置 SubAgent
-│   │       └── subagent/                 # SubAgent 核心
-│   ├── runtime/                          # 运行时检测
-│   ├── types/                            # 类型定义
-│   │   ├── compact/                      # 压缩类型
-│   │   ├── error/                        # 错误类型
-│   │   ├── location/                     # 位置类型
-│   │   ├── message/                      # 消息类型
-│   │   ├── permission/                   # 权限类型
-│   │   ├── sdk_marshal/                  # SDK 序列化
-│   │   └── sdk_protocol/                 # SDK 协议
-│   └── utils/                            # 核心工具库
-│       ├── converter/                    # 类型转换器
-│       │   ├── anthropic/                # Anthropic 格式转换
-│       │   └── qoder/                    # Qoder 格式转换
-│       ├── diff/                         # Diff 工具
+│   │   │   ├── options/                  # Provider options
+│   │   │   ├── provider/                 # Provider interface
+│   │   │   ├── qoder/                    # Qoder proprietary Provider
+│   │   │   └── think/                    # Thinking/reasoning layer
+│   │   ├── settings/                     # Agent settings
+│   │   ├── state/                        # Agent state management
+│   │   │   ├── active/                   # Active state
+│   │   │   ├── context/                  # Context state
+│   │   │   ├── file/                     # File state
+│   │   │   │   ├── file_state/           # File state management
+│   │   │   │   ├── snapshot/             # File snapshot
+│   │   │   │   └── storage/              # File storage
+│   │   │   ├── max/                      # Maximum limits
+│   │   │   ├── memory/                   # Memory management
+│   │   │   │   ├── memory/               # Memory entry point
+│   │   │   │   ├── memory_state/         # Memory state
+│   │   │   │   └── qoder_rule/           # Qoder rules
+│   │   │   ├── message/                  # Message management
+│   │   │   │   ├── cache/                # Message cache
+│   │   │   │   ├── message/              # Message core
+│   │   │   │   └── storage/              # Message storage
+│   │   │   ├── session/                  # Session state
+│   │   │   │   ├── cache/                # Session cache
+│   │   │   │   ├── options/              # Session options
+│   │   │   │   ├── session/              # Session core
+│   │   │   │   └── storage/              # Session storage
+│   │   │   ├── shell/                    # Shell management
+│   │   │   │   ├── adapt_unix/           # Unix adapter
+│   │   │   │   ├── background_shell/     # Background shell
+│   │   │   │   ├── grep/                 # Grep tool
+│   │   │   │   │   ├── grep_darwin_arm64/ # arm64 platform grep
+│   │   │   │   │   └── grep_resource/   # grep resources
+│   │   │   │   ├── manager/              # Shell manager
+│   │   │   │   ├── quote/                # Quote handling
+│   │   │   │   ├── shell/                # Shell core
+│   │   │   │   └── snapshot/             # Shell snapshot
+│   │   │   ├── state/                    # State core
+│   │   │   ├── state_execution/          # Execution state
+│   │   │   ├── state_quest/              # Quest state
+│   │   │   ├── state_shell/              # Shell state
+│   │   │   ├── state_todo/               # Todo state
+│   │   │   └── state_vars/               # State variables
+│   │   ├── task/                         # SubAgent Task scheduling
+│   │   ├── title/                        # Title generation
+│   │   └── tools/                        # Built-in tools
+│   │       ├── abstract/                 # Tool abstract base class
+│   │       ├── ask_user_question/        # AskUserQuestion tool
+│   │       ├── bash/                     # Bash tool
+│   │       ├── bashkill/                 # BashKill (KillBash) tool
+│   │       ├── bashoutput/               # BashOutput tool
+│   │       ├── check_runtime/            # CheckRuntime tool
+│   │       ├── edit/                     # Edit tool
+│   │       ├── enter_plan_in_quest/      # Quest enter Plan mode
+│   │       ├── exit_plan_in_quest/       # Quest exit Plan mode
+│   │       ├── glob/                     # Glob tool
+│   │       ├── grep/                     # Grep tool
+│   │       ├── imagegen/                 # ImageGen tool
+│   │       ├── ls/                       # LS tool
+│   │       ├── multiedit/                # MultiEdit tool
+│   │       ├── read/                     # Read tool
+│   │       ├── skill/                    # Skill tool
+│   │       ├── task/                     # Task (SubAgent) tool
+│   │       ├── todowrite/                # TodoWrite tool
+│   │       ├── utils/                    # Tool common utilities
+│   │       │   ├── file/                 # File utilities
+│   │       │   ├── format/               # Formatting utilities
+│   │       │   └── repair/               # Repair utilities
+│   │       ├── webfetch/                 # WebFetch tool
+│   │       ├── webfetch_trusted/         # WebFetch (trusted) tool
+│   │       ├── websearch/                # WebSearch tool
+│   │       └── write/                    # Write tool
+│   ├── auth/                             # Authentication module
+│   │   ├── default/                      # Default authentication
+│   │   └── model/                        # Model authentication
+│   │       ├── anthropic/                # Anthropic authentication
+│   │       ├── dashscope/                # DashScope authentication
+│   │       ├── filter/                   # Model filter
+│   │       ├── idealab/                  # IdeaLab authentication
+│   │       ├── models/                   # Model list
+│   │       ├── openai/                   # OpenAI authentication
+│   │       └── qoder/                    # Qoder authentication
+│   ├── config/                           # Configuration management
+│   │   ├── config/                       # Configuration core
+│   │   ├── qoder/                        # Qoder configuration
+│   │   └── settings/                     # Settings management
+│   ├── generator/                        # Generators
+│   │   ├── command/                      # Command generator
+│   │   └── subagent/                     # SubAgent generator
+│   ├── logging/                          # Logging system
+│   │   ├── broker/                       # Logging middleware
+│   │   ├── config/                       # Logging configuration
+│   │   └── logger/                       # Logging core
+│   ├── monitoring/                       # Monitoring
+│   │   └── run/                          # Run monitoring
+│   ├── pubsub/                           # Publish/subscribe
+│   │   └── broker/                       # Message broker
+│   ├── resource/                         # Resource management
+│   │   ├── command/                      # Slash commands
+│   │   │   ├── builtin/                  # Built-in commands
+│   │   │   └── commands/                 # Command list
+│   │   ├── hook/                         # Hook system
+│   │   │   ├── executor/                 # Hook executor
+│   │   │   ├── hook/                     # Hook core
+│   │   │   ├── hooks/                    # Hook list
+│   │   │   └── log/                      # Hook log
+│   │   ├── mcp/                          # MCP resources
+│   │   │   ├── mcp/                      # MCP core
+│   │   │   ├── mcp_ipc_client_unix/      # Unix IPC client
+│   │   │   ├── mcps/                     # MCP list
+│   │   │   ├── process/                  # MCP process management
+│   │   │   └── token_store/              # MCP Token storage
+│   │   ├── output_style/                 # Output styles
+│   │   │   ├── built_in/                 # Built-in styles
+│   │   │   └── output_style/             # Style core
+│   │   ├── plugin/                       # Plugin system
+│   │   │   ├── bootstrap/                # Plugin bootstrap
+│   │   │   ├── config/                   # Plugin configuration
+│   │   │   ├── errors/                   # Plugin errors
+│   │   │   ├── integration/              # Plugin integration
+│   │   │   ├── loader/                   # Plugin loader
+│   │   │   ├── manifest/                 # Plugin manifest
+│   │   │   ├── registry/                 # Plugin registry
+│   │   │   └── resolver/                 # Plugin resolver
+│   │   ├── skill/                        # Skill system
+│   │   │   ├── builtin/                  # Built-in skills
+│   │   │   └── skills/                   # Skill list
+│   │   └── subagent/                     # SubAgent system
+│   │       ├── builtin/                  # Built-in SubAgents
+│   │       └── subagent/                 # SubAgent core
+│   ├── runtime/                          # Runtime detection
+│   ├── types/                            # Type definitions
+│   │   ├── compact/                      # Compaction types
+│   │   ├── error/                        # Error types
+│   │   ├── location/                     # Location types
+│   │   ├── message/                      # Message types
+│   │   ├── permission/                   # Permission types
+│   │   ├── sdk_marshal/                  # SDK serialization
+│   │   └── sdk_protocol/                 # SDK protocol
+│   └── utils/                            # Core utility library
+│       ├── converter/                    # Type converters
+│       │   ├── anthropic/                # Anthropic format conversion
+│       │   └── qoder/                    # Qoder format conversion
+│       ├── diff/                         # Diff utilities
 │       │   └── diff/
-│       ├── env/                          # 环境变量
+│       ├── env/                          # Environment variables
 │       │   └── env/
-│       ├── envprep/                      # 环境准备
-│       │   ├── download/                 # 下载
-│       │   ├── envprep/                  # 环境准备核心
-│       │   ├── extract/                  # 解压
-│       │   ├── gitbash_preparer/         # Git Bash 准备
-│       │   └── lock/                     # 文件锁
-│       ├── feedback/                     # 反馈收集
-│       │   ├── collector/                # 收集器
-│       │   ├── feedback/                 # 反馈核心
-│       │   ├── image_upload/             # 图片上传
-│       │   ├── sign/                     # 签名
-│       │   └── truncate/                 # 截断
-│       ├── fileutil/                     # 文件工具
+│       ├── envprep/                      # Environment preparation
+│       │   ├── download/                 # Download
+│       │   ├── envprep/                  # Environment preparation core
+│       │   ├── extract/                  # Extraction
+│       │   ├── gitbash_preparer/         # Git Bash preparation
+│       │   └── lock/                     # File lock
+│       ├── feedback/                     # Feedback collection
+│       │   ├── collector/                # Collector
+│       │   ├── feedback/                 # Feedback core
+│       │   ├── image_upload/             # Image upload
+│       │   ├── sign/                     # Signature
+│       │   └── truncate/                 # Truncation
+│       ├── fileutil/                     # File utilities
 │       │   └── fileutil/
-│       ├── goroutine/                    # Goroutine 管理
+│       ├── goroutine/                    # Goroutine management
 │       │   └── run/
-│       ├── http/                         # HTTP 客户端
-│       │   ├── client/                   # 客户端核心
-│       │   └── init/                     # 初始化
-│       ├── imageutil/                    # 图片处理
+│       ├── http/                         # HTTP client
+│       │   ├── client/                   # Client core
+│       │   └── init/                     # Initialization
+│       ├── imageutil/                    # Image processing
 │       │   └── processor/
-│       ├── install/                      # 安装工具
+│       ├── install/                      # Installation utilities
 │       │   └── source/
-│       ├── jsonrepair/                   # JSON 修复
+│       ├── jsonrepair/                   # JSON repair
 │       │   ├── const/
 │       │   ├── jsonrepair/
 │       │   └── utils/
-│       ├── pathutil/                     # 路径工具
+│       ├── pathutil/                     # Path utilities
 │       │   └── path/
-│       ├── qoder/                        # Qoder 服务交互
-│       │   ├── auth_callback/            # 认证回调
-│       │   ├── business_tracker/         # 业务追踪
-│       │   ├── codebase_api/             # 代码库 API
-│       │   ├── codebase_service/         # 代码库服务
-│       │   ├── codebase_types/           # 代码库类型
-│       │   ├── device_info/              # 设备信息
-│       │   ├── device_polling/           # 设备轮询
-│       │   ├── device_token/             # 设备 Token
-│       │   ├── endpoints/                # API 端点
-│       │   ├── github/                   # GitHub 集成
-│       │   ├── json/                     # JSON 工具
-│       │   ├── manager/                  # 管理器
-│       │   ├── oauth/                    # OAuth 认证
-│       │   ├── privacy_policy/           # 隐私政策
-│       │   ├── qoder_support/            # Qoder 支持
-│       │   ├── quota/                    # 配额管理
-│       │   ├── region_config/            # 区域配置
-│       │   ├── request/                  # 请求构建
-│       │   ├── sse/                      # SSE 客户端
+│       ├── qoder/                        # Qoder service interaction
+│       │   ├── auth_callback/            # Authentication callback
+│       │   ├── business_tracker/         # Business tracking
+│       │   ├── codebase_api/             # Codebase API
+│       │   ├── codebase_service/         # Codebase service
+│       │   ├── codebase_types/           # Codebase types
+│       │   ├── device_info/              # Device info
+│       │   ├── device_polling/           # Device polling
+│       │   ├── device_token/             # Device token
+│       │   ├── endpoints/                # API endpoints
+│       │   ├── github/                   # GitHub integration
+│       │   ├── json/                     # JSON utilities
+│       │   ├── manager/                  # Manager
+│       │   ├── oauth/                    # OAuth authentication
+│       │   ├── privacy_policy/           # Privacy policy
+│       │   ├── qoder_support/            # Qoder support
+│       │   ├── quota/                    # Quota management
+│       │   ├── region_config/            # Region configuration
+│       │   ├── request/                  # Request building
+│       │   ├── sse/                      # SSE client
 │       │   │   ├── client/
 │       │   │   └── event/
-│       │   └── storage/                  # 本地存储
-│       ├── runner/                       # 运行器
+│       │   └── storage/                  # Local storage
+│       ├── runner/                       # Runner
 │       │   └── runner/
-│       ├── shellutil/                    # Shell 工具
+│       ├── shellutil/                    # Shell utilities
 │       │   └── detect/
-│       ├── sls/                          # SLS (日志服务)
-│       │   ├── command_tracker/          # 命令追踪
-│       │   ├── data_format/              # 数据格式
-│       │   ├── heartbeat/                # 心跳
-│       │   ├── initializer/              # 初始化
-│       │   └── reporter/                 # 上报
-│       ├── storage/                      # 通用存储
+│       ├── sls/                          # SLS (logging service)
+│       │   ├── command_tracker/          # Command tracking
+│       │   ├── data_format/              # Data format
+│       │   ├── heartbeat/                # Heartbeat
+│       │   ├── initializer/              # Initializer
+│       │   └── reporter/                 # Reporting
+│       ├── storage/                      # Generic storage
 │       │   └── storage/
-│       ├── system/                       # 系统工具
+│       ├── system/                       # System utilities
 │       │   ├── os/
 │       │   └── util/
-│       ├── template/                     # 模板工具
+│       ├── template/                     # Template utilities
 │       │   └── template/
-│       ├── timeutil/                     # 时间工具
+│       ├── timeutil/                     # Time utilities
 │       │   └── timeutil/
-│       ├── tokens/                       # Token 计算
+│       ├── tokens/                       # Token calculation
 │       │   └── tokens/
-│       ├── umid/                         # 设备唯一 ID
+│       ├── umid/                         # Device unique ID
 │       │   ├── types/
 │       │   ├── umid/
 │       │   ├── umid_common/
 │       │   └── umid_unix/
-│       ├── version/                      # 版本管理
+│       ├── version/                      # Version management
 │       │   └── version/
-│       └── yamlrepair/                   # YAML 修复
+│       └── yamlrepair/                   # YAML repair
 │           ├── const/
 │           ├── utils/
 │           └── yamlrepair/
 │
-├── acp/                                    # ACP (Agent Communication Protocol) 层
-│   ├── acp/                              # ACP 核心
-│   ├── acp_file/                         # ACP 文件服务
-│   ├── json_utils/                       # JSON 工具
-│   ├── mcp_server/                       # MCP 服务器
-│   ├── option/                           # ACP 选项
+├── acp/                                    # ACP (Agent Communication Protocol) layer
+│   ├── acp/                              # ACP core
+│   ├── acp_file/                         # ACP file service
+│   ├── json_utils/                       # JSON utilities
+│   ├── mcp_server/                       # MCP server
+│   ├── option/                           # ACP options
 │   ├── qoder_agent/                      # Qoder Agent
-│   ├── session/                          # ACP 会话
-│   └── tools/                            # ACP 工具
+│   ├── session/                          # ACP session
+│   └── tools/                            # ACP tools
 │
-├── sdk/                                    # SDK 模式 (非交互式)
-│   ├── control/                          # 控制协议
-│   ├── process_query/                    # 进程查询
-│   └── runtime/                          # SDK 运行时
+├── sdk/                                    # SDK mode (non-interactive)
+│   ├── control/                          # Control protocol
+│   ├── process_query/                    # Process query
+│   └── runtime/                          # SDK runtime
 │
-├── tui/                                    # TUI (终端用户界面) 层
-│   ├── app/                              # 应用入口
-│   ├── cmd/                              # TUI 命令处理
-│   ├── components/                       # UI 组件
-│   │   ├── askuser/                      # 用户问题对话框
+├── tui/                                    # TUI (terminal user interface) layer
+│   ├── app/                              # Application entry point
+│   ├── cmd/                              # TUI command handling
+│   ├── components/                       # UI components
+│   │   ├── askuser/                      # User question dialog
 │   │   │   └── askuser/
-│   │   ├── command/                      # 斜杠命令 UI
-│   │   │   ├── agents/                   # /agents 命令
-│   │   │   ├── bashes/                   # /bashes 命令
-│   │   │   ├── clear/                    # /clear 命令
-│   │   │   ├── commands/                 # 命令列表
-│   │   │   ├── compact/                  # /compact 命令
-│   │   │   ├── config/                   # /config 命令
-│   │   │   ├── export/                   # /export 命令
-│   │   │   ├── feedback/                 # /feedback 命令
-│   │   │   ├── github/                   # /github 命令
-│   │   │   │   ├── assets/               # GitHub Actions 模板
-│   │   │   │   └── installer/            # 安装器
-│   │   │   ├── help/                     # /help 命令
-│   │   │   ├── login/                    # /login 命令
-│   │   │   ├── logout/                   # /logout 命令
-│   │   │   ├── mcp/                      # /mcp 命令
-│   │   │   ├── memory/                   # /memory 命令
-│   │   │   ├── model/                    # /model 命令
-│   │   │   ├── prompt/                   # /prompt 命令
-│   │   │   ├── quest_off/                # /quest-off 命令
-│   │   │   ├── quest_on/                 # /quest-on 命令
-│   │   │   ├── quit/                     # /quit 命令
-│   │   │   ├── release_notes/            # /release-notes 命令
-│   │   │   ├── resume/                   # /resume 命令
-│   │   │   ├── setup_github/             # /setup-github 命令
-│   │   │   ├── skills/                   # /skills 命令
-│   │   │   ├── status/                   # /status 命令
-│   │   │   ├── upgrade/                  # /upgrade 命令
-│   │   │   ├── usage/                    # /usage 命令
-│   │   │   └── vim/                      # /vim 命令
-│   │   ├── common/                       # 通用 UI 组件
-│   │   │   ├── dialog/                   # 对话框
-│   │   │   │   ├── command/              # 命令对话框
-│   │   │   │   ├── simple/               # 简单对话框
-│   │   │   │   └── support/              # 支持对话框
-│   │   │   ├── editor/                   # 编辑器组件
+│   │   ├── command/                      # Slash command UI
+│   │   │   ├── agents/                   # /agents command
+│   │   │   ├── bashes/                   # /bashes command
+│   │   │   ├── clear/                    # /clear command
+│   │   │   ├── commands/                 # Command list
+│   │   │   ├── compact/                  # /compact command
+│   │   │   ├── config/                   # /config command
+│   │   │   ├── export/                   # /export command
+│   │   │   ├── feedback/                 # /feedback command
+│   │   │   ├── github/                   # /github command
+│   │   │   │   ├── assets/               # GitHub Actions templates
+│   │   │   │   └── installer/            # Installer
+│   │   │   ├── help/                     # /help command
+│   │   │   ├── login/                    # /login command
+│   │   │   ├── logout/                   # /logout command
+│   │   │   ├── mcp/                      # /mcp command
+│   │   │   ├── memory/                   # /memory command
+│   │   │   ├── model/                    # /model command
+│   │   │   ├── prompt/                   # /prompt command
+│   │   │   ├── quest_off/                # /quest-off command
+│   │   │   ├── quest_on/                 # /quest-on command
+│   │   │   ├── quit/                     # /quit command
+│   │   │   ├── release_notes/            # /release-notes command
+│   │   │   ├── resume/                   # /resume command
+│   │   │   ├── setup_github/             # /setup-github command
+│   │   │   ├── skills/                   # /skills command
+│   │   │   ├── status/                   # /status command
+│   │   │   ├── upgrade/                  # /upgrade command
+│   │   │   ├── usage/                    # /usage command
+│   │   │   └── vim/                      # /vim command
+│   │   ├── common/                       # Common UI components
+│   │   │   ├── dialog/                   # Dialog
+│   │   │   │   ├── command/              # Command dialog
+│   │   │   │   ├── simple/               # Simple dialog
+│   │   │   │   └── support/              # Support dialog
+│   │   │   ├── editor/                   # Editor component
 │   │   │   │   └── editor/
-│   │   │   └── textarea/                 # 文本区域组件
+│   │   │   └── textarea/                 # Textarea component
 │   │   │       └── textarea/
-│   │   ├── filepicker/                   # 文件选择器
+│   │   ├── filepicker/                   # File picker
 │   │   │   ├── filepicker/
 │   │   │   └── filetree/
-│   │   ├── interaction/                  # 交互面板
-│   │   │   ├── bash/                     # Bash 交互
-│   │   │   ├── board/                    # 面板
-│   │   │   ├── editor/                   # 输入编辑器
-│   │   │   │   ├── attachment/           # 附件处理
-│   │   │   │   ├── bash_handler/         # Bash 处理
-│   │   │   │   ├── cache/                # 编辑器缓存
-│   │   │   │   ├── editor/               # 编辑器核心
-│   │   │   │   ├── hint/                 # 提示
-│   │   │   │   ├── history/              # 历史记录
-│   │   │   │   ├── pending/              # 待处理
-│   │   │   │   └── windows_paste_handler/ # Windows 粘贴
-│   │   │   ├── memory/                   # 内存面板
-│   │   │   ├── progress/                 # 进度条
+│   │   ├── interaction/                  # Interaction panel
+│   │   │   ├── bash/                     # Bash interaction
+│   │   │   ├── board/                    # Board
+│   │   │   ├── editor/                   # Input editor
+│   │   │   │   ├── attachment/           # Attachment handling
+│   │   │   │   ├── bash_handler/         # Bash handling
+│   │   │   │   ├── cache/                # Editor cache
+│   │   │   │   ├── editor/               # Editor core
+│   │   │   │   ├── hint/                 # Hint
+│   │   │   │   ├── history/              # History
+│   │   │   │   ├── pending/              # Pending
+│   │   │   │   └── windows_paste_handler/ # Windows paste
+│   │   │   ├── memory/                   # Memory panel
+│   │   │   ├── progress/                 # Progress bar
 │   │   │   │   └── progress/
-│   │   │   ├── selectors/                # 选择器
-│   │   │   │   ├── at_selector/          # @ 选择器
-│   │   │   │   ├── command_selector/     # 命令选择器
-│   │   │   │   └── memory_selector/      # 内存选择器
-│   │   │   └── status/                   # 状态栏
+│   │   │   ├── selectors/                # Selectors
+│   │   │   │   ├── at_selector/          # @ selector
+│   │   │   │   ├── command_selector/     # Command selector
+│   │   │   │   └── memory_selector/      # Memory selector
+│   │   │   └── status/                   # Status bar
 │   │   │       └── status/
-│   │   ├── messages/                     # 消息显示
-│   │   │   ├── bash/                     # Bash 输出
-│   │   │   ├── command/                  # 命令消息
-│   │   │   ├── log/                      # 日志消息
-│   │   │   ├── memory/                   # 内存消息
-│   │   │   ├── message/                  # 消息核心
-│   │   │   ├── process/                  # 进程消息
-│   │   │   ├── render/                   # 渲染器
-│   │   │   ├── tool/                     # 工具消息
-│   │   │   ├── view/                     # 视图
-│   │   │   └── welcome/                  # 欢迎消息
-│   │   └── permission/                   # 权限 UI
+│   │   ├── messages/                     # Message display
+│   │   │   ├── bash/                     # Bash output
+│   │   │   ├── command/                  # Command message
+│   │   │   ├── log/                      # Log message
+│   │   │   ├── memory/                   # Memory message
+│   │   │   ├── message/                  # Message core
+│   │   │   ├── process/                  # Process message
+│   │   │   ├── render/                   # Renderer
+│   │   │   ├── tool/                     # Tool message
+│   │   │   ├── view/                     # View
+│   │   │   └── welcome/                  # Welcome message
+│   │   └── permission/                   # Permission UI
 │   │       ├── permission/
 │   │       └── quest_switch/
-│   ├── event/                            # TUI 事件
-│   ├── render/                           # 渲染
-│   ├── state/                            # TUI 状态
+│   ├── event/                            # TUI events
+│   ├── render/                           # Rendering
+│   ├── state/                            # TUI state
 │   │   └── global_state/
-│   ├── styles/                           # 样式
+│   ├── styles/                           # Styles
 │   │   └── styles/
-│   ├── theme/                            # 主题
+│   ├── theme/                            # Theme
 │   │   ├── catppuccin/
 │   │   ├── dracula/
 │   │   ├── flexoki/
@@ -457,11 +457,11 @@ code.alibaba-inc.com/qoder-core/qodercli/
 │   │   ├── manager/
 │   │   ├── monokai/
 │   │   ├── onedark/
-│   │   ├── qoder/                        # Qoder 默认主题
+│   │   ├── qoder/                        # Qoder default theme
 │   │   ├── theme/
 │   │   ├── tokyonight/
 │   │   └── tron/
-│   └── util/                             # TUI 工具
+│   └── util/                             # TUI utilities
 │       ├── code/
 │       ├── diff/
 │       ├── markdown/
@@ -469,60 +469,60 @@ code.alibaba-inc.com/qoder-core/qodercli/
 │       ├── text/
 │       └── util/
 │
-└── profile/                                # 性能分析
+└── profile/                                # Performance profiling
     ├── init/
     ├── profile/
     └── trigger/
 ```
 
-## 3. 第三方依赖列表
+## 3. Third-Party Dependencies
 
-### 3.1 核心框架与 SDK
+### 3.1 Core Frameworks and SDKs
 
-| 依赖 | 版本 | 用途 |
-|------|------|------|
-| `github.com/spf13/cobra` | - | CLI 框架 |
+| Dependency | Version | Purpose |
+|------------|---------|---------|
+| `github.com/spf13/cobra` | - | CLI framework |
 | `github.com/anthropics/anthropic-sdk-go` | - | Anthropic Claude SDK |
-| `github.com/google/go-github/v57` | v57.0.0 | GitHub API 客户端 |
-| `github.com/Masterminds/semver/v3` | v3 | 语义版本控制 |
+| `github.com/google/go-github/v57` | v57.0.0 | GitHub API client |
+| `github.com/Masterminds/semver/v3` | v3 | Semantic versioning |
 
-### 3.2 TUI 与终端
+### 3.2 TUI and Terminal
 
-| 依赖 | 用途 |
-|------|------|
-| `github.com/charmbracelet/bubbletea` | TUI 框架 (推断, Bubble Tea) |
-| `github.com/charmbracelet/lipgloss` | 终端样式 (推断) |
-| `github.com/alecthomas/chroma/v2` | 代码语法高亮 |
-| `github.com/atotto/clipboard` | 剪贴板操作 |
-| `github.com/aymanbagabas/go-osc52/v2` | OSC52 终端协议 |
+| Dependency | Purpose |
+|------------|---------|
+| `github.com/charmbracelet/bubbletea` | TUI framework (inferred, Bubble Tea) |
+| `github.com/charmbracelet/lipgloss` | Terminal styling (inferred) |
+| `github.com/alecthomas/chroma/v2` | Code syntax highlighting |
+| `github.com/atotto/clipboard` | Clipboard operations |
+| `github.com/aymanbagabas/go-osc52/v2` | OSC52 terminal protocol |
 | `github.com/aymanbagabas/go-udiff` | Unified Diff |
 
-### 3.3 数据处理
+### 3.3 Data Processing
 
-| 依赖 | 用途 |
-|------|------|
-| `github.com/BurntSushi/toml` | v1.5.0 | TOML 解析 |
-| `github.com/JohannesKaufmann/html-to-markdown/v2` | HTML 转 Markdown |
-| `github.com/JohannesKaufmann/dom` | v0.2.0 | DOM 操作 |
-| `github.com/adrg/frontmatter` | Frontmatter 解析 |
-| `github.com/andybalholm/brotli` | Brotli 压缩/解压 |
+| Dependency | Purpose |
+|------------|---------|
+| `github.com/BurntSushi/toml` | v1.5.0 | TOML parsing |
+| `github.com/JohannesKaufmann/html-to-markdown/v2` | HTML to Markdown |
+| `github.com/JohannesKaufmann/dom` | v0.2.0 | DOM manipulation |
+| `github.com/adrg/frontmatter` | Frontmatter parsing |
+| `github.com/andybalholm/brotli` | Brotli compression/decompression |
 
-### 3.4 基础设施
+### 3.4 Infrastructure
 
-| 依赖 | 用途 |
-|------|------|
-| `github.com/aliyun/alicloud-httpdns-go-sdk` | 阿里云 HTTPDNS |
-| `golang.org/x/crypto` | 加密库 |
-| `golang.org/x/net` | 网络库 |
-| `golang.org/x/sync` | 并发原语 |
-| `golang.org/x/sys` | 系统调用 |
-| `golang.org/x/term` | 终端操作 |
-| `golang.org/x/text` | 文本处理 |
-| `golang.org/x/exp` | 实验性库 |
+| Dependency | Purpose |
+|------------|---------|
+| `github.com/aliyun/alicloud-httpdns-go-sdk` | Alibaba Cloud HTTPDNS |
+| `golang.org/x/crypto` | Cryptography library |
+| `golang.org/x/net` | Networking library |
+| `golang.org/x/sync` | Concurrency primitives |
+| `golang.org/x/sys` | System calls |
+| `golang.org/x/term` | Terminal operations |
+| `golang.org/x/text` | Text processing |
+| `golang.org/x/exp` | Experimental library |
 
-## 4. 核心 types 包类型定义
+## 4. Core Types in the `types` Package
 
-从二进制字符串中提取的关键类型（`core/types` 包）：
+Key types extracted from binary strings (in the `core/types` package):
 
 ```
 types.Role              types.Type              types.MIME
@@ -546,9 +546,9 @@ types.StreamEventData   types.ReasoningContent  types.HookCallbackData
 types.TrackingEventData types.ControlRequestData
 ```
 
-## 5. qoder 服务端交互类型
+## 5. Qoder Service Interaction Types
 
-从二进制中提取的 `qoder` 包类型（`core/utils/qoder`）：
+`qoder` package types (in `core/utils/qoder`):
 
 ```
 qoder.AuthManager           qoder.AuthService          qoder.AuthStatus
@@ -565,26 +565,26 @@ qoder.WhitelistStatus       qoder.DeviceTokenPollingManager
 qoder.ExchangeGitHubAppTokenParam  qoder.GitHubAppRepoStatusResponse
 ```
 
-## 6. Provider 层类型
+## 6. Provider Layer Types
 
 ```
-provider.Client             # Provider 客户端接口
-provider.ClientBuilder      # 客户端构建器
-provider.Event              # 流式事件
-provider.EventType          # 事件类型
-provider.ModelRequest       # 模型请求
-provider.Response           # 模型响应
-provider.TokenUsage         # Token 使用量
-provider.ThinkLevel         # 思考级别
-provider.ReasoningEffort    # 推理努力程度
+provider.Client             # Provider client interface
+provider.ClientBuilder      # Client builder
+provider.Event              # Streaming event
+provider.EventType          # Event type
+provider.ModelRequest       # Model request
+provider.Response           # Model response
+provider.TokenUsage         # Token usage
+provider.ThinkLevel         # Thinking level
+provider.ReasoningEffort    # Reasoning effort
 
-# 具体实现
-provider.OpenAIClient       # OpenAI 客户端
-provider.QoderClient        # Qoder 客户端
-provider.IdeaLabClient      # IdeaLab 客户端
+# Concrete implementations
+provider.OpenAIClient       # OpenAI client
+provider.QoderClient        # Qoder client
+provider.IdeaLabClient      # IdeaLab client
 ```
 
-## 7. ACP (Agent Communication Protocol) 层类型
+## 7. ACP (Agent Communication Protocol) Layer Types
 
 ```
 acp.QoderAcpAgent           acp.Session            acp.SessionConfig

@@ -1,80 +1,80 @@
-# qodercli TUI 实现文档
+# qodercli-reverse TUI Implementation
 
-> 更新日期：2026-03-09  
-> 状态：已完成 (95% 原版覆盖率)
+> Updated: 2026-03-09
+> Status: Completed (95% original coverage)
 
 ---
 
-## 1. TUI 架构概述
+## 1. TUI Architecture Overview
 
-### 1.1 技术栈
+### 1.1 Tech Stack
 
-qodercli 使用完整的 Charmbracelet TUI 技术栈：
+qodercli-reverse uses the complete Charmbracelet TUI tech stack:
 
-| 库 | 用途 | 版本 |
-|------|------|------|
-| `bubbletea` | TUI 框架（基于 Elm 架构） | v1.3.10 |
-| `bubbles` | TUI 组件库 | v1.0.0 |
-| `lipgloss` | 终端样式系统 | v1.1.0 |
-| `glamour` | Markdown 渲染 | v0.8.0 |
+| Library | Purpose | Version |
+|---------|---------|---------|
+| `bubbletea` | TUI framework (based on Elm architecture) | v1.3.10 |
+| `bubbles` | TUI component library | v1.0.0 |
+| `lipgloss` | Terminal styling system | v1.1.0 |
+| `glamour` | Markdown rendering | v0.8.0 |
 
-### 1.2 核心组件
+### 1.2 Core Components
 
 ```
 tui/
-├── app/                      # 应用层
-│   ├── model.go             # 主 Model (Bubble Tea)
-│   ├── run.go               # 应用入口
-│   └── options.go           # 配置选项
-├── components/               # UI 组件
-│   ├── chat/                # 聊天视图（核心）
-│   │   └── chat.go         # 消息显示 + Markdown 渲染
-│   ├── editor/              # 输入编辑器
-│   │   └── editor.go       # 多行文本输入
-│   ├── status/              # 状态栏
-│   │   └── status.go       # Token 计数 + 模式显示
-│   └── messages/            # 消息列表
-│       └── messages.go     # 历史消息展示
-└── styles/                   # 样式定义
-    └── styles.go           # 颜色 + 主题
+├── app/                      # Application layer
+│   ├── model.go             # Main Model (Bubble Tea)
+│   ├── run.go               # Application entry
+│   └── options.go           # Config options
+├── components/               # UI components
+│   ├── chat/                # Chat view (core)
+│   │   └── chat.go         # Message display + Markdown rendering
+│   ├── editor/              # Input editor
+│   │   └── editor.go       # Multi-line text input
+│   ├── status/              # Status bar
+│   │   └── status.go       # Token count + mode display
+│   └── messages/            # Message list
+│       └── messages.go     # Historical message display
+└── styles/                   # Style definitions
+    └── styles.go           # Colors + theme
 ```
 
-### 1.3 Bubble Tea 架构模式
+### 1.3 Bubble Tea Architecture Pattern
 
 ```go
-// Bubble Tea 三要素
+// Bubble Tea three elements
 type Model interface {
-    Init() Cmd              // 初始化命令
-    Update(Msg) (Model, Cmd) // 消息处理
-    View() string           // 视图渲染
+    Init() Cmd              // Initialization command
+    Update(Msg) (Model, Cmd) // Message handling
+    View() string           // View rendering
 }
 
-// 主 Model 结构
+// Main Model structure
 type Model struct {
-    chatView    *chat.Component   // 聊天视图
-    editor      *editor.Component // 输入编辑器
-    statusBar   *status.Component // 状态栏
-    messageList *messages.Component // 消息列表
-    
-    agent       agent.Agent       // Agent 核心
-    pubsub      *pubsub.Broker    // 事件总线
-    config      *config.Config    // 配置
-    
-    mode        Mode              // 运行模式
-    processing  bool              // 处理中状态
-    quitting    bool              // 退出标志
+    chatView    *chat.Component   // Chat view
+    editor      *editor.Component // Input editor
+    statusBar   *status.Component // Status bar
+    messageList *messages.Component // Message list
+
+    agent       agent.Agent       // Agent core
+    pubsub      *pubsub.Broker    // Event bus
+    config      *config.Config    // Config
+
+    mode        Mode              // Run mode
+    processing  bool              // Processing state
+    quitting    bool              // Quit flag
 }
 ```
 
 ---
 
-## 2. 核心功能实现
+## 2. Core Feature Implementation
 
-### 2.1 Markdown 渲染
+### 2.1 Markdown Rendering
 
-**实现位置**: `tui/components/chat/chat.go`
+**Implementation location**: `tui/components/chat/chat.go`
 
-**关键代码**:
+**Key code**:
 ```go
 import "github.com/charmbracelet/glamour"
 
@@ -84,19 +84,19 @@ type Component struct {
     needsRender  bool
 }
 
-// 初始化渲染器
+// Initialize renderer
 renderer, _ := glamour.NewTermRenderer(
     glamour.WithAutoStyle(),
     glamour.WithWordWrap(width),
 )
 
-// 渲染 Markdown
+// Render Markdown
 func (c *Component) renderContent() {
     var sb strings.Builder
     for _, msg := range c.messages {
         sb.WriteString(c.formatMessage(msg))
     }
-    
+
     rendered := sb.String()
     if r, err := c.renderer.Render(rendered); err == nil {
         rendered = r
@@ -105,16 +105,16 @@ func (c *Component) renderContent() {
 }
 ```
 
-**消息格式**:
+**Message format**:
 ```markdown
 **You:**
-用户输入的内容...
+User input content...
 
 **Assistant:**
-助手回复的 Markdown 内容...
-- 支持列表
-- 支持代码块
-- 支持链接
+Assistant reply Markdown content...
+- Supports lists
+- Supports code blocks
+- Supports links
 
 ▶ Tool Call: bash
 { "command": "ls -la" }
@@ -124,11 +124,11 @@ total 48
 drwxr-xr-x  8 user staff  256 Mar  9 20:00 .
 ```
 
-### 2.2 滚动系统
+### 2.2 Scroll System
 
-**实现位置**: `tui/components/chat/chat.go`
+**Implementation location**: `tui/components/chat/chat.go`
 
-#### 鼠标滚轮支持
+#### Mouse Wheel Support
 ```go
 case tea.MouseMsg:
     switch msg.Type {
@@ -147,9 +147,9 @@ case tea.MouseMsg:
     }
 ```
 
-#### 键盘快捷键
+#### Keyboard Shortcuts
 ```go
-// 在 model.go 的 handleKeyMsg 中
+// In model.go's handleKeyMsg
 case "ctrl+shift+end":
     m.chatView.ScrollToBottom()
 case "ctrl+shift+home":
@@ -164,7 +164,7 @@ case "ctrl+d":
     m.chatView.HalfPageDown()
 ```
 
-#### 公共方法封装
+#### Public Method Wrappers
 ```go
 func (c *Component) ScrollToTop()       { c.viewport.GotoTop() }
 func (c *Component) ScrollToBottom()    { c.viewport.GotoBottom() }
@@ -174,11 +174,11 @@ func (c *Component) HalfPageUp()        { c.viewport.HalfPageUp() }
 func (c *Component) HalfPageDown()      { c.viewport.HalfPageDown() }
 ```
 
-### 2.3 工具调用显示
+### 2.3 Tool Call Display
 
-**三种状态**:
+**Three states**:
 
-1. **工具调用中**:
+1. **During tool call**:
 ```go
 func (c *Component) ShowToolCall(name, arguments string) tea.Cmd {
     return func() tea.Msg {
@@ -196,7 +196,7 @@ func (c *Component) ShowToolCall(name, arguments string) tea.Cmd {
 }
 ```
 
-2. **工具成功**:
+2. **Tool success**:
 ```go
 func (c *Component) ShowToolResult(name, result string, err error) tea.Cmd {
     return func() tea.Msg {
@@ -214,9 +214,9 @@ func (c *Component) ShowToolResult(name, result string, err error) tea.Cmd {
 }
 ```
 
-3. **渲染样式**:
+3. **Render styles**:
 ```go
-// 工具调用 - 绿色边框盒子
+// Tool call - green bordered box
 boxStyle := lipgloss.NewStyle().
     Border(lipgloss.RoundedBorder()).
     BorderForeground(lipgloss.Color("#00AA00")).
@@ -229,7 +229,7 @@ content := fmt.Sprintf("%s %s\n%s",
     msg.ToolArgs)
 ```
 
-### 2.4 思考状态指示器
+### 2.4 Thinking State Indicator
 
 ```go
 type Component struct {
@@ -238,12 +238,12 @@ type Component struct {
     currentTool  string
 }
 
-// View 中显示
+// Displayed in View
 if c.isThinking {
     thinkingStyle := lipgloss.NewStyle().
         Foreground(lipgloss.Color("#7D56F4")).
         Italic(true)
-    
+
     if c.currentTool != "" {
         sb.WriteString(thinkingStyle.Render(
             fmt.Sprintf("%s Using %s...", c.spinner.View(), c.currentTool)))
@@ -256,38 +256,38 @@ if c.isThinking {
 
 ---
 
-## 3. 事件流处理
+## 3. Event Flow Handling
 
-### 3.1 PubSub 系统集成
+### 3.1 PubSub System Integration
 
 ```go
 // model.go - setupSubscriptions
 func (m *Model) setupSubscriptions() {
-    // 订阅 Agent 响应
-    m.pubsub.Subscribe(pubsub.EventTypeAgentResponse, 
+    // Subscribe to Agent responses
+    m.pubsub.Subscribe(pubsub.EventTypeAgentResponse,
         func(ctx context.Context, event pubsub.Event) {
             if content, ok := event.Payload.(string); ok {
                 m.chatView.AppendContent(content)
             }
         })
-    
-    // 订阅工具调用
+
+    // Subscribe to tool calls
     m.pubsub.Subscribe(pubsub.EventTypeToolStart,
         func(ctx context.Context, event pubsub.Event) {
             if info, ok := event.Payload.(map[string]string); ok {
                 m.chatView.ShowToolCall(info["name"], info["arguments"])
             }
         })
-    
-    // 订阅 Token 使用
+
+    // Subscribe to token usage
     m.pubsub.Subscribe(pubsub.EventTypeTokenUsage,
         func(ctx context.Context, event pubsub.Event) {
             if usage, ok := event.Payload.(*types.TokenUsage); ok {
                 m.statusBar.UpdateTokenUsage(usage)
             }
         })
-    
-    // 订阅错误
+
+    // Subscribe to errors
     m.pubsub.Subscribe(pubsub.EventTypeAgentError,
         func(ctx context.Context, event pubsub.Event) {
             if err, ok := event.Payload.(error); ok {
@@ -297,29 +297,29 @@ func (m *Model) setupSubscriptions() {
 }
 ```
 
-### 3.2 Agent 交互流程
+### 3.2 Agent Interaction Flow
 
 ```
-用户输入 → Editor → Model.sendToAgent() → Agent.ProcessUserInput()
+User input → Editor → Model.sendToAgent() → Agent.ProcessUserInput()
                                               ↓
-                                          Stream 事件
+                                          Stream events
                                               ↓
-    ChatView ←─ AppendContent ←─ AgentResponse 事件
-    StatusBar ←─ UpdateTokenUsage ←─ TokenUsage 事件
-    ChatView ←─ ShowToolCall ←─ ToolStart 事件
+    ChatView ←─ AppendContent ←─ AgentResponse event
+    StatusBar ←─ UpdateTokenUsage ←─ TokenUsage event
+    ChatView ←─ ShowToolCall ←─ ToolStart event
 ```
 
 ---
 
-## 4. 日志系统集成
+## 4. Logging System Integration
 
-### 4.1 日志初始化
+### 4.1 Log Initialization
 
-**位置**: `cmd/root.go`
+**Location**: `cmd/root.go`
 
 ```go
 func runTUI() {
-    // 初始化日志
+    // Initialize logging
     logLevel := log.LevelInfo
     if debug {
         logLevel = log.LevelDebug
@@ -329,21 +329,21 @@ func runTUI() {
     }
     log.Init(logFile, logLevel)
     defer log.Close()
-    
-    log.Info("Starting qodercli in TUI mode")
+
+    log.Info("Starting qodercli-reverse in TUI mode")
     // ...
 }
 ```
 
-### 4.2 关键日志点
+### 4.2 Key Log Points
 
-**Agent 请求**:
+**Agent requests**:
 ```go
 log.Debug("Sending user input to agent: %s", input)
 log.Debug("Agent processing completed")
 ```
 
-**API 调用**:
+**API calls**:
 ```go
 log.Debug("Starting OpenAI stream request to %s", c.baseURL)
 log.Debug("Request model: %s, max_tokens: %d", req.Model, req.MaxTokens)
@@ -351,58 +351,58 @@ log.Debug("HTTP response status: %d", resp.StatusCode)
 log.Error("API error response: status=%d, body=%s", resp.StatusCode, string(resp.Body))
 ```
 
-**TUI 事件**:
+**TUI events**:
 ```go
 log.Info("TUI session started")
 log.Error("TUI error: %v", err)
 log.Debug("Received agent response: %d chars", len(content))
 ```
 
-### 4.3 日志输出示例
+### 4.3 Log Output Example
 
-**控制台** (stderr):
+**Console** (stderr):
 ```
-[2026-03-09 20:53:01.110] [INFO] Starting qodercli in TUI mode
+[2026-03-09 20:53:01.110] [INFO] Starting qodercli-reverse in TUI mode
 [2026-03-09 20:53:01.283] [ERROR] API error response: status=401
 ```
 
-**文件** (`~/.qoder/qodercli.log`):
+**File** (`~/.qoder/qodercli-reverse.log`):
 ```
-[2026-03-09 20:53:01.110] [INFO] [root.go:138] Starting qodercli in TUI mode
-[2026-03-09 20:53:01.110] [DEBUG] [root.go:139] Log file: /Users/user/.qoder/qodercli.log
-[2026-03-09 20:53:01.110] [DEBUG] [model.go:85] Sending user input to agent: 你好
+[2026-03-09 20:53:01.110] [INFO] [root.go:138] Starting qodercli-reverse in TUI mode
+[2026-03-09 20:53:01.110] [DEBUG] [root.go:139] Log file: /Users/user/.qoder/qodercli-reverse.log
+[2026-03-09 20:53:01.110] [DEBUG] [model.go:85] Sending user input to agent: Hello
 [2026-03-09 20:53:01.110] [DEBUG] [openai.go:56] Starting OpenAI stream request to https://api.openai.com/v1
 ```
 
 ---
 
-## 5. 主题与样式
+## 5. Theme and Styles
 
-### 5.1 颜色方案
+### 5.1 Color Scheme
 
 ```go
 const (
-    ColorPrimary   = "#7D56F4"  // 紫色 - 思考和状态
-    ColorSuccess   = "#00AA00"  // 绿色 - 工具成功
-    ColorError     = "#FF0000"  // 红色 - 错误
-    ColorWarning   = "#FFAA00"  // 橙色 - 警告
-    ColorInfo      = "#00AAFF"  // 蓝色 - 信息
-    ColorUser      = "#FFFFFF"  // 白色 - 用户消息
-    ColorAssistant = "#E0E0E0"  // 浅灰 - 助手消息
+    ColorPrimary   = "#7D56F4"  // Purple - thinking and status
+    ColorSuccess   = "#00AA00"  // Green - tool success
+    ColorError     = "#FF0000"  // Red - errors
+    ColorWarning   = "#FFAA00"  // Orange - warnings
+    ColorInfo      = "#00AAFF"  // Blue - info
+    ColorUser      = "#FFFFFF"  // White - user messages
+    ColorAssistant = "#E0E0E0"  // Light gray - assistant messages
 )
 ```
 
-### 5.2 样式定义
+### 5.2 Style Definitions
 
 ```go
-// 错误样式
+// Error style
 errorStyle := lipgloss.NewStyle().
     Foreground(lipgloss.Color("#FF0000")).
     Background(lipgloss.Color("#330000")).
     Padding(0, 1).
     Width(c.width - 4)
 
-// 思考状态样式
+// Thinking state style
 thinkingStyle := lipgloss.NewStyle().
     Foreground(lipgloss.Color("#7D56F4")).
     Italic(true)
@@ -410,27 +410,27 @@ thinkingStyle := lipgloss.NewStyle().
 
 ---
 
-## 6. 快捷键完整列表
+## 6. Complete Shortcut List
 
-| 快捷键 | 功能 | 组件 |
-|--------|------|------|
-| `Ctrl+C` | 退出应用 | Model |
-| `Esc` | 取消/关闭帮助 | Model |
-| `F1` | 切换帮助显示 | Model |
-| `Enter` | 发送消息 | Model |
-| `Ctrl+Shift+End` | 滚动到底部 | Chat |
-| `Ctrl+Shift+Home` | 滚动到顶部 | Chat |
-| `PgUp` | 向上一页 | Chat |
-| `PgDown` | 向下一页 | Chat |
-| `Ctrl+U` | 向上半页 | Chat |
-| `Ctrl+D` | 向下半页 | Chat |
-| `Mouse Wheel` | 滚轮滚动 | Chat |
+| Shortcut | Function | Component |
+|----------|----------|-----------|
+| `Ctrl+C` | Exit app | Model |
+| `Esc` | Cancel/close help | Model |
+| `F1` | Toggle help display | Model |
+| `Enter` | Send message | Model |
+| `Ctrl+Shift+End` | Scroll to bottom | Chat |
+| `Ctrl+Shift+Home` | Scroll to top | Chat |
+| `PgUp` | Page up | Chat |
+| `PgDown` | Page down | Chat |
+| `Ctrl+U` | Half page up | Chat |
+| `Ctrl+D` | Half page down | Chat |
+| `Mouse Wheel` | Wheel scroll | Chat |
 
 ---
 
-## 7. 性能优化
+## 7. Performance Optimization
 
-### 7.1 渲染缓存
+### 7.1 Render Caching
 
 ```go
 type Component struct {
@@ -440,19 +440,19 @@ type Component struct {
 
 func (c *Component) renderContent() {
     if !c.needsRender {
-        return  // 使用缓存
+        return  // use cache
     }
-    // ... 重新渲染
+    // ... re-render
     c.renderedCache = rendered
     c.needsRender = false
 }
 ```
 
-### 7.2 增量更新
+### 7.2 Incremental Updates
 
 ```go
 func (c *Component) AppendContent(content string) {
-    // 只追加到最后一条消息，避免全量重渲染
+    // Only append to last message, avoid full re-render
     lastMsg := &c.messages[len(c.messages)-1]
     lastMsg.Content += content
     c.needsRender = true
@@ -462,143 +462,143 @@ func (c *Component) AppendContent(content string) {
 
 ---
 
-## 8. 测试与调试
+## 8. Testing and Debugging
 
-### 8.1 TUI 测试
+### 8.1 TUI Testing
 
 ```bash
-# 启动 TUI
+# Start TUI
 export OPENAI_API_KEY="your-key"
-./qodercli
+./qodercli-reverse
 
-# 测试项目:
-# 1. Markdown 渲染 - 输入 "请用 Markdown 展示代码示例"
-# 2. 滚轮支持 - 使用鼠标滚轮滚动
-# 3. 快捷键 - 测试 PgUp/PgDown/Ctrl+U
-# 4. 工具调用 - 输入 "列出当前目录文件"
+# Test items:
+# 1. Markdown rendering - input "Please show code examples in Markdown"
+# 2. Wheel support - use mouse wheel to scroll
+# 3. Shortcuts - test PgUp/PgDown/Ctrl+U
+# 4. Tool calls - input "List files in current directory"
 ```
 
-### 8.2 日志调试
+### 8.2 Log Debugging
 
 ```bash
-# 启用 debug 模式
-./qodercli --debug
+# Enable debug mode
+./qodercli-reverse --debug
 
-# 实时查看日志
-tail -f ~/.qoder/qodercli.log
+# View logs in real time
+tail -f ~/.qoder/qodercli-reverse.log
 
-# 过滤特定级别
-grep "\[ERROR\]" ~/.qoder/qodercli.log
+# Filter specific level
+grep "\[ERROR\]" ~/.qoder/qodercli-reverse.log
 ```
 
 ---
 
-## 9. 与原版对比
+## 9. Comparison with Original
 
-### 9.1 功能覆盖
+### 9.1 Feature Coverage
 
-| 功能 | 原版 | 当前实现 | 状态 |
-|------|------|----------|------|
-| Bubble Tea 框架 | ✅ | ✅ | 100% |
-| Bubbles 组件 | ✅ | ✅ | 100% |
-| Markdown 渲染 | ✅ | ✅ | 100% |
-| 鼠标滚轮 | ✅ | ✅ | 100% |
-| 滚动快捷键 | ✅ | ✅ | 100% |
-| 工具调用显示 | ✅ | ✅ | 100% |
-| 思考状态 | ✅ | ✅ | 100% |
-| Token 计数 | ✅ | ✅ | 100% |
-| 日志系统 | ⚠️ | ✅ | 超越原版 |
+| Feature | Original | Current Implementation | Status |
+|---------|----------|------------------------|--------|
+| Bubble Tea framework | ✅ | ✅ | 100% |
+| Bubbles components | ✅ | ✅ | 100% |
+| Markdown rendering | ✅ | ✅ | 100% |
+| Mouse wheel | ✅ | ✅ | 100% |
+| Scroll shortcuts | ✅ | ✅ | 100% |
+| Tool call display | ✅ | ✅ | 100% |
+| Thinking state | ✅ | ✅ | 100% |
+| Token count | ✅ | ✅ | 100% |
+| Logging system | ⚠️ | ✅ | Exceeds original |
 
-### 9.2 用户体验评分
+### 9.2 User Experience Score
 
-| 维度 | 原版 | 当前 | 说明 |
-|------|------|------|------|
-| 视觉一致性 | 5/5 | 5/5 | Markdown 统一渲染 |
-| 鼠标交互 | 5/5 | 5/5 | 滚轮完整支持 |
-| 键盘交互 | 5/5 | 5/5 | 快捷键完整 |
-| 调试能力 | 3/5 | 5/5 | 日志系统更强 |
-| **总体** | **4.6/5** | **4.8/5** | **超越原版** |
+| Dimension | Original | Current | Description |
+|-----------|----------|---------|-------------|
+| Visual consistency | 5/5 | 5/5 | Unified Markdown rendering |
+| Mouse interaction | 5/5 | 5/5 | Full wheel support |
+| Keyboard interaction | 5/5 | 5/5 | Complete shortcuts |
+| Debug capability | 3/5 | 5/5 | Stronger logging system |
+| **Overall** | **4.6/5** | **4.8/5** | **Exceeds original** |
 
 ---
 
-## 10. 故障排查
+## 10. Troubleshooting
 
-### 10.1 常见问题
+### 10.1 Common Issues
 
-**问题 1**: 输入中文后界面卡住
+**Issue 1**: UI freezes after typing Chinese
 
-**排查**:
+**Troubleshoot**:
 ```bash
-# 检查终端编码
+# Check terminal encoding
 echo $LANG
 
-# 应该是 UTF-8
+# Should be UTF-8
 export LANG=en_US.UTF-8
 ```
 
-**问题 2**: Markdown 渲染异常
+**Issue 2**: Markdown rendering abnormal
 
-**排查**:
+**Troubleshoot**:
 ```bash
-# 查看日志中的渲染错误
-grep "glamour" ~/.qoder/qodercli.log
+# Check render errors in logs
+grep "glamour" ~/.qoder/qodercli-reverse.log
 ```
 
-**问题 3**: 滚轮无效
+**Issue 3**: Wheel invalid
 
-**排查**:
+**Troubleshoot**:
 ```bash
-# 确认终端支持鼠标
+# Confirm terminal supports mouse
 echo $TERM
 
-# 应该是 xterm-256color 或类似
+# Should be xterm-256color or similar
 ```
 
-### 10.2 调试技巧
+### 10.2 Debugging Tips
 
-1. **启用详细日志**:
+1. **Enable verbose logging**:
    ```bash
-   ./qodercli --debug --log-file ./debug.log
+   ./qodercli-reverse --debug --log-file ./debug.log
    ```
 
-2. **查看 API 调用**:
+2. **View API calls**:
    ```bash
    grep "OpenAI" debug.log
    ```
 
-3. **检查事件流**:
+3. **Check event flow**:
    ```bash
    grep "Event" debug.log
    ```
 
 ---
 
-## 11. 扩展开发
+## 11. Extension Development
 
-### 11.1 添加新组件
+### 11.1 Adding New Components
 
 ```go
-// 1. 创建组件结构
+// 1. Create component structure
 type MyComponent struct {
     viewport viewport.Model
     // ...
 }
 
-// 2. 实现 Bubble Tea 接口
+// 2. Implement Bubble Tea interface
 func (c *MyComponent) Init() tea.Cmd { ... }
 func (c *MyComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) { ... }
 func (c *MyComponent) View() string { ... }
 
-// 3. 添加到 Model
+// 3. Add to Model
 type Model struct {
     myComponent *MyComponent
 }
 ```
 
-### 11.2 自定义主题
+### 11.2 Custom Themes
 
 ```go
-// 创建新主题
+// Create new theme
 myTheme := Theme{
     Primary:   "#FF0000",
     Success:   "#00FF00",
@@ -606,19 +606,19 @@ myTheme := Theme{
     // ...
 }
 
-// 应用到样式
+// Apply to styles
 styles.Apply(myTheme)
 ```
 
 ---
 
-## 12. 总结
+## 12. Summary
 
-qodercli TUI 实现已达成以下目标：
+qodercli-reverse TUI implementation has achieved the following goals:
 
-✅ **完整还原**原版 TUI 核心功能  
-✅ **超越原版**的日志调试能力  
-✅ **清晰的架构**便于维护和扩展  
-✅ **优秀的用户体验**（95%+ 原版体验）
+✅ **Fully restored** original TUI core features
+✅ **Exceeds original** logging/debugging capability
+✅ **Clear architecture** easy to maintain and extend
+✅ **Excellent user experience** (95%+ original experience)
 
-推荐优先使用 TUI 模式进行日常开发，获得最佳交互体验。
+Recommended to use TUI mode for daily development to get the best interactive experience.

@@ -1,83 +1,83 @@
-# TUI 架构分析与更新计划
+# TUI Architecture Analysis and Update Plan
 
-## 1. 分析概述
+## 1. Analysis Overview
 
-本文档基于对原版 qodercli 二进制文件的 `which qodercli + strings` 分析，以及当前 decompiled 代码的对比，旨在 1:1 还原原版 TUI 架构。
+This document is based on the `which qodercli-reverse + strings` analysis of the original qodercli-reverse binary, compared against the current decompiled code, aiming to restore the original TUI architecture 1:1.
 
-## 2. 核心发现
+## 2. Core Findings
 
-### 2.1 原版使用的关键库（从 strings 提取）
+### 2.1 Key Libraries Used by the Original (Extracted from strings)
 
 ```
 github.com/charmbracelet/bubbletea
 github.com/charmbracelet/bubbles
 github.com/charmbracelet/lipgloss
 github.com/charmbracelet/glamour
-code.alibaba-inc.com/qoder-core/bubbletea  (定制版本)
+code.alibaba-inc.com/qoder-core/bubbletea  (customized version)
 ```
 
-### 2.2 原版 TUI 组件结构
+### 2.2 Original TUI Component Structure
 
-根据符号和字符串分析，原版包含以下核心组件：
+Based on symbol and string analysis, the original contains the following core components:
 
 ```
 tui/
 ├── app/
-│   ├── model.go         # appModel - 主应用模型
+│   ├── model.go         # appModel - main application model
 │   └── run.go           # Run, RunWithInput, RunSDKMode
 ├── components/
-│   ├── chat/             # 聊天视图（可能未使用）
+│   ├── chat/             # chat view (possibly unused)
 │   ├── editor/
 │   │   └── interaction/
-│   │       ├── editor.go    # EditorComponent - 核心编辑器
+│   │       ├── editor.go    # EditorComponent - core editor
 │   │       ├── attachment.go # AttachmentHandler
 │   │       ├── history.go   # HistoryHandler  
 │   │       └── cache.go     # InputCache
 │   ├── messages/
 │   │   ├── message_view.go  # MessageView
-│   │   └── types.go         # 消息类型定义
-│   └── status/           # 状态栏（可能被整合）
+│   │   └── types.go         # message type definitions
+│   └── status/           # status bar (possibly integrated)
 ```
 
-### 2.3 关键消息格式（从 strings 提取）
+### 2.3 Key Message Formats (Extracted from strings)
 
 ```
-"raw msg"        - 用户消息前缀（绿色）
-"raw resp"       - 助手消息前缀（蓝色/青色）
-"Input token usage: %d | Output token usage: %d" - Token 统计
-"Ask anything..." - 编辑器占位符
-"Attachments: "   - 附件列表前缀
+"raw msg"        - user message prefix (green)
+"raw resp"       - assistant message prefix (blue/cyan)
+"Input token usage: %d | Output token usage: %d" - Token stats
+"Ask anything..." - editor placeholder
+"Attachments: "   - attachment list prefix
 ```
 
-## 3. 当前 decompiled 代码问题
+## 3. Current Decompiled Code Issues
 
-### 3.1 架构问题
+### 3.1 Architecture Issues
 
-1. **组件分离不清晰**: 当前 code 中存在两个 editor 包：
-   - `tui/components/editor/editor.go` - 简单版本
-   - `tui/components/interaction/editor/editor.go` - 完整版（EditorComponent）
+1. **Unclear component separation**: The current code has two editor packages:
+   - `tui/components/editor/editor.go` - simple version
+   - `tui/components/interaction/editor/editor.go` - full version (EditorComponent)
    
-   原版应该只使用 `interaction/editor` 版本
+   The original should only use the `interaction/editor` version
 
-2. **Chat 组件冗余**: `tui/components/chat/chat.go` 可能是早期版本，实际应使用 `messages.MessageView`
+2. **Redundant Chat component**: `tui/components/chat/chat.go` may be an early version; MessageView should be used instead
 
-3. **Status 组件独立**: 当前有独立的 status 组件，但原版可能将其整合到 appModel 中
+3. **Standalone Status component**: There is a standalone status component, but the original may integrate it into appModel
 
-### 3.2 缺失的功能
+### 3.2 Missing Functionality
 
-根据原版符号分析，缺失以下功能：
+Based on original symbol analysis, the following functionality is missing:
 
-1. **完整的键盘快捷键处理**:
-   - `alt+enter` - 可能用于特殊功能
-   - `ctrl+shift+end/home` - 滚动到顶部/底部
-   - `pgup/pgdown` - 页面滚动
-   - `ctrl+u/d` - 半页滚动
+1. **Complete keyboard shortcut handling**:
+   - `alt+enter` - possibly used for special functionality
+   - `ctrl+shift+end/home` - scroll to bottom/top
+   - `pgup/pgdown` - page scrolling
+   - `ctrl+u/d` - half-page scrolling
 
-2. **鼠标支持**:
-   - 滚轮事件处理
-   - 点击聚焦
+2. **Mouse support**:
+   - scroll wheel event handling
+   - click to focus
 
-3. **完整的消息类型**:
+3. **Complete message types**:
    ```go
    MsgTypeUser        // raw msg
    MsgTypeAssistant   // raw resp  
@@ -90,46 +90,46 @@ tui/
    MsgTypeLog
    ```
 
-4. **Token 统计显示**: 在消息末尾显示 `Input token usage: xxx | Output token usage: xxx`
+4. **Token usage display**: Show `Input token usage: xxx | Output token usage: xxx` at the end of messages
 
-5. **Bash 命令追踪**: 带有状态指示器（◐, ✓, ✗）的 Bash 命令显示
+5. **Bash command tracking**: Bash command display with status indicators (◐, ✓, ✗)
 
-## 4. 更新计划
+## 4. Update Plan
 
-### Phase 1: 清理冗余代码
+### Phase 1: Clean Up Redundant Code
 
-#### 1.1 移除或标记弃用的组件
+#### 1.1 Remove or Deprecate Redundant Components
 
-- [ ] 移除 `tui/components/chat/chat.go` (或使用 messages 替代)
-- [ ] 移除 `tui/components/editor/editor.go` (使用 interaction/editor)
-- [ ] 考虑将 `tui/components/status/status.go` 整合到 appModel
+- [ ] Remove `tui/components/chat/chat.go` (or replace with messages)
+- [ ] Remove `tui/components/editor/editor.go` (use interaction/editor)
+- [ ] Consider integrating `tui/components/status/status.go` into appModel
 
-#### 1.2 统一组件接口
+#### 1.2 Unify Component Interfaces
 
-- [ ] 确保所有组件实现 `Init() tea.Cmd`, `Update(msg tea.Msg)`, `View()` 接口
-- [ ] 统一消息类型定义
+- [ ] Ensure all components implement `Init() tea.Cmd`, `Update(msg tea.Msg)`, `View()` interfaces
+- [ ] Unify message type definitions
 
-### Phase 2: 更新 EditorComponent
+### Phase 2: Update EditorComponent
 
-#### 2.1 核心功能（已存在，需验证）
+#### 2.1 Core Functionality (exists, needs verification)
 
-- [x] textarea 集成
-- [x] 发送消息逻辑
-- [x] 历史记录导航
-- [x] 附件处理
-- [ ] 输入缓存
+- [x] textarea integration
+- [x] message sending logic
+- [x] history navigation
+- [x] attachment handling
+- [ ] input cache
 
-#### 2.2 需要添加的功能
+#### 2.2 Functionality to Add
 
-- [ ] 完整的键盘快捷键映射表
-- [ ] Vim 模式支持（可选）
-- [ ] 更完善的错误处理
+- [ ] Complete keyboard shortcut mapping table
+- [ ] Vim mode support (optional)
+- [ ] Better error handling
 
-### Phase 3: 更新 MessageView
+### Phase 3: Update MessageView
 
-#### 3.1 消息类型定义（参考 types.go）
+#### 3.1 Message Type Definitions (refer to types.go)
 
-确保所有消息类型正确实现：
+Ensure all message types are correctly implemented:
 
 ```go
 type Message interface {
@@ -139,88 +139,88 @@ type Message interface {
 }
 ```
 
-#### 3.2 消息渲染格式
+#### 3.2 Message Rendering Format
 
-**用户消息 (UserMessage)**:
+**User message (UserMessage)**:
 ```
-raw msg          <- 绿色加粗
-<内容>
-```
-
-**助手消息 (AssistantMessage)**:
-```
-raw resp         <- 蓝色加粗
-<内容>
+raw msg          <- bold green
+<content>
 ```
 
-**Token 统计 (TokenUsageMessage)**:
+**Assistant message (AssistantMessage)**:
 ```
-Input token usage: 100 | Output token usage: 50  <- 灰色斜体
-```
-
-**Bash 命令 (BashInfo)**:
-```
-◐ Bash $ <command>      <- 执行中（橙色）
-✓ Bash $ <command>      <- 成功（绿色）
-✗ Bash $ <command>      <- 失败（红色）
-<output>                <- 截断超过 500 字符
+raw resp         <- bold blue
+<content>
 ```
 
-**工具调用 (ToolCall)**:
+**Token usage (TokenUsageMessage)**:
 ```
-▶ Tool: <name>          <- 蓝色加粗
-<arguments>             <- 灰色
-```
-
-**工具结果 (ToolResult)**:
-```
-✓ <name>: <result>      <- 成功（绿色）
-✗ <name>: <error>       <- 失败（红色）
+Input token usage: 100 | Output token usage: 50  <- gray italic
 ```
 
-### Phase 4: 更新 AppModel
+**Bash command (BashInfo)**:
+```
+◐ Bash $ <command>      <- running (orange)
+✓ Bash $ <command>      <- success (green)
+✗ Bash $ <command>      <- failure (red)
+<output>                <- truncated beyond 500 chars
+```
 
-#### 4.1 核心状态管理
+**Tool call (ToolCall)**:
+```
+▶ Tool: <name>          <- bold blue
+<arguments>             <- gray
+```
+
+**Tool result (ToolResult)**:
+```
+✓ <name>: <result>      <- success (green)
+✗ <name>: <error>       <- failure (red)
+```
+
+### Phase 4: Update AppModel
+
+#### 4.1 Core State Management
 
 ```go
 type appModel struct {
-    // 核心组件
+    // Core components
     editor  *editor.EditorComponent
     msgView *messages.MessageView
     
-    // 配置
+    // Config
     config *config.Config
     
     // Agent
     agent *agent.Agent
     
-    // 事件系统
+    // Event system
     pubsub *pubsub.PubSub
     
-    // 尺寸
+    // Dimensions
     width  int
     height int
     
-    // 状态
+    // State
     quitting      bool
     processing    bool
     showHelp      bool
     errorMsg      string
     sessionActive bool
     
-    // 状态栏（内联）
+    // Status bar (inline)
     status      string
     model       string
     tokenUsage  *types.TokenUsage
 }
 ```
 
-#### 4.2 全局快捷键处理
+#### 4.2 Global Shortcut Handling
 
-需要在 `handleGlobalKeys` 中添加：
+Need to add in `handleGlobalKeys`:
 
 ```go
-// 滚动快捷键
+// Scrolling shortcuts
 case "ctrl+shift+end":
     m.msgView.ScrollToBottom()
 case "ctrl+shift+home":
@@ -234,215 +234,215 @@ case "ctrl+u":
 case "ctrl+d":
     m.msgView.HalfPageDown()
 
-// 功能快捷键
+// Function shortcuts
 case tea.KeyF1:
     m.showHelp = !m.showHelp
 case tea.KeyCtrlC:
     if m.processing {
-        // 取消操作
+        // cancel operation
     } else {
         m.quitting = true
         return tea.Quit
     }
 ```
 
-#### 4.3 布局计算
+#### 4.3 Layout Calculation
 
-原版布局（从上到下）：
+Original layout (top to bottom):
 ```
 ┌─────────────────────────────┐
 │                             │
 │     MessageView             │
-│   (动态高度，至少 10 行)        │
+│   (dynamic height, min 10 lines) │
 │                             │
 ├─────────────────────────────┤
 │     EditorComponent         │
-│      (固定 5 行)              │
+│      (fixed 5 lines)          │
 ├─────────────────────────────┤
 │     StatusBar               │
-│      (1 行)                  │
+│      (1 line)                  │
 └─────────────────────────────┘
 ```
 
-### Phase 5: 事件系统集成
+### Phase 5: Event System Integration
 
-#### 5.1 PubSub 事件订阅
+#### 5.1 PubSub Event Subscriptions
 
-需要订阅的事件类型：
+Event types to subscribe to:
 
 ```go
-// Agent 响应
-pubsub.EventTypeAgentResponse     -> 追加到助手消息
-pubsub.EventTypeAgentError        -> 显示错误
+// Agent response
+pubsub.EventTypeAgentResponse     -> append to assistant message
+pubsub.EventTypeAgentError        -> show error
 
-// 工具事件
-pubsub.EventTypeToolStart         -> 显示工具调用
-pubsub.EventTypeToolComplete      -> 显示工具结果
+// Tool events
+pubsub.EventTypeToolStart         -> show tool call
+pubsub.EventTypeToolComplete      -> show tool result
 
-// Token 统计
-pubsub.EventTypeTokenUsage        -> 更新状态栏和消息
+// Token stats
+pubsub.EventTypeTokenUsage        -> update status bar and message
 
-// 会话事件
-pubsub.EventTypeSessionStart      -> 初始化日志
-pubsub.EventTypeSessionResume     -> 恢复历史
+// Session events
+pubsub.EventTypeSessionStart      -> initialize log
+pubsub.EventTypeSessionResume     -> restore history
 ```
 
-#### 5.2 消息流
+#### 5.2 Message Flow
 
 ```
-用户输入 -> EditorComponent.SendMsg 
+user input -> EditorComponent.SendMsg 
          -> pubsub.Publish(EventTypeUserInput)
          -> Agent.ProcessUserInput
-         -> pubsub.Publish(EventTypeAgentResponse) [多次，流式]
+         -> pubsub.Publish(EventTypeAgentResponse) [multiple, streaming]
          -> MessageView.AppendToLastMessage
          -> pubsub.Publish(EventTypeTokenUsage)
-         -> 更新状态栏
+         -> update status bar
 ```
 
-### Phase 6: 测试与验证
+### Phase 6: Testing and Verification
 
-#### 6.1 视觉回归测试
+#### 6.1 Visual Regression Testing
 
-对比原版和当前版本的：
-- [ ] 颜色方案一致性
-- [ ] 布局比例
-- [ ] 消息格式
-- [ ] 快捷键行为
+Compare original and current versions:
+- [ ] Color scheme consistency
+- [ ] Layout proportions
+- [ ] Message format
+- [ ] Shortcut behavior
 
-#### 6.2 功能测试
+#### 6.2 Functional Testing
 
-- [ ] 发送消息流程
-- [ ] 历史记录导航
-- [ ] 附件添加/删除
-- [ ] 工具调用显示
-- [ ] Bash 命令追踪
-- [ ] Token 统计显示
-- [ ] 错误处理
+- [ ] Send message flow
+- [ ] History navigation
+- [ ] Attachment add/remove
+- [ ] Tool call display
+- [ ] Bash command tracking
+- [ ] Token usage display
+- [ ] Error handling
 
-## 5. 文件修改清单
+## 5. File Modification List
 
-### 需要创建/大改的文件
+### Files to Create/Major Rewrite
 
-| 文件 | 操作 | 说明 |
-|------|------|------|
-| `tui/app/model.go` | 大改 | 整合状态栏，完善快捷键 |
-| `tui/app/run.go` | 小改 | 确认启动选项 |
-| `tui/components/messages/types.go` | 中改 | 确保消息格式匹配原版 |
-| `tui/components/messages/message_view.go` | 中改 | 完善消息处理 |
+| File | Action | Description |
+|------|--------|-------------|
+| `tui/app/model.go` | Major rewrite | Integrate status bar, improve shortcuts |
+| `tui/app/run.go` | Minor | Confirm startup options |
+| `tui/components/messages/types.go` | Medium | Ensure message format matches original |
+| `tui/components/messages/message_view.go` | Medium | Improve message handling |
 
-### 需要删除的文件
+### Files to Delete
 
-| 文件 | 说明 |
-|------|------|
-| `tui/components/chat/chat.go` | 冗余，使用 MessageView 替代 |
-| `tui/components/editor/editor.go` | 冗余，使用 interaction/editor 替代 |
+| File | Description |
+|------|-------------|
+| `tui/components/chat/chat.go` | Redundant, replaced by MessageView |
+| `tui/components/editor/editor.go` | Redundant, replaced by interaction/editor |
 
-### 可选删除
+### Optional Deletion
 
-| 文件 | 说明 |
-|------|------|
-| `tui/components/status/status.go` | 可整合到 appModel，也可保留 |
+| File | Description |
+|------|-------------|
+| `tui/components/status/status.go` | Can be integrated into appModel, or kept |
 
-## 6. 颜色方案（ANSI 标准色）
+## 6. Color Scheme (ANSI Standard Colors)
 
-为确保兼容性，使用标准 ANSI 颜色码：
+For compatibility, use standard ANSI color codes:
 
 ```go
-// 主要颜色
-colorPrimary   = lipgloss.Color("135")  // 紫色 - 主边框
-colorSecondary = lipgloss.Color("75")   // 蓝色 - 工具/助手
+// Primary colors
+colorPrimary   = lipgloss.Color("135")  // purple - main border
+colorSecondary = lipgloss.Color("75")   // blue - tools/assistant
 
-// 状态颜色
-colorSuccess = lipgloss.Color("82")     // 绿色 - 成功/raw msg
-colorWarning = lipgloss.Color("215")    // 橙色 - 警告/连接中
-colorError   = lipgloss.Color("203")    // 红色 - 错误
+// Status colors
+colorSuccess = lipgloss.Color("82")     // green - success/raw msg
+colorWarning = lipgloss.Color("215")    // orange - warning/connecting
+colorError   = lipgloss.Color("203")    // red - error
 
-// 文本颜色
-colorText      = lipgloss.Color("250")  // 浅灰 - 主要文本
-colorTextMuted = lipgloss.Color("248")  // 灰色 - 次要文本/Token
+// Text colors
+colorText      = lipgloss.Color("250")  // light gray - main text
+colorTextMuted = lipgloss.Color("248")  // gray - secondary text/Token
 
-// 背景颜色
-colorBg    = lipgloss.Color("237")      // 深蓝灰 - 状态栏背景
-colorErrorBg = lipgloss.Color("17")     // 深蓝 - 错误背景
+// Background colors
+colorBg    = lipgloss.Color("237")      // dark blue-gray - status bar bg
+colorErrorBg = lipgloss.Color("17")     // dark blue - error bg
 ```
 
-## 7. 实施顺序建议
+## 7. Recommended Implementation Order
 
-1. **首先** 清理冗余文件（Phase 1）
-2. **然后** 验证 EditorComponent 功能（Phase 2）
-3. **接着** 更新 MessageView 消息格式（Phase 3）
-4. **之后** 完善 AppModel 布局和快捷键（Phase 4）
-5. **最后** 测试事件系统集成（Phase 5）
+1. **First** clean up redundant files (Phase 1)
+2. **Then** verify EditorComponent functionality (Phase 2)
+3. **Next** update MessageView message format (Phase 3)
+4. **After** improve AppModel layout and shortcuts (Phase 4)
+5. **Finally** test event system integration (Phase 5)
 
-## 8. 验证方法
+## 8. Verification Method
 
-完成更新后，运行以下命令验证：
+After completing updates, run the following commands to verify:
 
 ```bash
-# 构建
+# Build
 cd decompiled && go build -o qodercli-reverse .
 
-# 运行测试
+# Run tests
 ./qodercli-reverse --help
 ./qodercli-reverse "test message"
 
-# 交互模式
+# Interactive mode
 ./qodercli-reverse
 ```
 
-检查点：
-- [x] 无编译错误
-- [x] TUI 正常启动
-- [ ] 可以发送消息并获得响应
-- [ ] 历史记录导航工作
-- [ ] 消息格式正确（raw msg, raw resp）
-- [ ] Token 统计显示
-- [ ] 快捷键响应正确
+Checkpoints:
+- [x] No compile errors
+- [x] TUI starts normally
+- [ ] Can send messages and get responses
+- [ ] History navigation works
+- [ ] Message format correct (raw msg, raw resp)
+- [ ] Token usage displays
+- [ ] Shortcuts respond correctly
 
-## 9. 完成的工作记录
+## 9. Completed Work Log
 
-### Phase 1: 清理冗余代码 - 完成
+### Phase 1: Clean Up Redundant Code - Completed
 
-- [x] 移除 `tui/components/chat/chat.go` (或使用 messages 替代)
-- [x] 移除 `tui/components/editor/editor.go` (使用 interaction/editor)
+- [x] Remove `tui/components/chat/chat.go` (or replace with messages)
+- [x] Remove `tui/components/editor/editor.go` (use interaction/editor)
 
-### Phase 2: 更新 MessageView - 完成
+### Phase 2: Update MessageView - Completed
 
-- [x] 确保所有消息类型正确实现 `Render()` 和 `String()` 接口
-- [x] 添加 `HalfPageUp()` 和 `HalfPageDown()` 方法
-- [x] 消息格式保持原版风格（raw msg, raw resp）
+- [x] Ensure all message types correctly implement `Render()` and `String()` interfaces
+- [x] Add `HalfPageUp()` and `HalfPageDown()` methods
+- [x] Message format keeps original style (raw msg, raw resp)
 
-### Phase 3: 更新 AppModel - 完成
+### Phase 3: Update AppModel - Completed
 
-- [x] 完善全局快捷键处理（ctrl+u/d 现在是半页滚动）
-- [x] 状态栏整合到 appModel 中
-- [x] 布局计算正确
+- [x] Improve global shortcut handling (ctrl+u/d are now half-page scroll)
+- [x] Integrate status bar into appModel
+- [x] Layout calculation correct
 
-### Phase 4: 构建验证 - 完成
+### Phase 4: Build Verification - Completed
 
-- [x] 构建成功，无编译错误
-- [x] help 命令正常工作
-- [x] 非交互模式测试通过
+- [x] Build successful, no compile errors
+- [x] help command works normally
+- [x] Non-interactive mode tests pass
 
-## 10. 重要修正说明 (2026-03-09)
+## 10. Important Correction Notes (2026-03-09)
 
-### 消息格式修正
+### Message Format Correction
 
-**问题**：之前的实现错误地添加了 "raw msg" 和 "raw resp" 前缀标记
+**Problem**: Previous implementation incorrectly added "raw msg" and "raw resp" prefix markers
 
-**修正**：根据用户反馈和进一步分析，原版 TUI 实际上：
-- 用户消息：直接显示内容，无特殊标记
-- 助手消息：直接显示内容，无特殊标记  
-- 状态栏：使用 `●` 符号配合颜色（绿色表示 Ready）
-- 消息视图：使用简单的文本显示，支持 ANSI 颜色
+**Correction**: Based on user feedback and further analysis, the original TUI actually:
+- User messages: display content directly, no special marker
+- Assistant messages: display content directly, no special marker  
+- Status bar: uses `●` symbol with color (green means Ready)
+- Message view: uses simple text display, supports ANSI colors
 
-**原因分析**：
-- strings 输出中的 "raw" 相关字符串实际上是其他功能的残留（如 `raw_content`, `raw-write` 等）
-- 反编译代码中的注释可能误导了实现
-- 原版 TUI 更注重简洁性和实用性
+**Root cause analysis**:
+- The "raw"-related strings in strings output are actually remnants of other functionality (such as `raw_content`, `raw-write`, etc.)
+- Comments in decompiled code may have misled the implementation
+- Original TUI focuses more on simplicity and practicality
 
-### 下一步需要确认的问题
+### Issues to Confirm Next
 
-1. **状态栏渲染**：需要确认原版状态栏的具体格式
-2. **消息边框**：是否需要为消息添加边框或背景
-3. **可复制性**：原版无法复制可能是因为使用了特殊的渲染模式
+1. **Status bar rendering**: Need to confirm the exact format of the original status bar
+2. **Message borders**: Whether borders or backgrounds are needed for messages
+3. **Copyability**: Original cannot copy possibly because of special rendering mode

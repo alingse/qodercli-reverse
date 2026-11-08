@@ -1,4 +1,4 @@
-// Package prompts 辅助函数
+// Package prompts Helper functions
 package prompts
 
 import (
@@ -6,9 +6,9 @@ import (
 	"strings"
 )
 
-// ========== 提示词选项类型 ==========
+// ========== Prompt option types ==========
 
-// PromptOptions 提示词选项（用于快速构建）
+// PromptOptions Prompt options (for quick building)
 type PromptOptions struct {
 	IncludeCoreInstructions bool
 	IncludeToolRules        bool
@@ -22,14 +22,14 @@ type PromptOptions struct {
 	}
 }
 
-// ========== 便捷获取函数 ==========
+// ========== Convenience retrieval functions ==========
 
-// CoreInstructions 获取核心指令
+// CoreInstructions Gets core instructions
 func CoreInstructions() string {
 	return coreInstructions
 }
 
-// ToolRules 获取工具规则（带变量替换）
+// ToolRules Gets tool rules (with variable substitution)
 func ToolRules(vars *TemplateVars) string {
 	if vars == nil {
 		vars = DefaultTemplateVars()
@@ -44,39 +44,39 @@ func ToolRules(vars *TemplateVars) string {
 	return rules
 }
 
-// FileOperationRules 获取文件操作规则
+// FileOperationRules Gets file operation rules
 func FileOperationRules() string {
 	return fileOperationRules
 }
 
-// EducationalRules 获取教育规则
+// EducationalRules Gets educational rules
 func EducationalRules() string {
 	return educationalRules
 }
 
-// SecurityRules 获取安全规则
+// SecurityRules Gets security rules
 func SecurityRules() string {
 	return coreSecurityRules
 }
 
-// OutputFormatRules 获取输出格式规则
+// OutputFormatRules Gets output format rules
 func OutputFormatRules() string {
 	return outputFormatRules
 }
 
-// QoderWorkRules 获取 QoderWork 规则
+// QoderWorkRules Gets QoderWork rules
 func QoderWorkRules() string {
 	return qoderWorkRules
 }
 
-// QoderStudioRules 获取 Qoder Studio 规则
+// QoderStudioRules Gets Qoder Studio rules
 func QoderStudioRules() string {
 	return qoderStudioRules
 }
 
-// ========== 快速构建函数 ==========
+// ========== Quick build functions ==========
 
-// QuickMainAgent 快速构建主 Agent 提示词
+// QuickMainAgent Quickly builds the main Agent prompt
 func QuickMainAgent(appName string) (string, error) {
 	vars := DefaultTemplateVars()
 	if appName != "" {
@@ -85,51 +85,51 @@ func QuickMainAgent(appName string) (string, error) {
 	return GetRendered(PromptTypeMainAgent, vars)
 }
 
-// QuickSubagent 快速构建子 Agent 提示词
+// QuickSubagent Quickly builds a sub-agent prompt
 func QuickSubagent(subagentType string) (string, error) {
 	vars := DefaultTemplateVars()
 	return GetSubagentPrompt(subagentType, vars)
 }
 
-// QuickCustom 快速构建自定义提示词
+// QuickCustom Quickly builds a custom prompt
 func QuickCustom(roleDefinition string, options PromptOptions) (string, error) {
 	vars := DefaultTemplateVars()
 
 	builder := NewSystemPromptBuilder(vars)
 
-	// 角色定义
+	// Role definition
 	if roleDefinition != "" {
 		builder.AddRoleDefinition(roleDefinition)
 	} else {
 		builder.AddRoleDefinition(fmt.Sprintf("You are %s, an interactive CLI tool.", vars.AppName))
 	}
 
-	// 核心指令
+	// Core instructions
 	if options.IncludeCoreInstructions {
 		builder.AddCoreInstructions(CoreInstructions())
 	}
 
-	// 工具规则
+	// Tool rules
 	if options.IncludeToolRules {
 		builder.AddToolRules(ToolRules(vars))
 	}
 
-	// 文件操作规则
+	// File operation rules
 	if options.IncludeFileRules {
 		builder.AddFileOperationRules(FileOperationRules())
 	}
 
-	// 安全规则
+	// Security rules
 	if options.IncludeSecurityRules {
 		builder.AddCustomSection("Security", SecurityRules())
 	}
 
-	// 输出格式
+	// Output format
 	if options.IncludeOutputFormat {
 		builder.AddCustomSection("Output Format", OutputFormatRules())
 	}
 
-	// 额外章节
+	// Extra sections
 	for _, section := range options.ExtraSections {
 		builder.AddCustomSection(section.Title, section.Content)
 	}
@@ -137,41 +137,41 @@ func QuickCustom(roleDefinition string, options PromptOptions) (string, error) {
 	return builder.Build(), nil
 }
 
-// ========== 系统提醒标签 ==========
+// ========== System reminder tags ==========
 
-// SystemReminder 生成 system-reminder 标签
+// SystemReminder Generates a system-reminder tag
 func SystemReminder(content string) string {
 	return fmt.Sprintf("<system-reminder>\n%s\n</system-reminder>", content)
 }
 
-// SystemReminderVars 生成带变量的 system-reminder 标签
+// SystemReminderVars Generates a system-reminder tag with variables
 func SystemReminderVars(format string, args ...interface{}) string {
 	return SystemReminder(fmt.Sprintf(format, args...))
 }
 
-// CommonSystemReminders 常用系统提醒
+// CommonSystemReminders Common system reminders
 var CommonSystemReminders = struct {
-	// 文件相关
+	// File related
 	FileTruncated func(file string, lines int) string
 	FileTooShort  func(file string, offset, actual int) string
 	FileEmpty     func(file string) string
 	FileNotFound  func(file string) string
 
-	// 图片相关
+	// Image related
 	ImageAttachment    func(count int) string
 	ImageInAttachment  func(path string) string
 	ImageProcessFailed func(path string) string
 
-	// 命令相关
+	// Command related
 	CommandTimeout    func(timeout int) string
 	CommandBackground func(pid int) string
 
-	// 会话相关
+	// Session related
 	ContextTruncated func() string
 	FolderCleared    func() string
 	FolderUpdated    func(dirs string) string
 
-	// 提示更新
+	// Prompt updates
 	TipsUpdated func() string
 }{
 	FileTruncated: func(file string, lines int) string {
@@ -218,7 +218,7 @@ var CommonSystemReminders = struct {
 	},
 }
 
-// ========== 核心安全规则（独立） ==========
+// ========== Core security rules (standalone) ==========
 
 const coreSecurityRules = `IMPORTANT: Assist with defensive security tasks only.
 Refuse to create, modify, or improve code that may be used maliciously.
@@ -230,7 +230,7 @@ You CAN and SHOULD provide analysis of malware, what it is doing.
 But you MUST refuse to improve or augment the code.
 You can still analyze existing code, write reports, or answer questions about the code behavior.`
 
-// ========== 输出格式规则（独立） ==========
+// ========== Output format rules (standalone) ==========
 
 const outputFormatRules = `Your output will be displayed on a command line interface.
 Your responses should be short and concise.
@@ -241,9 +241,9 @@ For clear communication with the user the assistant MUST avoid using emojis.
 In your final response always share relevant file names and code snippets.
 Any file paths you return in your response MUST be absolute. Do NOT use relative paths.`
 
-// ========== 思考触发词 ==========
+// ========== Thinking triggers ==========
 
-// ThinkTriggers 思考模式触发词（多语言）
+// ThinkTriggers Thinking mode trigger words (multilingual)
 var ThinkTriggers = []string{
 	`\bthink about it\b`,
 	`\bthink intensely\b`,
@@ -251,24 +251,24 @@ var ThinkTriggers = []string{
 	`\bthink hard\b`,
 	`\bthink more\b`,
 	`\bultrathink\b`,
-	`\bdenk gründlich nach\b`,   // 德语
-	`\bnachdenken\b`,            // 德语
-	`\briflettere\b`,            // 意大利语
-	`\bpensare profondamente\b`, // 意大利语
-	`\bpensando\b`,              // 西班牙语/葡萄牙语
-	`\bpiensa profundamente\b`,  // 西班牙语
-	`\bpensare\b`,               // 意大利语
-	`\bpensa molto\b`,           // 意大利语
+	`\bdenk gründlich nach\b`,   // German
+	`\bnachdenken\b`,            // German
+	`\briflettere\b`,            // Italian
+	`\bpensare profondamente\b`, // Italian
+	`\bpensando\b`,              // Spanish/Portuguese
+	`\bpiensa profundamente\b`,  // Spanish
+	`\bpensare\b`,               // Italian
+	`\bpensa molto\b`,           // Italian
 	`\bthink a lot\b`,
 	`\brichis\b`,
 	`\brichi\b`,
 }
 
-// ShouldTriggerThinking 检查文本是否应该触发思考模式
+// ShouldTriggerThinking Checks whether the text should trigger thinking mode
 func ShouldTriggerThinking(text string) bool {
 	lowerText := strings.ToLower(text)
 	for _, trigger := range ThinkTriggers {
-		// 简化匹配，实际应该用正则
+		// Simplified matching; regex should be used in practice
 		cleanTrigger := strings.Trim(trigger, `\b`)
 		if strings.Contains(lowerText, cleanTrigger) {
 			return true

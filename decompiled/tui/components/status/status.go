@@ -1,5 +1,5 @@
-// Package status 状态栏组件
-// 显示当前状态、Token 用量、模型信息等
+// Package status status bar component
+// displays current status, token usage, model info, etc.
 package status
 
 import (
@@ -12,20 +12,20 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/types"
 )
 
-// 配色方案 - 使用标准 ANSI 颜色码提高兼容性
+// color scheme - use standard ANSI color codes for better compatibility
 var (
-	statusColorIdle       = lipgloss.Color("82")  // 空闲 - 绿色
-	statusColorConnecting = lipgloss.Color("215") // 连接中 - 橙色
-	statusColorThinking   = lipgloss.Color("135") // 思考中 - 紫色
-	statusColorTool       = lipgloss.Color("75")  // 工具执行 - 蓝色
-	statusColorError      = lipgloss.Color("203") // 错误 - 红色
-	statusColorBg         = lipgloss.Color("237") // 状态栏背景 - 深蓝灰
-	statusColorText       = lipgloss.Color("251") // 文本 - 浅灰
-	statusColorMuted      = lipgloss.Color("248") // 弱化文本 - 灰色
-	statusColorVim        = lipgloss.Color("215") // Vim 模式 - 橙色
+	statusColorIdle       = lipgloss.Color("82")  // idle - green
+	statusColorConnecting = lipgloss.Color("215") // connecting - orange
+	statusColorThinking   = lipgloss.Color("135") // thinking - purple
+	statusColorTool       = lipgloss.Color("75")  // tool execution - blue
+	statusColorError      = lipgloss.Color("203") // error - red
+	statusColorBg         = lipgloss.Color("237") // status bar background - dark blue-gray
+	statusColorText       = lipgloss.Color("251") // text - light gray
+	statusColorMuted      = lipgloss.Color("248") // muted text - gray
+	statusColorVim        = lipgloss.Color("215") // Vim mode - orange
 )
 
-// Status 应用状态
+// Status application status
 type Status int
 
 const (
@@ -36,7 +36,7 @@ const (
 	StatusError
 )
 
-// Component 状态栏组件
+// Component status bar component
 type Component struct {
 	width       int
 	height      int
@@ -48,7 +48,7 @@ type Component struct {
 	lastUpdated time.Time
 }
 
-// New 创建新的状态栏组件
+// New creates a new status bar component
 func New() *Component {
 	return &Component{
 		status:      StatusIdle,
@@ -58,32 +58,32 @@ func New() *Component {
 	}
 }
 
-// Init 初始化组件
+// Init initializes the component
 func (c *Component) Init() tea.Cmd {
 	return nil
 }
 
-// Update 更新组件状态
+// Update updates component state
 func (c *Component) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return c, nil
 }
 
-// View 渲染视图
+// View renders the view
 func (c *Component) View() string {
 	if c.height <= 0 {
 		c.height = 1
 	}
 
-	// 左侧：状态指示器
+	// left: status indicator
 	leftContent := c.renderStatus()
 
-	// 中间：模型信息
+	// center: model info
 	centerContent := c.renderModelInfo()
 
-	// 右侧：Token 用量
+	// right: token usage
 	rightContent := c.renderTokenUsage()
 
-	// 组合状态栏
+	// compose status bar
 	leftWidth := 20
 	rightWidth := 25
 	centerWidth := c.width - leftWidth - rightWidth - 4
@@ -118,40 +118,40 @@ func (c *Component) View() string {
 	return barStyle.Render(content)
 }
 
-// SetSize 设置组件尺寸
+// SetSize sets component size
 func (c *Component) SetSize(width, height int) {
 	c.width = width
 	c.height = height
 }
 
-// SetStatus 设置状态
+// SetStatus sets status
 func (c *Component) SetStatus(status Status) {
 	c.status = status
 	c.lastUpdated = time.Now()
 }
 
-// SetModel 设置模型
+// SetModel sets model
 func (c *Component) SetModel(model string) {
 	c.model = model
 }
 
-// SetMode 设置模式
+// SetMode sets mode
 func (c *Component) SetMode(mode string) {
 	c.mode = mode
 }
 
-// SetMessage 设置状态消息
+// SetMessage sets status message
 func (c *Component) SetMessage(msg string) {
 	c.message = msg
 }
 
-// UpdateTokenUsage 更新 Token 用量
+// UpdateTokenUsage updates token usage
 func (c *Component) UpdateTokenUsage(usage *types.TokenUsage) {
 	c.tokenUsage = usage
 	c.lastUpdated = time.Now()
 }
 
-// renderStatus 渲染状态指示器
+// renderStatus renders status indicator
 func (c *Component) renderStatus() string {
 	switch c.status {
 	case StatusIdle:
@@ -184,7 +184,7 @@ func (c *Component) renderStatus() string {
 	}
 }
 
-// renderModelInfo 渲染模型信息
+// renderModelInfo renders model info
 func (c *Component) renderModelInfo() string {
 	var modeIndicator string
 	if c.mode == "vim" {
@@ -199,7 +199,7 @@ func (c *Component) renderModelInfo() string {
 	return fmt.Sprintf("%s%s", modeIndicator, modelStyle.Render(c.model))
 }
 
-// renderTokenUsage 渲染 Token 用量
+// renderTokenUsage renders token usage
 func (c *Component) renderTokenUsage() string {
 	if c.tokenUsage == nil {
 		return ""
@@ -212,12 +212,12 @@ func (c *Component) renderTokenUsage() string {
 	return style.Render(fmt.Sprintf("Tokens: %d", total))
 }
 
-// GetStatus 获取当前状态
+// GetStatus gets current status
 func (c *Component) GetStatus() Status {
 	return c.status
 }
 
-// IsProcessing 是否正在处理
+// IsProcessing whether currently processing
 func (c *Component) IsProcessing() bool {
 	return c.status == StatusThinking || c.status == StatusToolExecuting
 }

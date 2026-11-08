@@ -1,24 +1,25 @@
-# Bubble Tea WithAltScreen 使用分析
+# Bubble Tea WithAltScreen Usage Analysis
 
-## 为什么使用 `tea.WithAltScreen()`？
+## Why use `tea.WithAltScreen()`?
 
-### 1. Alternate Screen Buffer 的作用
+### 1. Alternate Screen Buffer Role
 
-`tea.WithAltScreen()` 启用终端的 **alternate screen buffer**（备用屏幕缓冲区），这是一个独立的屏幕空间，具有以下优点：
+`tea.WithAltScreen()` enables the terminal's **alternate screen buffer**, an independent screen space with the following advantages:
 
-#### ✅ 优点：
-- **不污染终端历史**：TUI 运行时的内容不会混入终端的滚动历史
-- **完整的屏幕控制**：可以自由使用整个屏幕空间，支持复杂的 UI 布局
-- **清晰的进入/退出**：退出后自动恢复到之前的终端状态
-- **更好的用户体验**：类似 vim、less、htop 等工具的行为
+#### ✅ Advantages:
+- **Doesn't pollute terminal history**: TUI content doesn't mix into the terminal's scroll history
+- **Full screen control**: Can freely use the entire screen space, supporting complex UI layouts
+- **Clean enter/exit**: Automatically restores the previous terminal state on exit
+- **Better UX**: Behavior similar to vim, less, htop, etc.
 
-#### ❌ 缺点：
-- **退出时清屏**：默认情况下，退出时会清除所有 TUI 内容
-- **无法查看历史**：TUI 中的内容退出后无法回看
+#### ❌ Disadvantages:
+- **Clears on exit**: By default, all TUI content is cleared on exit
+- **No history viewable**: TUI content cannot be reviewed after exit
 
-### 2. 官方实现分析
+### 2. Official Implementation Analysis
 
-从 qodercli 官方二进制的字符串分析：
+From string analysis of the official qodercli-reverse binary:
+
 ```
 AltScreen
 ExitAltScreen
@@ -27,11 +28,11 @@ altScreenActive
 altScreenWasActive
 ```
 
-官方确实使用了 AltScreen，这是标准做法。
+The official version indeed uses AltScreen, which is standard practice.
 
-### 3. 其他项目的实践
+### 3. Practices in Other Projects
 
-#### Glow (Charm 官方项目)
+#### Glow (Charm's official project)
 ```go
 opts := []tea.ProgramOption{tea.WithAltScreen()}
 if cfg.EnableMouse {
@@ -40,91 +41,91 @@ if cfg.EnableMouse {
 return tea.NewProgram(m, opts...)
 ```
 
-✅ 使用 `WithAltScreen()`
+✅ Uses `WithAltScreen()`
 
-#### 其他 TUI 工具
-- **vim**: 使用 alternate screen
-- **less**: 使用 alternate screen
-- **htop**: 使用 alternate screen
-- **lazygit**: 使用自己的 TUI 框架（gocui），也使用 alternate screen
+#### Other TUI Tools
+- **vim**: Uses alternate screen
+- **less**: Uses alternate screen
+- **htop**: Uses alternate screen
+- **lazygit**: Uses its own TUI framework (gocui), also uses alternate screen
 
-## 如何在退出时保留输出？
+## How to Preserve Output on Exit?
 
-### 方案 1：输出到 stderr（当前实现）✅
+### Approach 1: Output to stderr (current implementation) ✅
 
 ```go
-// 在退出前输出统计信息到 stderr
+// Output statistics to stderr before exiting
 fmt.Fprint(os.Stderr, statsMsg)
 return QuitMsg{}
 ```
 
-**原理**：
-- stderr 不受 alternate screen 影响
-- 退出后，统计信息会显示在主屏幕上
+**Principle**:
+- stderr is not affected by alternate screen
+- After exit, the statistics will display on the main screen
 
-**优点**：
-- 简单直接
-- 不影响 TUI 的正常运行
-- 统计信息在退出后可见
+**Advantages**:
+- Simple and direct
+- Doesn't affect normal TUI operation
+- Statistics visible after exit
 
-**缺点**：
-- 只能在退出时输出，无法在 TUI 中显示
+**Disadvantages**:
+- Can only output on exit, cannot display within TUI
 
-### 方案 2：不使用 AltScreen
+### Approach 2: Don't Use AltScreen
 
 ```go
-// 不使用 WithAltScreen
+// Without WithAltScreen
 p := tea.NewProgram(model)
 ```
 
-**优点**：
-- 所有输出都保留在终端历史中
-- 可以随时滚动查看
+**Advantages**:
+- All output remains in terminal history
+- Can scroll and view anytime
 
-**缺点**：
-- TUI 内容会污染终端历史
-- 无法完全控制屏幕
-- 用户体验较差（不像传统 TUI 工具）
+**Disadvantages**:
+- TUI content pollutes terminal history
+- Cannot fully control the screen
+- Poorer user experience (unlike traditional TUI tools)
 
-### 方案 3：混合模式（推荐）
+### Approach 3: Hybrid Mode (recommended)
 
 ```go
-// 在 TUI 中使用 AltScreen
+// Use AltScreen within TUI
 p := tea.NewProgram(model, tea.WithAltScreen())
 
-// 退出时输出重要信息到 stderr
+// Output important info to stderr on exit
 func (m *appModel) handleCommand(input string) tea.Msg {
     case "/quit", "/exit":
-        // 输出统计信息到 stderr
+        // Output statistics to stderr
         fmt.Fprint(os.Stderr, statsMsg)
         return QuitMsg{}
 }
 ```
 
-**这是最佳实践**：
-- ✅ TUI 运行时有完整的屏幕控制
-- ✅ 退出时保留重要信息（统计数据）
-- ✅ 不污染终端历史
-- ✅ 符合用户对 TUI 工具的预期
+**This is best practice**:
+- ✅ Full screen control during TUI runtime
+- ✅ Important information (statistics) preserved after exit
+- ✅ Doesn't pollute terminal history
+- ✅ Meets user expectations for TUI tools
 
-### 方案 4：使用 tea.Println（Bubble Tea 提供）
+### Approach 4: Use tea.Println (provided by Bubble Tea)
 
 ```go
-// Bubble Tea 提供的方法，可以在 AltScreen 外打印
+// Method provided by Bubble Tea for printing outside AltScreen
 return m, tea.Sequence(
     tea.Printf(statsMsg),
     tea.Quit,
 )
 ```
 
-**注意**：这需要 Bubble Tea 较新版本支持。
+**Note**: This requires a newer version of Bubble Tea.
 
-## 当前实现
+## Current Implementation
 
-我们采用了 **方案 3（混合模式）**：
+We adopted **Approach 3 (Hybrid Mode)**:
 
-1. **TUI 运行时**：使用 `tea.WithAltScreen()` 提供完整的 TUI 体验
-2. **退出时**：将统计信息输出到 `stderr`，确保退出后可见
+1. **TUI runtime**: Use `tea.WithAltScreen()` for full TUI experience
+2. **On exit**: Output statistics to `stderr`, ensuring visibility after exit
 
 ```go
 // tui/app/model.go
@@ -133,19 +134,19 @@ func (m *appModel) handleCommand(input string) tea.Msg {
         stats := m.agent.GetState().GetStats()
         statsMsg := fmt.Sprintf(...)
 
-        // 输出到 stderr，退出后可见
+        // Output to stderr, visible after exit
         fmt.Fprint(os.Stderr, statsMsg)
 
         return QuitMsg{}
 }
 ```
 
-## 总结
+## Summary
 
-| 方案 | TUI 体验 | 退出后可见 | 终端历史 | 推荐度 |
-|------|---------|-----------|---------|--------|
-| WithAltScreen + stderr | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | 干净 | ⭐⭐⭐⭐⭐ |
-| 不用 AltScreen | ⭐⭐ | ⭐⭐⭐⭐⭐ | 混乱 | ⭐⭐ |
-| tea.Println | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | 干净 | ⭐⭐⭐⭐ |
+| Approach | TUI Experience | Visible After Exit | Terminal History | Recommendation |
+|----------|---------------|-------------------|------------------|----------------|
+| WithAltScreen + stderr | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Clean | ⭐⭐⭐⭐⭐ |
+| No AltScreen | ⭐⭐ | ⭐⭐⭐⭐⭐ | Messy | ⭐⭐ |
+| tea.Println | ⭐⭐⭐⭐⭐ | ⭐⭐⭐⭐⭐ | Clean | ⭐⭐⭐⭐ |
 
-**结论**：使用 `tea.WithAltScreen()` 是正确的选择，配合 stderr 输出可以完美解决退出时保留信息的需求。
+**Conclusion**: Using `tea.WithAltScreen()` is the correct choice; combined with stderr output, it perfectly solves the need to preserve information on exit.

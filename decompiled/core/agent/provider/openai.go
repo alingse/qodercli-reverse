@@ -1,5 +1,5 @@
-// Package provider OpenAI Provider 实现
-// 支持标准的 OPENAI_API_KEY, OPENAI_MODEL, OPENAI_BASE_URL 环境变量
+// Package provider OpenAI Provider implementation
+// Supports standard OPENAI_API_KEY, OPENAI_MODEL, OPENAI_BASE_URL env vars
 package provider
 
 import (
@@ -17,7 +17,7 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/types"
 )
 
-// OpenAIClient OpenAI 兼容客户端
+// OpenAIClient OpenAI compatible client
 type OpenAIClient struct {
 	*baseClient
 	baseURL    string
@@ -25,7 +25,7 @@ type OpenAIClient struct {
 	httpClient HTTPClient
 }
 
-// NewOpenAIClient 创建 OpenAI 客户端
+// NewOpenAIClient creates OpenAI client
 func NewOpenAIClient(opts ...ClientOption) (*OpenAIClient, error) {
 	client := &OpenAIClient{
 		baseClient: &baseClient{
@@ -46,7 +46,7 @@ func NewOpenAIClient(opts ...ClientOption) (*OpenAIClient, error) {
 	return client, nil
 }
 
-// Stream 流式请求
+// Stream streaming request
 func (c *OpenAIClient) Stream(ctx context.Context, req *ModelRequest) <-chan Event {
 	eventChan := make(chan Event, 100)
 
@@ -56,7 +56,7 @@ func (c *OpenAIClient) Stream(ctx context.Context, req *ModelRequest) <-chan Eve
 		log.Debug("Starting OpenAI stream request to %s", c.baseURL)
 		log.Debug("Request model: %s, max_tokens: %d", req.Model, req.MaxTokens)
 
-		// 构建 OpenAI 格式的请求
+		// build OpenAI-format request
 		openAIReq, err := c.buildOpenAIRequest(req)
 		if err != nil {
 			log.Error("Failed to build OpenAI request: %v", err)
@@ -93,7 +93,7 @@ func (c *OpenAIClient) Stream(ctx context.Context, req *ModelRequest) <-chan Eve
 			Timeout: 5 * time.Minute,
 		}
 
-		// 发送请求
+		// send request
 		resp, err := c.httpClient.Do(httpReq)
 		if err != nil {
 			log.Error("HTTP request failed: %v", err)
@@ -121,7 +121,7 @@ func (c *OpenAIClient) Stream(ctx context.Context, req *ModelRequest) <-chan Eve
 			return
 		}
 
-		// 处理 SSE 流
+		// handle SSE stream
 		c.processSSEStream(ctx, bytes.NewReader(resp.Body), eventChan)
 		log.Debug("Stream processing completed")
 	}()
@@ -129,12 +129,12 @@ func (c *OpenAIClient) Stream(ctx context.Context, req *ModelRequest) <-chan Eve
 	return eventChan
 }
 
-// Send 同步请求
+// Send sync request
 func (c *OpenAIClient) Send(ctx context.Context, req *ModelRequest) (*Response, error) {
 	log.Debug("Starting OpenAI sync request to %s", c.baseURL)
 	req.Stream = false
 
-	// 构建 OpenAI 格式的请求
+	// build OpenAI-format request
 	openAIReq, err := c.buildOpenAIRequest(req)
 	if err != nil {
 		log.Error("Failed to build OpenAI request: %v", err)
@@ -181,17 +181,17 @@ func (c *OpenAIClient) Send(ctx context.Context, req *ModelRequest) (*Response, 
 	return c.parseResponse(&apiResp), nil
 }
 
-// Close 关闭客户端
+// Close closes the client
 func (c *OpenAIClient) Close() error {
 	return nil
 }
 
-// buildOpenAIRequest 构建 OpenAI 格式的请求
+// buildOpenAIRequest builds OpenAI-format request
 func (c *OpenAIClient) buildOpenAIRequest(req *ModelRequest) (*openAIChatRequest, error) {
-	// 转换消息格式
+	// convert message format
 	messages := make([]openAIMessage, 0, len(req.Messages)+1)
 
-	// 添加 system prompt
+	// add system prompt
 	if req.SystemPrompt != "" {
 		messages = append(messages, openAIMessage{
 			Role:    "system",
@@ -199,13 +199,13 @@ func (c *OpenAIClient) buildOpenAIRequest(req *ModelRequest) (*openAIChatRequest
 		})
 	}
 
-	// 转换用户消息
+	// convert user messages
 	for _, msg := range req.Messages {
 		openAIMsg := openAIMessage{
 			Role: string(msg.Role),
 		}
 
-		// 处理内容 - 将 ContentPart 数组转换为文本或混合内容
+		// handle content - convert ContentPart array to text or mixed content
 		if len(msg.Content) > 0 {
 			textParts := make([]string, 0)
 			hasImages := false
@@ -221,7 +221,7 @@ func (c *OpenAIClient) buildOpenAIRequest(req *ModelRequest) (*openAIChatRequest
 			fullText := strings.Join(textParts, "\n")
 
 			if hasImages && len(msg.Content) > 0 {
-				// 多模态内容
+				// multimodal content
 				contentParts := make([]interface{}, 0)
 				for _, part := range msg.Content {
 					if part.Type == "text" && part.Text != "" {
@@ -244,12 +244,12 @@ func (c *OpenAIClient) buildOpenAIRequest(req *ModelRequest) (*openAIChatRequest
 				}
 				openAIMsg.Content = contentParts
 			} else {
-				// 纯文本内容
+				// plain text content
 				openAIMsg.Content = fullText
 			}
 		}
 
-		// 处理工具调用
+		// handle tool calls
 		if len(msg.ToolCalls) > 0 {
 			toolCalls := make([]openAIToolCall, len(msg.ToolCalls))
 			for i, tc := range msg.ToolCalls {
@@ -265,7 +265,7 @@ func (c *OpenAIClient) buildOpenAIRequest(req *ModelRequest) (*openAIChatRequest
 			openAIMsg.ToolCalls = toolCalls
 		}
 
-		// 处理工具调用结果
+		// handle tool call results
 		if msg.ToolCallID != "" {
 			openAIMsg.ToolCallID = msg.ToolCallID
 			openAIMsg.Name = msg.Name
@@ -274,7 +274,7 @@ func (c *OpenAIClient) buildOpenAIRequest(req *ModelRequest) (*openAIChatRequest
 		messages = append(messages, openAIMsg)
 	}
 
-	// 转换工具定义
+	// convert tool definitions
 	var tools []openAITool
 	if len(req.Tools) > 0 {
 		tools = make([]openAITool, len(req.Tools))
@@ -290,19 +290,19 @@ func (c *OpenAIClient) buildOpenAIRequest(req *ModelRequest) (*openAIChatRequest
 		}
 	}
 
-	// 设置温度
+	// set temperature
 	temperature := req.Temperature
 	if temperature == 0 {
 		temperature = 0.7
 	}
 
-	// 设置最大 tokens
+	// set max tokens
 	maxTokens := req.MaxTokens
 	if maxTokens == 0 {
 		maxTokens = 4096
 	}
 
-	// 使用配置中的模型（优先）或请求中的模型
+	// use configured model (priority) or model from request
 	model := c.model
 	if req.Model != "" {
 		model = req.Model
@@ -321,7 +321,7 @@ func (c *OpenAIClient) buildOpenAIRequest(req *ModelRequest) (*openAIChatRequest
 	}, nil
 }
 
-// buildHeaders 构建请求头
+// buildHeaders builds request headers
 func (c *OpenAIClient) buildHeaders() map[string]string {
 	headers := map[string]string{
 		"Content-Type":  "application/json",
@@ -339,17 +339,17 @@ func (c *OpenAIClient) buildHeaders() map[string]string {
 	return headers
 }
 
-// processSSEStream 处理 SSE 流
+// processSSEStream handles SSE stream
 func (c *OpenAIClient) processSSEStream(ctx context.Context, reader io.Reader, eventChan chan<- Event) {
 	scanner := bufio.NewScanner(reader)
 
-	// 发送消息开始事件
+	// send message start event
 	eventChan <- Event{Type: EventTypeMessageStart}
 	eventChan <- Event{Type: EventTypeContentBlockStart}
 
 	var currentContent strings.Builder
 	var currentToolCall *openAIToolCall
-	lastToolCallIndex := -1 // 初始化为 -1，这样第一个工具调用（index=0）也能被正确处理
+	lastToolCallIndex := -1 // initialized to -1 so first tool call (index=0) is handled correctly
 
 	for scanner.Scan() {
 		select {
@@ -382,11 +382,11 @@ func (c *OpenAIClient) processSSEStream(ctx context.Context, reader io.Reader, e
 			continue
 		}
 
-		// 处理内容增量
+		// handle content delta
 		if len(chunk.Choices) > 0 {
 			delta := chunk.Choices[0].Delta
 
-			// Content 可能是 string 或 []interface{}
+			// Content may be string or []interface{}
 			if contentStr, ok := delta.Content.(string); ok && contentStr != "" {
 				currentContent.WriteString(contentStr)
 				eventChan <- Event{
@@ -394,7 +394,7 @@ func (c *OpenAIClient) processSSEStream(ctx context.Context, reader io.Reader, e
 					Content: contentStr,
 				}
 			} else if contentArr, ok := delta.Content.([]interface{}); ok {
-				// 处理数组格式的内容
+				// handle array-format content
 				for _, item := range contentArr {
 					if m, ok := item.(map[string]interface{}); ok {
 						if text, ok := m["text"].(string); ok && text != "" {
@@ -408,7 +408,7 @@ func (c *OpenAIClient) processSSEStream(ctx context.Context, reader io.Reader, e
 				}
 			}
 
-			// 处理思考内容（某些模型如 o1）
+			// handle thinking content (some models like o1)
 			if delta.ReasoningContent != "" {
 				eventChan <- Event{
 					Type:     EventTypeThinkingDelta,
@@ -417,13 +417,13 @@ func (c *OpenAIClient) processSSEStream(ctx context.Context, reader io.Reader, e
 			}
 		}
 
-		// 处理工具调用
+		// handle tool calls
 		if len(chunk.Choices) > 0 && len(chunk.Choices[0].Delta.ToolCalls) > 0 {
 			for _, tc := range chunk.Choices[0].Delta.ToolCalls {
 				log.Debug("Processing tool call: index=%d, name=%s, args=%s", tc.Index, tc.Function.Name, tc.Function.Arguments)
 
 				if tc.Index != lastToolCallIndex {
-					// 新的工具调用 - 先发送前一个工具调用的停止事件
+					// new tool call - send stop event for previous tool call first
 					if currentToolCall != nil {
 						eventChan <- Event{
 							Type: EventTypeToolUseStop,
@@ -431,7 +431,7 @@ func (c *OpenAIClient) processSSEStream(ctx context.Context, reader io.Reader, e
 						log.Debug("Sent ToolUseStop for previous tool call")
 					}
 
-					// 更新索引
+					// update index
 					lastToolCallIndex = tc.Index
 
 					if tc.Function.Name != "" {
@@ -471,12 +471,12 @@ func (c *OpenAIClient) processSSEStream(ctx context.Context, reader io.Reader, e
 			}
 		}
 
-		// 处理完成原因
+		// handle finish reason
 		if len(chunk.Choices) > 0 && chunk.Choices[0].FinishReason != "" {
 			finishReason := types.FinishReason(chunk.Choices[0].FinishReason)
 			log.Debug("Finish reason: %s", finishReason)
 
-			// 如果有未完成的工具调用，发送停止事件
+			// if there are unfinished tool calls, send stop event
 			if currentToolCall != nil {
 				eventChan <- Event{
 					Type: EventTypeToolUseStop,
@@ -485,7 +485,7 @@ func (c *OpenAIClient) processSSEStream(ctx context.Context, reader io.Reader, e
 				currentToolCall = nil
 			}
 
-			// 发送 token 使用信息
+			// send token usage info
 			if chunk.Usage != nil {
 				eventChan <- Event{
 					Type: EventTypeMessageDelta,
@@ -505,12 +505,12 @@ func (c *OpenAIClient) processSSEStream(ctx context.Context, reader io.Reader, e
 		}
 	}
 
-	// 发送停止事件
+	// send stop event
 	eventChan <- Event{Type: EventTypeContentBlockStop}
 	eventChan <- Event{Type: EventTypeMessageStop}
 }
 
-// parseResponse 解析响应
+// parseResponse parses response
 func (c *OpenAIClient) parseResponse(resp *openAIChatResponse) *Response {
 	result := &Response{
 		ID:           resp.ID,
@@ -523,14 +523,14 @@ func (c *OpenAIClient) parseResponse(resp *openAIChatResponse) *Response {
 		},
 	}
 
-	// 解析内容
+	// parse content
 	choice := resp.Choices[0]
 
-	// Content 可能是 string 或 []interface{}
+	// Content may be string or []interface{}
 	if contentStr, ok := choice.Message.Content.(string); ok {
 		result.Content = contentStr
 	} else if contentArr, ok := choice.Message.Content.([]interface{}); ok {
-		// 处理数组格式的内容
+		// handle array-format content
 		for _, item := range contentArr {
 			if m, ok := item.(map[string]interface{}); ok {
 				if text, ok := m["text"].(string); ok {
@@ -540,12 +540,12 @@ func (c *OpenAIClient) parseResponse(resp *openAIChatResponse) *Response {
 		}
 	}
 
-	// 添加思考内容
+	// add thinking content
 	if choice.Message.ReasoningContent != "" {
 		result.Thinking = choice.Message.ReasoningContent
 	}
 
-	// 解析工具调用
+	// parse tool calls
 	if len(choice.Message.ToolCalls) > 0 {
 		result.ToolCalls = make([]types.ToolCall, len(choice.Message.ToolCalls))
 		for i, tc := range choice.Message.ToolCalls {
@@ -560,7 +560,7 @@ func (c *OpenAIClient) parseResponse(resp *openAIChatResponse) *Response {
 	return result
 }
 
-// getEnvOrDefault 获取环境变量或默认值
+// getEnvOrDefault gets env var or default
 func getEnvOrDefault(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return strings.TrimSpace(value)
@@ -568,9 +568,9 @@ func getEnvOrDefault(key, defaultValue string) string {
 	return defaultValue
 }
 
-// OpenAI API 数据结构
+// OpenAI API data structures
 
-// openAIChatRequest OpenAI 聊天请求
+// openAIChatRequest OpenAI chat request
 type openAIChatRequest struct {
 	Model           string          `json:"model"`
 	Messages        []openAIMessage `json:"messages"`
@@ -583,23 +583,23 @@ type openAIChatRequest struct {
 	ReasoningEffort string          `json:"reasoning_effort,omitempty"`
 }
 
-// openAIMessage OpenAI 消息
+// openAIMessage OpenAI message
 type openAIMessage struct {
 	Role             string           `json:"role"`
-	Content          interface{}      `json:"content,omitempty"` // string 或 []interface{}
+	Content          interface{}      `json:"content,omitempty"` // string or []interface{}
 	ToolCalls        []openAIToolCall `json:"tool_calls,omitempty"`
 	ToolCallID       string           `json:"tool_call_id,omitempty"`
 	Name             string           `json:"name,omitempty"`
-	ReasoningContent string           `json:"reasoning_content,omitempty"` // 思考内容（某些模型）
+	ReasoningContent string           `json:"reasoning_content,omitempty"` // thinking content (some models)
 }
 
-// openAITool OpenAI 工具
+// openAITool OpenAI tool
 type openAITool struct {
 	Type     string                   `json:"type"`
 	Function openAIFunctionDefinition `json:"function"`
 }
 
-// openAIToolCall OpenAI 工具调用
+// openAIToolCall OpenAI tool call
 type openAIToolCall struct {
 	Index    int            `json:"index,omitempty"`
 	ID       string         `json:"id"`
@@ -607,20 +607,20 @@ type openAIToolCall struct {
 	Function openAIFunction `json:"function"`
 }
 
-// openAIFunction OpenAI 函数
+// openAIFunction OpenAI function
 type openAIFunction struct {
 	Name      string `json:"name"`
 	Arguments string `json:"arguments,omitempty"`
 }
 
-// openAIFunctionDefinition OpenAI 函数定义
+// openAIFunctionDefinition OpenAI function definition
 type openAIFunctionDefinition struct {
 	Name        string                 `json:"name"`
 	Description string                 `json:"description,omitempty"`
 	Parameters  map[string]interface{} `json:"parameters,omitempty"`
 }
 
-// openAIChatResponse OpenAI 聊天响应
+// openAIChatResponse OpenAI chat response
 type openAIChatResponse struct {
 	ID      string         `json:"id"`
 	Model   string         `json:"model"`
@@ -628,14 +628,14 @@ type openAIChatResponse struct {
 	Usage   openAIUsage    `json:"usage"`
 }
 
-// openAIChoice OpenAI 选择
+// openAIChoice OpenAI choice
 type openAIChoice struct {
 	Index        int           `json:"index"`
 	Message      openAIMessage `json:"message"`
 	FinishReason string        `json:"finish_reason"`
 }
 
-// openAIChunk OpenAI 流式响应块
+// openAIChunk OpenAI streaming chunk
 type openAIChunk struct {
 	ID      string              `json:"id"`
 	Model   string              `json:"model"`
@@ -643,14 +643,14 @@ type openAIChunk struct {
 	Usage   *openAIUsage        `json:"usage,omitempty"`
 }
 
-// openAIChunkChoice OpenAI 流式选择
+// openAIChunkChoice OpenAI streaming choice
 type openAIChunkChoice struct {
 	Index        int           `json:"index"`
 	Delta        openAIMessage `json:"delta"`
 	FinishReason string        `json:"finish_reason,omitempty"`
 }
 
-// openAIUsage OpenAI 使用情况
+// openAIUsage OpenAI usage
 type openAIUsage struct {
 	InputTokens  int `json:"prompt_tokens"`
 	OutputTokens int `json:"completion_tokens"`

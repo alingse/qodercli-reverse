@@ -1,4 +1,4 @@
-// Package prompts 环境信息收集器
+// Package prompts Environment info collector
 package prompts
 
 import (
@@ -11,17 +11,17 @@ import (
 	"time"
 )
 
-// EnvironmentCollector 环境信息收集器
+// EnvironmentCollector Environment info collector
 type EnvironmentCollector struct {
 	cache *EnvironmentInfo
 }
 
-// NewEnvironmentCollector 创建新的收集器
+// NewEnvironmentCollector Creates a new collector
 func NewEnvironmentCollector() *EnvironmentCollector {
 	return &EnvironmentCollector{}
 }
 
-// Collect 收集环境信息
+// Collect Collects environment info
 func (c *EnvironmentCollector) Collect() (*EnvironmentInfo, error) {
 	if c.cache != nil {
 		return c.cache, nil
@@ -29,16 +29,16 @@ func (c *EnvironmentCollector) Collect() (*EnvironmentInfo, error) {
 
 	info := &EnvironmentInfo{}
 
-	// 收集系统信息
+	// Collect system info
 	c.collectSystemInfo(info)
 
-	// 收集 Git 信息
+	// Collect Git info
 	c.collectGitInfo(info)
 
-	// 收集开发环境版本
+	// Collect dev environment versions
 	c.collectDevEnvironments(info)
 
-	// 时间信息
+	// Time info
 	info.Timezone = time.Local.String()
 	info.CurrentTime = time.Now().Format(time.RFC3339)
 
@@ -46,7 +46,7 @@ func (c *EnvironmentCollector) Collect() (*EnvironmentInfo, error) {
 	return info, nil
 }
 
-// collectSystemInfo 收集系统信息
+// collectSystemInfo Collects system info
 func (c *EnvironmentCollector) collectSystemInfo(info *EnvironmentInfo) {
 	info.OS = runtime.GOOS
 	info.Architecture = runtime.GOARCH
@@ -56,9 +56,9 @@ func (c *EnvironmentCollector) collectSystemInfo(info *EnvironmentInfo) {
 	info.Shell = c.detectShell()
 }
 
-// collectGitInfo 收集 Git 信息
+// collectGitInfo Collects Git info
 func (c *EnvironmentCollector) collectGitInfo(info *EnvironmentInfo) {
-	// 检查是否在 Git 仓库中
+	// Check whether in a Git repo
 	if !c.isGitRepo() {
 		return
 	}
@@ -68,7 +68,7 @@ func (c *EnvironmentCollector) collectGitInfo(info *EnvironmentInfo) {
 	info.GitCommit = c.execGit("rev-parse", "--short", "HEAD")
 	info.GitRemote = c.execGit("remote", "get-url", "origin")
 
-	// 获取 Git 状态摘要
+	// Get Git status summary
 	status := c.execGit("status", "--porcelain")
 	if status != "" {
 		lines := strings.Split(status, "\n")
@@ -91,7 +91,7 @@ func (c *EnvironmentCollector) collectGitInfo(info *EnvironmentInfo) {
 	}
 }
 
-// collectDevEnvironments 收集开发环境版本
+// collectDevEnvironments Collects dev environment versions
 func (c *EnvironmentCollector) collectDevEnvironments(info *EnvironmentInfo) {
 	info.GoVersion = c.getCommandVersion("go", "version")
 	info.NodeVersion = c.getCommandVersion("node", "--version")
@@ -103,7 +103,7 @@ func (c *EnvironmentCollector) collectDevEnvironments(info *EnvironmentInfo) {
 	info.RustVersion = c.getCommandVersion("rustc", "--version")
 }
 
-// getHomeDir 获取用户主目录
+// getHomeDir Gets the user home directory
 func (c *EnvironmentCollector) getHomeDir() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -112,7 +112,7 @@ func (c *EnvironmentCollector) getHomeDir() string {
 	return home
 }
 
-// getWorkingDir 获取当前工作目录
+// getWorkingDir Gets the current working directory
 func (c *EnvironmentCollector) getWorkingDir() string {
 	wd, err := os.Getwd()
 	if err != nil {
@@ -121,9 +121,9 @@ func (c *EnvironmentCollector) getWorkingDir() string {
 	return wd
 }
 
-// detectShell 检测当前 shell
+// detectShell Detects the current shell
 func (c *EnvironmentCollector) detectShell() string {
-	// 从环境变量检测
+	// Detect from environment variables
 	shell := os.Getenv("SHELL")
 	if shell != "" {
 		return filepath.Base(shell)
@@ -140,7 +140,7 @@ func (c *EnvironmentCollector) detectShell() string {
 	return "unknown"
 }
 
-// isGitRepo 检查是否在 Git 仓库中
+// isGitRepo Checks whether in a Git repo
 func (c *EnvironmentCollector) isGitRepo() bool {
 	cmd := exec.Command("git", "rev-parse", "--git-dir")
 	cmd.Stdout = nil
@@ -149,7 +149,7 @@ func (c *EnvironmentCollector) isGitRepo() bool {
 	return err == nil
 }
 
-// execGit 执行 Git 命令
+// execGit Executes a Git command
 func (c *EnvironmentCollector) execGit(args ...string) string {
 	cmd := exec.Command("git", args...)
 	output, err := cmd.Output()
@@ -159,14 +159,14 @@ func (c *EnvironmentCollector) execGit(args ...string) string {
 	return strings.TrimSpace(string(output))
 }
 
-// getCommandVersion 获取命令版本
+// getCommandVersion Gets a command version
 func (c *EnvironmentCollector) getCommandVersion(name string, args ...string) string {
 	cmd := exec.Command(name, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return ""
 	}
-	// 取第一行
+	// Take the first line
 	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
 	if len(lines) > 0 {
 		return strings.TrimSpace(lines[0])
@@ -174,7 +174,7 @@ func (c *EnvironmentCollector) getCommandVersion(name string, args ...string) st
 	return ""
 }
 
-// ClearCache 清除缓存
+// ClearCache Clears the cache
 func (c *EnvironmentCollector) ClearCache() {
 	c.cache = nil
 }

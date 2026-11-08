@@ -1,5 +1,5 @@
-// Package agent Agent 核心实现
-// 反编译自 qodercli v0.1.29
+// Package agent Agent core implementation
+// Decompiled from qodercli-reverse v0.1.29
 package agent
 
 import (
@@ -18,53 +18,53 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/types"
 )
 
-// 工具默认配置常量
+// tool default config constants
 const (
-	DefaultReadToolMaxBytes = 32 * 1024 * 1024 // Read 工具默认最大读取字节数 (32MB)
-	DefaultBashTimeout      = 5 * time.Minute  // Bash 工具默认超时时间
+	DefaultReadToolMaxBytes = 32 * 1024 * 1024 // Read tool default max read bytes (32MB)
+	DefaultBashTimeout      = 5 * time.Minute  // Bash tool default timeout
 )
 
 // Agent AI Agent
 type Agent struct {
-	// 配置
+	// config
 	config *Config
 
 	// Provider
 	provider provider.Client
 
-	// 工具
+	// tools
 	toolRegistry *tools.Registry
 	toolExecutor *tools.Executor
 
-	// 状态
+	// state
 	state *state.State
 
-	// Todo 状态
+	// Todo state
 	todoState     state.TodoState
 	sessionMemory *state.SessionMemory
 
-	// 权限
+	// permissions
 	permissionCoordinator *permission.Coordinator
 
 	// Hook
 	hooks *HookManager
 
-	// 控制
+	// control
 	ctx    context.Context
 	cancel context.CancelFunc
 	mu     sync.RWMutex
 
-	// 回调
-	onMessage        func(msg *types.Message)
-	onToolCall       func(call *types.ToolCall)
-	onToolResult     func(result *types.ToolResult)
-	onError          func(err error)
-	onFinish         func(reason types.FinishReason)
-	onGenerationStart func() // 新一轮 LLM 生成开始回调
-	onTurnComplete   func() bool // 回合完成回调，返回 true 表示已插入新消息需要立即处理
+	// callbacks
+	onMessage         func(msg *types.Message)
+	onToolCall        func(call *types.ToolCall)
+	onToolResult      func(result *types.ToolResult)
+	onError           func(err error)
+	onFinish          func(reason types.FinishReason)
+	onGenerationStart func()      // new round LLM generation start callback
+	onTurnComplete    func() bool // turn complete callback, returns true if new message inserted needs immediate handling
 }
 
-// Config Agent 配置
+// Config Agent config
 type Config struct {
 	SystemPrompt          string
 	Model                 string
@@ -77,14 +77,14 @@ type Config struct {
 	ThinkLevel            provider.ThinkLevel
 	SubagentMode          bool
 	AgentName             string
-	EnableEnhancedCompact bool // 启用增强 compact 功能
+	EnableEnhancedCompact bool // enable enhanced compact feature
 }
 
-// NewAgent 创建 Agent
+// NewAgent creates Agent
 func NewAgent(config *Config, provider provider.Client) (*Agent, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// 创建会话内存和 Todo 状态
+	// create session memory and Todo state
 	sessionMemory := state.NewSessionMemory()
 	todoState := state.NewTodoState(sessionMemory)
 
@@ -101,14 +101,14 @@ func NewAgent(config *Config, provider provider.Client) (*Agent, error) {
 		cancel:                cancel,
 	}
 
-	// 初始化工具执行器
+	// initialize tool executor
 	agent.toolExecutor = tools.NewExecutor(agent.toolRegistry)
 
-	// 设置权限
+	// set permissions
 	agent.permissionCoordinator.SetAllowedTools(config.AllowedTools)
 	agent.permissionCoordinator.SetDisallowedTools(config.DisallowedTools)
 
-	// 注册内置工具
+	// register built-in tools
 	if err := agent.registerBuiltinTools(); err != nil {
 		return nil, fmt.Errorf("register builtin tools: %w", err)
 	}
@@ -116,9 +116,9 @@ func NewAgent(config *Config, provider provider.Client) (*Agent, error) {
 	return agent, nil
 }
 
-// registerBuiltinTools 注册内置工具
+// registerBuiltinTools registers built-in tools
 func (a *Agent) registerBuiltinTools() error {
-	// 文件工具
+	// file tools
 	if err := a.toolRegistry.Register(tools.NewReadTool(DefaultReadToolMaxBytes)); err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func (a *Agent) registerBuiltinTools() error {
 		return err
 	}
 
-	// Bash 工具
+	// Bash tools
 	shellManager := tools.NewDefaultShellManager()
 	if err := a.toolRegistry.Register(tools.NewBashTool(shellManager, DefaultBashTimeout)); err != nil {
 		return err
@@ -150,7 +150,7 @@ func (a *Agent) registerBuiltinTools() error {
 		return err
 	}
 
-	// TodoWrite 工具
+	// TodoWrite tools
 	if err := a.toolRegistry.Register(tools.NewTodoWriteTool(a.todoState)); err != nil {
 		return err
 	}
@@ -158,14 +158,14 @@ func (a *Agent) registerBuiltinTools() error {
 	return nil
 }
 
-// SetCallbacks 设置回调
+// SetCallbacks sets callbacks
 func (a *Agent) SetCallbacks(
 	onMessage func(msg *types.Message),
 	onToolCall func(call *types.ToolCall),
 	onToolResult func(result *types.ToolResult),
 	onError func(err error),
 	onFinish func(reason types.FinishReason),
-	onTurnComplete ...func() bool, // 可选参数：回合完成回调
+	onTurnComplete ...func() bool, // optional param: turn complete callback
 ) {
 	a.onMessage = onMessage
 	a.onToolCall = onToolCall
@@ -177,35 +177,35 @@ func (a *Agent) SetCallbacks(
 	}
 }
 
-// SetGenerationStartCallback 设置新一轮 LLM 生成开始回调
+// SetGenerationStartCallback sets new round LLM generation start callback
 func (a *Agent) SetGenerationStartCallback(callback func()) {
 	a.onGenerationStart = callback
 }
 
-// SetAskCallback 设置权限询问回调
+// SetAskCallback sets permission ask callback
 func (a *Agent) SetAskCallback(callback func(ctx context.Context, req *permission.Request) (permission.Decision, error)) {
 	a.permissionCoordinator.SetAskCallback(callback)
 }
 
-// RegisterTool 注册工具
+// RegisterTool registers tool
 func (a *Agent) RegisterTool(tool tools.Tool) error {
 	return a.toolRegistry.Register(tool)
 }
 
-// AddHook 添加 Hook
+// AddHook adds hook
 func (a *Agent) AddHook(hookType HookType, hook Hook) {
 	a.hooks.Add(hookType, hook)
 }
 
-// SendMessage 发送消息
+// SendMessage sends message
 func (a *Agent) SendMessage(ctx context.Context, content string, attachments ...*types.Attachment) error {
-	// 构建用户消息
+	// build user message
 	msg := &types.Message{
 		Role:    types.RoleUser,
 		Content: []types.ContentPart{{Type: "text", Text: content}},
 	}
 
-	// 添加附件
+	// add attachments
 	for _, att := range attachments {
 		if att.MediaType != "" {
 			msg.Content = append(msg.Content, types.ContentPart{
@@ -219,10 +219,10 @@ func (a *Agent) SendMessage(ctx context.Context, content string, attachments ...
 		}
 	}
 
-	// 添加到状态
+	// add to state
 	a.state.AddMessage(msg)
 
-	// 触发 Hook
+	// trigger hook
 	if err := a.hooks.Execute(HookTypeUserPromptSubmit, &HookContext{
 		Agent:   a,
 		Message: msg,
@@ -230,16 +230,16 @@ func (a *Agent) SendMessage(ctx context.Context, content string, attachments ...
 		return fmt.Errorf("hook error: %w", err)
 	}
 
-	// 开始生成
+	// start generation
 	return a.generate(ctx)
 }
 
-// generate 生成响应
+// generate generates response
 func (a *Agent) generate(ctx context.Context) error {
 	turnCount := 0
 
 	for {
-		// 检查最大回合数
+		// check max turns
 		if a.config.MaxTurns > 0 && turnCount >= a.config.MaxTurns {
 			log.Debug("Max turns reached: %d/%d", turnCount, a.config.MaxTurns)
 			if a.onFinish != nil {
@@ -251,7 +251,7 @@ func (a *Agent) generate(ctx context.Context) error {
 
 		log.Debug("Starting turn %d, current messages count: %d", turnCount, len(a.state.GetMessages()))
 
-		// 构建请求
+		// build request
 		req := &provider.ModelRequest{
 			Model:        a.config.Model,
 			Messages:     a.state.GetMessages(),
@@ -263,11 +263,11 @@ func (a *Agent) generate(ctx context.Context) error {
 			ThinkLevel:   a.config.ThinkLevel,
 		}
 
-		// 流式请求
+		// streaming request
 		log.Debug("Calling provider.Stream() for turn %d", turnCount)
 		eventChan := a.provider.Stream(ctx, req)
 
-		// 处理事件
+		// handle events
 		assistantMsg := &types.Message{
 			Role: types.RoleAssistant,
 		}
@@ -279,19 +279,19 @@ func (a *Agent) generate(ctx context.Context) error {
 		for event := range eventChan {
 			switch event.Type {
 			case provider.EventTypeMessageStart:
-				// 消息开始 - 标记新一轮 LLM 生成开始
+				// message start - mark new round LLM generation start
 				log.Debug("Event: MessageStart")
 				if a.onGenerationStart != nil {
 					a.onGenerationStart()
 				}
 
 			case provider.EventTypeContentBlockDelta:
-				// 内容增量 - 累积到最后一个文本 ContentPart
+				// content delta - accumulate to last text ContentPart
 				if len(assistantMsg.Content) > 0 && assistantMsg.Content[len(assistantMsg.Content)-1].Type == "text" {
-					// 如果最后一个 ContentPart 是文本类型，追加到它
+					// if last ContentPart is text type, append to it
 					assistantMsg.Content[len(assistantMsg.Content)-1].Text += event.Content
 				} else {
-					// 否则创建新的 ContentPart
+					// otherwise create new ContentPart
 					assistantMsg.Content = append(assistantMsg.Content, types.ContentPart{
 						Type: "text",
 						Text: event.Content,
@@ -303,12 +303,12 @@ func (a *Agent) generate(ctx context.Context) error {
 				log.Debug("Event: ContentBlockDelta, content length: %d", len(event.Content))
 
 			case provider.EventTypeThinkingDelta:
-				// 思考增量 - 累积到最后一个 thinking ContentPart
+				// thinking delta - accumulate to last thinking ContentPart
 				if len(assistantMsg.Content) > 0 && assistantMsg.Content[len(assistantMsg.Content)-1].Type == "thinking" {
-					// 如果最后一个 ContentPart 是 thinking 类型，追加到它
+					// if last ContentPart is thinking type, append to it
 					assistantMsg.Content[len(assistantMsg.Content)-1].Thinking += event.Thinking
 				} else {
-					// 否则创建新的 ContentPart
+					// otherwise create new ContentPart
 					assistantMsg.Content = append(assistantMsg.Content, types.ContentPart{
 						Type:     "thinking",
 						Thinking: event.Thinking,
@@ -317,7 +317,7 @@ func (a *Agent) generate(ctx context.Context) error {
 				log.Debug("Event: ThinkingDelta")
 
 			case provider.EventTypeToolUseStart:
-				// 工具使用开始
+				// tool use start
 				currentToolCall = &types.ToolCall{
 					ID:   generateToolCallID(),
 					Name: event.ToolUse.Name,
@@ -325,14 +325,14 @@ func (a *Agent) generate(ctx context.Context) error {
 				log.Debug("Event: ToolUseStart, tool name: %s", event.ToolUse.Name)
 
 			case provider.EventTypeToolUseDelta:
-				// 工具使用增量
+				// tool use delta
 				if currentToolCall != nil {
 					currentToolCall.Arguments += event.ToolCall.Arguments
 				}
 				log.Debug("Event: ToolUseDelta, arguments length: %d", len(currentToolCall.Arguments))
 
 			case provider.EventTypeToolUseStop:
-				// 工具使用结束
+				// tool use end
 				if currentToolCall != nil {
 					toolCalls = append(toolCalls, *currentToolCall)
 					log.Debug("Event: ToolUseStop, total tool calls so far: %d", len(toolCalls))
@@ -340,13 +340,13 @@ func (a *Agent) generate(ctx context.Context) error {
 				}
 
 			case provider.EventTypeMessageStop:
-				// 消息结束
+				// message end
 				log.Debug("Event: MessageStop")
 
 			case provider.EventTypeMessageDelta:
-				// 消息增量（包含 finish_reason 和 token usage）
+				// message delta (includes finish_reason and token usage)
 				finishReason = event.FinishReason
-				// 更新 token 使用统计
+				// update token usage stats
 				if event.TokenUsage != nil {
 					a.state.UpdateTokenUsage(event.TokenUsage.InputTokens, event.TokenUsage.OutputTokens)
 					log.Debug("Event: MessageDelta, finish reason: %s, tokens: %d input + %d output",
@@ -356,7 +356,7 @@ func (a *Agent) generate(ctx context.Context) error {
 				}
 
 			case provider.EventTypeError:
-				// 错误
+				// error
 				log.Debug("Event: Error, message: %s", event.Error.Message)
 				if a.onError != nil {
 					a.onError(fmt.Errorf("provider error: %s", event.Error.Message))
@@ -367,19 +367,19 @@ func (a *Agent) generate(ctx context.Context) error {
 
 		log.Debug("Event channel closed for turn %d, tool calls: %d, finish reason: %s", turnCount, len(toolCalls), finishReason)
 
-		// 添加工具调用
+		// add tool calls
 		if len(toolCalls) > 0 {
 			assistantMsg.ToolCalls = toolCalls
 			log.Debug("Added %d tool calls to assistant message", len(toolCalls))
 		}
 
-		// 保存助手消息
+		// save assistant message
 		a.state.AddMessage(assistantMsg)
-		// 增加助手回复计数
+		// increment assistant reply count
 		a.state.IncrementAssistantReplies()
 		log.Debug("Added assistant message to state, total messages now: %d", len(a.state.GetMessages()))
 
-		// 如果没有工具调用，结束
+		// if no tool calls, finish
 		if len(toolCalls) == 0 {
 			log.Debug("No tool calls, finishing with reason: %s", finishReason)
 			if a.onFinish != nil {
@@ -388,11 +388,11 @@ func (a *Agent) generate(ctx context.Context) error {
 			return nil
 		}
 
-		// 执行工具调用
+		// execute tool calls
 		log.Debug("Executing %d tool calls for turn %d", len(toolCalls), turnCount)
 		for i, tc := range toolCalls {
 			log.Debug("Executing tool call %d/%d: %s", i+1, len(toolCalls), tc.Name)
-			// 增加工具调用计数
+			// increment tool call count
 			a.state.IncrementToolCallCount()
 			if err := a.executeToolCall(ctx, &tc); err != nil {
 				log.Debug("Tool call %d failed: %v", i+1, err)
@@ -402,31 +402,31 @@ func (a *Agent) generate(ctx context.Context) error {
 		}
 		log.Debug("All tool calls completed for turn %d, will continue to next turn", turnCount)
 
-		// 回合完成回调：给 TUI 机会插入队列中的用户消息
+		// turn complete callback: give TUI chance to insert queued user messages
 		if a.onTurnComplete != nil {
 			if shouldBreak := a.onTurnComplete(); shouldBreak {
 				log.Debug("Turn %d interrupted by queued user message, will restart generation", turnCount)
-				// 重置回合计数，因为新消息开启了一个新会话
+				// reset turn count, new message starts new session
 				turnCount = 0
 			}
 		}
 	}
 }
 
-// executeToolCall 执行工具调用
+// executeToolCall executes tool call
 func (a *Agent) executeToolCall(ctx context.Context, tc *types.ToolCall) error {
-	// 触发回调
+	// trigger callback
 	if a.onToolCall != nil {
 		a.onToolCall(tc)
 	}
 
-	// 构建权限请求
+	// build permission request
 	permReq := &permission.Request{
 		ToolName:  tc.Name,
 		ToolInput: tc.Arguments,
 	}
 
-	// 解析参数以获取更多信息
+	// parse params for more info
 	var args map[string]interface{}
 	if err := json.Unmarshal([]byte(tc.Arguments), &args); err == nil {
 		if path, ok := args["file_path"].(string); ok {
@@ -440,7 +440,7 @@ func (a *Agent) executeToolCall(ctx context.Context, tc *types.ToolCall) error {
 		}
 	}
 
-	// 检查权限
+	// check permissions
 	permResult, err := a.permissionCoordinator.Check(ctx, permReq)
 	if err != nil {
 		return fmt.Errorf("permission check error: %w", err)
@@ -469,7 +469,7 @@ func (a *Agent) executeToolCall(ctx context.Context, tc *types.ToolCall) error {
 		return fmt.Errorf("pre-tool-use hook error: %w", err)
 	}
 
-	// 执行工具
+	// execute tool
 	toolCall := &tools.ToolCall{
 		ID:        tc.ID,
 		Name:      tc.Name,
@@ -492,7 +492,7 @@ func (a *Agent) executeToolCall(ctx context.Context, tc *types.ToolCall) error {
 		return fmt.Errorf("post-tool-use hook error: %w", err)
 	}
 
-	// 转换结果
+	// convert result
 	toolResult := &types.ToolResult{
 		ToolCallID: result.ToolCallID,
 		Name:       tc.Name,
@@ -500,10 +500,10 @@ func (a *Agent) executeToolCall(ctx context.Context, tc *types.ToolCall) error {
 		IsError:    result.IsError,
 	}
 
-	// 添加到状态
+	// add to state
 	a.state.AddToolResult(toolResult)
 
-	// 触发回调
+	// trigger callback
 	if a.onToolResult != nil {
 		a.onToolResult(toolResult)
 	}
@@ -511,33 +511,33 @@ func (a *Agent) executeToolCall(ctx context.Context, tc *types.ToolCall) error {
 	return nil
 }
 
-// Stop 停止 Agent
+// Stop stops Agent
 func (a *Agent) Stop() {
 	a.cancel()
 
-	// 触发停止 Hook
+	// trigger stop hook
 	a.hooks.Execute(HookTypeAgentStop, &HookContext{
 		Agent: a,
 	})
 }
 
-// GetState 获取状态
+// GetState gets state
 func (a *Agent) GetState() *state.State {
 	return a.state
 }
 
-// GetMessages 获取消息
+// GetMessages gets messages
 func (a *Agent) GetMessages() []types.Message {
 	return a.state.GetMessages()
 }
 
-// ClearMessages 清空消息
+// ClearMessages clears messages
 func (a *Agent) ClearMessages() {
 	a.state.ClearMessages()
 }
 
-// InjectUserMessage 注入用户消息（用于回合间插入队列消息）
-// 与 SendMessage 不同，此方法不会触发 generate，只添加消息到状态
+// InjectUserMessage inject user message (for inserting queued messages between turns)
+// unlike SendMessage, this method doesn't trigger generate, only adds message to state
 func (a *Agent) InjectUserMessage(content string) {
 	msg := &types.Message{
 		Role:    types.RoleUser,
@@ -547,18 +547,18 @@ func (a *Agent) InjectUserMessage(content string) {
 	log.Debug("Injected user message: %s", content)
 }
 
-// ProcessUserInput 处理用户输入（TUI 入口）
+// ProcessUserInput handles user input (TUI entry)
 func (a *Agent) ProcessUserInput(ctx context.Context, input string) error {
-	// 检查是否是特殊命令
+	// check if special command
 	if strings.HasPrefix(input, "/") {
 		return a.handleCommand(ctx, input)
 	}
 
-	// 发送普通消息
+	// send normal message
 	return a.SendMessage(ctx, input)
 }
 
-// handleCommand 处理斜杠命令
+// handleCommand handles slash command
 func (a *Agent) handleCommand(ctx context.Context, cmd string) error {
 	parts := strings.Fields(cmd)
 	if len(parts) == 0 {
@@ -573,7 +573,7 @@ func (a *Agent) handleCommand(ctx context.Context, cmd string) error {
 		return nil
 
 	case "/compact":
-		// 压缩上下文
+		// compact context
 		return a.compactContext(ctx)
 
 	default:
@@ -581,43 +581,43 @@ func (a *Agent) handleCommand(ctx context.Context, cmd string) error {
 	}
 }
 
-// compactContext 压缩上下文
+// compactContext compact context
 func (a *Agent) compactContext(ctx context.Context) error {
-	// 获取当前消息
+	// get current messages
 	messages := a.state.GetMessages()
 	if len(messages) <= 2 {
 		log.Debug("Too few messages to compact: %d", len(messages))
-		return nil // 消息太少，无需压缩
+		return nil // too few messages, no need to compact
 	}
 
 	log.Debug("Starting context compaction with %d messages", len(messages))
 
-	// 简单实现
+	// simple implementation
 	compressed := simpleCompact(messages)
 
-	// 更新状态
+	// update state
 	a.state.SetMessages(compressed)
 	log.Debug("Context compaction completed: %d -> %d messages", len(messages), len(compressed))
 
 	return nil
 }
 
-// simpleCompact 简单的上下文压缩（向后兼容）
+// simpleCompact simple context compaction (backward compatible)
 func simpleCompact(messages []types.Message) []types.Message {
 	if len(messages) <= 2 {
 		return messages
 	}
 
-	// 保留系统消息和最近的用户 - 助手对话
+	// keep system messages and recent user-assistant dialog
 	var compressed []types.Message
 	var summary strings.Builder
 
-	// 保留第一条系统消息（如果有）
+	// keep first system message (if any)
 	if len(messages) > 0 && messages[0].Role == types.RoleSystem {
 		compressed = append(compressed, messages[0])
 	}
 
-	// 生成摘要（简化实现）
+	// generate summary (simplified implementation)
 	summary.WriteString("Previous conversation summary:\n")
 	for _, msg := range messages[1 : len(messages)-2] {
 		if msg.Role == types.RoleUser {
@@ -635,19 +635,19 @@ func simpleCompact(messages []types.Message) []types.Message {
 		}
 	}
 
-	// 添加摘要消息
+	// add summary message
 	compressed = append(compressed, types.Message{
 		Role:    types.RoleSystem,
 		Content: []types.ContentPart{{Type: "text", Text: summary.String()}},
 	})
 
-	// 保留最后两条消息（用户输入和助手回复）
+	// keep last two messages (user input and assistant reply)
 	compressed = append(compressed, messages[len(messages)-2:]...)
 
 	return compressed
 }
 
-// min 返回两个整数中的较小值
+// min returns smaller of two ints
 func min(a, b int) int {
 	if a < b {
 		return a
@@ -655,12 +655,12 @@ func min(a, b int) int {
 	return b
 }
 
-// generateToolCallID 生成工具调用 ID
+// generateToolCallID generates tool call ID
 func generateToolCallID() string {
 	return fmt.Sprintf("call_%d", time.Now().UnixNano())
 }
 
-// HookType Hook 类型
+// HookType hook type
 type HookType string
 
 const (
@@ -671,20 +671,20 @@ const (
 	HookTypeUserPromptSubmit HookType = "user_prompt_submit"
 )
 
-// Hook Hook 接口
+// Hook hook interface
 type Hook interface {
 	Execute(ctx *HookContext) error
 }
 
-// HookFunc Hook 函数
+// HookFunc hook function
 type HookFunc func(ctx *HookContext) error
 
-// Execute 执行 Hook
+// Execute executes hook
 func (f HookFunc) Execute(ctx *HookContext) error {
 	return f(ctx)
 }
 
-// HookContext Hook 上下文
+// HookContext hook context
 type HookContext struct {
 	Agent      *Agent
 	Message    *types.Message
@@ -692,27 +692,27 @@ type HookContext struct {
 	ToolResult *tools.ToolResult
 }
 
-// HookManager Hook 管理器
+// HookManager hook manager
 type HookManager struct {
 	hooks map[HookType][]Hook
 	mu    sync.RWMutex
 }
 
-// NewHookManager 创建 Hook 管理器
+// NewHookManager creates hook manager
 func NewHookManager() *HookManager {
 	return &HookManager{
 		hooks: make(map[HookType][]Hook),
 	}
 }
 
-// Add 添加 Hook
+// Add adds hook
 func (m *HookManager) Add(hookType HookType, hook Hook) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.hooks[hookType] = append(m.hooks[hookType], hook)
 }
 
-// Execute 执行 Hook
+// Execute executes hook
 func (m *HookManager) Execute(hookType HookType, ctx *HookContext) error {
 	m.mu.RLock()
 	hooks := m.hooks[hookType]
@@ -726,12 +726,12 @@ func (m *HookManager) Execute(hookType HookType, ctx *HookContext) error {
 	return nil
 }
 
-// GetTodoState 获取 Todo 状态
+// GetTodoState gets Todo state
 func (a *Agent) GetTodoState() state.TodoState {
 	return a.todoState
 }
 
-// GetTodoListText 获取 Todo 列表的文本描述
+// GetTodoListText gets Todo list text description
 func (a *Agent) GetTodoListText() string {
 	if a.todoState == nil {
 		return "Todo list not initialized."

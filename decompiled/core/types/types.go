@@ -1,10 +1,10 @@
-// Package types 核心类型定义
-// 反编译自 qodercli v0.1.29
+// Package types core type definitions
+// Decompiled from qodercli-reverse v0.1.29
 package types
 
 import "time"
 
-// Role 消息角色
+// Role message role
 type Role string
 
 const (
@@ -14,7 +14,7 @@ const (
 	RoleTool      Role = "tool"
 )
 
-// ModelProvider 模型提供商
+// ModelProvider model provider
 type ModelProvider string
 
 const (
@@ -25,10 +25,10 @@ const (
 	ProviderDashScope ModelProvider = "dashscope"
 )
 
-// ModelId 模型标识
+// ModelId model identifier
 type ModelId string
 
-// FinishReason 完成原因
+// FinishReason finish reason
 type FinishReason string
 
 const (
@@ -38,7 +38,7 @@ const (
 	FinishReasonContentFilter FinishReason = "content_filter"
 )
 
-// Message 消息结构
+// Message message structure
 type Message struct {
 	Role       Role          `json:"role"`
 	Content    []ContentPart `json:"content,omitempty"`
@@ -47,7 +47,7 @@ type Message struct {
 	Name       string        `json:"name,omitempty"`
 }
 
-// ContentPart 内容部分
+// ContentPart content part
 type ContentPart struct {
 	Type        string       `json:"type"` // "text", "image", "thinking"
 	Text        string       `json:"text,omitempty"`
@@ -55,36 +55,36 @@ type ContentPart struct {
 	Thinking    string       `json:"thinking,omitempty"`
 }
 
-// ImageSource 图片源
+// ImageSource image source
 type ImageSource struct {
 	Type      string `json:"type"`       // "base64", "url"
 	MediaType string `json:"media_type"` // "image/png", "image/jpeg"
-	Data      string `json:"data"`       // base64 数据或 URL
+	Data      string `json:"data"`       // base64 data or URL
 }
 
-// ToolCall 工具调用
+// ToolCall tool call
 type ToolCall struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
-	Arguments string `json:"arguments"` // JSON 字符串
+	Arguments string `json:"arguments"` // JSON string
 }
 
-// ToolResult 工具结果
+// ToolResult tool result
 type ToolResult struct {
 	ToolCallID string `json:"tool_call_id"`
-	Name       string `json:"name,omitempty"` // 工具名称，OpenAI API 要求
+	Name       string `json:"name,omitempty"` // tool name, required by OpenAI API
 	Content    string `json:"content"`
 	IsError    bool   `json:"is_error"`
 }
 
-// ToolInfo 工具信息
+// ToolInfo tool information
 type ToolInfo struct {
 	Name        string                 `json:"name"`
 	Description string                 `json:"description"`
 	InputSchema map[string]interface{} `json:"input_schema"`
 }
 
-// TokenUsage Token 使用量
+// TokenUsage token usage
 type TokenUsage struct {
 	InputTokens       int `json:"input_tokens"`
 	OutputTokens      int `json:"output_tokens"`
@@ -94,19 +94,19 @@ type TokenUsage struct {
 	PostContextTokens int `json:"post_context_tokens,omitempty"`
 }
 
-// Finish 完成状态
+// Finish finish status
 type Finish struct {
 	Reason    FinishReason `json:"reason"`
 	Timestamp time.Time    `json:"timestamp"`
 }
 
-// Delta 增量更新
+// Delta incremental update
 type Delta struct {
 	Type    DeltaType `json:"type"`
 	Content string    `json:"content,omitempty"`
 }
 
-// DeltaType 增量类型
+// DeltaType delta type
 type DeltaType string
 
 const (
@@ -117,27 +117,27 @@ const (
 	DeltaTypeContentBlock DeltaType = "content_block"
 )
 
-// PermissionRule 权限规则
+// PermissionRule permission rule
 type PermissionRule struct {
 	Pattern string `json:"pattern"`
 	Action  string `json:"action"` // "allow", "deny", "ask"
 }
 
-// Location 位置信息
+// Location location info
 type Location struct {
 	File   string `json:"file"`
 	Line   int    `json:"line"`
 	Column int    `json:"column"`
 }
 
-// Attachment 附件
+// Attachment attachment
 type Attachment struct {
 	Path      string `json:"path"`
 	MediaType string `json:"media_type"`
 	Data      []byte `json:"data,omitempty"`
 }
 
-// Memory 记忆项
+// Memory memory item
 type Memory struct {
 	Key       string    `json:"key"`
 	Value     string    `json:"value"`
@@ -145,21 +145,21 @@ type Memory struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// Status 状态
+// Status status
 type Status struct {
 	Running    bool      `json:"running"`
 	StartTime  time.Time `json:"start_time"`
 	LastActive time.Time `json:"last_active"`
 }
 
-// ErrorData 错误数据
+// ErrorData error data
 type ErrorData struct {
 	Type    string `json:"type"`
 	Message string `json:"message"`
 	Code    string `json:"code,omitempty"`
 }
 
-// SdkMessage SDK 消息
+// SdkMessage SDK message
 type SdkMessage struct {
 	ID        string      `json:"id"`
 	Type      string      `json:"type"`
@@ -167,14 +167,14 @@ type SdkMessage struct {
 	Data      interface{} `json:"data"`
 }
 
-// ContentBlock 内容块
+// ContentBlock content block
 type ContentBlock struct {
 	Type     string `json:"type"`
 	Text     string `json:"text,omitempty"`
 	Thinking string `json:"thinking,omitempty"`
 }
 
-// FeatureName 功能名称
+// FeatureName feature name
 type FeatureName string
 
 const (
@@ -186,7 +186,7 @@ const (
 	FeatureMCP        FeatureName = "mcp"
 )
 
-// BusinessType 业务类型
+// BusinessType business type
 type BusinessType string
 
 const (

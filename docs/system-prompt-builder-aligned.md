@@ -1,70 +1,70 @@
-# System Prompt Builder - 官方架构对齐版本
+# System Prompt Builder - Official Architecture Aligned Version
 
-## 与官方 qodercli 架构对齐
+## Aligned with Official qodercli-reverse Architecture
 
-基于官方二进制逆向分析，严格对齐官方架构设计。
+Based on reverse engineering of the official binary, strictly aligned with the official architecture design.
 
-## 官方行为
+## Official Behavior
 
-### 命令行标志
+### Command-line Flags
 
-官方 qodercli 支持以下与系统提示词相关的标志：
+The official qodercli-reverse supports the following system-prompt-related flags:
 
 ```bash
-# 官方标志
---system-prompt string        # 直接设置系统提示词文本
---with-claude-config          # 加载 .claude/ 目录配置
--w, --workspace string        # 设置工作目录
+# Official flags
+--system-prompt string        # Set system prompt text directly
+--with-claude-config          # Load .claude/ directory configuration
+-w, --workspace string        # Set working directory
 ```
 
-### 官方行为逻辑
+### Official Behavior Logic
 
 ```
-if --system-prompt 提供了:
-    使用用户提供的系统提示词
+if --system-prompt provided:
+    Use user-provided system prompt
 else:
-    内部自动构建系统提示词（服务器端或本地构建）
+    Internally auto-build system prompt (server-side or local build)
 ```
 
-## 我们的实现
+## Our Implementation
 
-### 命令行标志（已对齐）
+### Command-line Flags (Aligned)
 
 ```bash
-# 已实现（与官方一致）
---system-prompt string        # 直接设置系统提示词文本
---with-claude-config          # 加载 .claude/ 目录配置
--w, --workspace string        # 设置工作目录
+# Implemented (consistent with official)
+--system-prompt string        # Set system prompt text directly
+--with-claude-config          # Load .claude/ directory configuration
+-w, --workspace string        # Set working directory
 
-# 已移除（自定义标志）
-# --minimal-prompt           # 已移除
-# --no-project-info          # 已移除
-# --system-prompt-file       # 已移除
+# Removed (custom flags)
+# --minimal-prompt           # Removed
+# --no-project-info          # Removed
+# --system-prompt-file       # Removed
 ```
 
-### 代码实现逻辑
+### Code Implementation Logic
 
 ```go
 // cmd/root.go
 systemPromptText := systemPrompt
 if systemPromptText == "" {
-    // 内部自动构建系统提示词（对齐官方行为）
+    // Internally auto-build system prompt (aligned with official behavior)
     systemPromptText, err = utils.BuildSystemPromptAuto(workDir, withClaudeConfig)
     if err != nil {
-        // 回退到默认提示词
+        // Fall back to default prompt
         systemPromptText = utils.GetDefaultSystemPrompt()
     }
 }
 ```
 
-### 自动构建流程
+### Auto-build Flow
 
 ```go
 // cmd/utils/system_prompt.go
 func BuildSystemPromptAuto(workDir string, withClaudeConfig bool) (string, error) {
     builder := prompts.NewSystemPromptBuilderV2(vars)
     
-    // 标准组件（默认启用）
+    // Standard components (enabled by default)
     builder.WithRoleDefinition(true).
         WithToolGuide(true).
         WithPermissionRules(true).
@@ -72,15 +72,15 @@ func BuildSystemPromptAuto(workDir string, withClaudeConfig bool) (string, error
         WithProjectContext(true).
         WithCodingStandards(true)
     
-    // 收集环境信息
+    // Collect environment info
     builder.CollectEnvironment()
     
-    // 收集项目上下文（包括 .claude/ 配置）
+    // Collect project context (including .claude/ config)
     builder.CollectProjectContext(workDir)
     
-    // 如果启用了 --with-claude-config，确保加载 .claude/ 配置
+    // If --with-claude-config is enabled, ensure .claude/ config is loaded
     if withClaudeConfig {
-        // 项目上下文加载器会自动加载 .claude/ 目录
+        // The project context loader automatically loads the .claude/ directory
         log.Debug("Loading .claude configuration")
     }
     
@@ -88,57 +88,57 @@ func BuildSystemPromptAuto(workDir string, withClaudeConfig bool) (string, error
 }
 ```
 
-## 架构对齐对比
+## Architecture Alignment Comparison
 
-| 官方架构 | 我们的实现 | 对齐状态 |
-|----------|-----------|----------|
+| Official Architecture | Our Implementation | Alignment Status |
+|----------------------|--------------------|------------------|
 | `--system-prompt` | `--system-prompt` | ✓ |
 | `--with-claude-config` | `--with-claude-config` | ✓ |
 | `-w, --workspace` | `-w, --workspace` | ✓ |
-| 服务器端构建提示词 | `BuildSystemPromptAuto()` | ✓ |
+| Server-side prompt building | `BuildSystemPromptAuto()` | ✓ |
 | `acp.buildPrompt` | `SystemPromptBuilderV2` | ✓ |
 | `tui/texts.GetText` | `ProjectContextLoader` | ✓ |
 
-## 使用示例
+## Usage Examples
 
-### 官方使用方式
+### Official Usage
 
 ```bash
-# 方式1：使用默认自动构建
-qodercli
+# Approach 1: Use default auto-build
+qodercli-reverse
 
-# 方式2：使用自定义系统提示词
-qodercli --system-prompt "You are a React expert."
+# Approach 2: Use custom system prompt
+qodercli-reverse --system-prompt "You are a React expert."
 
-# 方式3：启用 Claude 配置
-qodercli --with-claude-config
+# Approach 3: Enable Claude config
+qodercli-reverse --with-claude-config
 
-# 方式4：指定工作目录
-qodercli -w /path/to/project
+# Approach 4: Specify working directory
+qodercli-reverse -w /path/to/project
 
-# 方式5：组合使用
-qodercli -w /path/to/project --with-claude-config
+# Approach 5: Combined usage
+qodercli-reverse -w /path/to/project --with-claude-config
 ```
 
-### 项目特定指令
+### Project-specific Instructions
 
-官方支持从以下文件自动加载项目特定指令：
+The official supports auto-loading project-specific instructions from the following files:
 
 ```
 project-root/
-├── AGENTS.md              # 项目指南（自动加载）
+├── AGENTS.md              # Project guide (auto-loaded)
 ├── .claude/
-│   ├── CLAUDE.md         # Claude 配置（--with-claude-config 时加载）
-│   ├── instructions.md   # 额外指令
-│   └── context.md        # 上下文
-└── .cursorrules          # Cursor 规则（自动加载）
+│   ├── CLAUDE.md         # Claude config (loaded when --with-claude-config)
+│   ├── instructions.md   # Additional instructions
+│   └── context.md        # Context
+└── .cursorrules          # Cursor rules (auto-loaded)
 ```
 
-## 核心组件
+## Core Components
 
 ### SystemPromptBuilderV2
 
-参考官方 `acp.(*QoderAcpAgent).buildPrompt`：
+Reference to official `acp.(*QoderAcpAgent).buildPrompt`:
 
 ```go
 type SystemPromptBuilderV2 struct {
@@ -148,63 +148,63 @@ type SystemPromptBuilderV2 struct {
 }
 
 func (b *SystemPromptBuilderV2) Build() (string, error) {
-    // 1. 角色定义
-    // 2. 核心指令
-    // 3. 工具指南
-    // 4. 权限规则
-    // 5. 环境信息（OS, Git）
-    // 6. 项目上下文（AGENTS.md, .claude/）
-    // 7. 编码规范
+    // 1. Role definition
+    // 2. Core instructions
+    // 3. Tool guide
+    // 4. Permission rules
+    // 5. Environment info (OS, Git)
+    // 6. Project context (AGENTS.md, .claude/)
+    // 7. Coding standards
     return renderedPrompt, nil
 }
 ```
 
 ### EnvironmentCollector
 
-收集环境信息：
+Collects environment information:
 - OS, Architecture, Shell
 - Git branch, commit, status
-- Go, Node.js, Python, Java, Rust 版本
+- Go, Node.js, Python, Java, Rust versions
 
 ### ProjectContextLoader
 
-加载项目上下文：
-- 检测项目类型（Go, Node, Python, Rust, Java）
-- 加载 AGENTS.md
-- 加载 .claude/ 目录（--with-claude-config 时）
-- 加载 .cursorrules
-- 加载编码规范配置
+Loads project context:
+- Detects project type (Go, Node, Python, Rust, Java)
+- Loads AGENTS.md
+- Loads .claude/ directory (when --with-claude-config)
+- Loads .cursorrules
+- Loads coding standard configurations
 
-## 与官方二进制的差异
+## Differences from Official Binary
 
-| 方面 | 官方 | 我们的实现 | 说明 |
-|------|------|-----------|------|
-| 提示词存储 | 服务器端 + 本地缓存 | 本地构建 | 官方部分提示词从服务器获取 |
-| OSS 加载 | 支持 | 暂未实现 | 官方从阿里云 OSS 加载部分配置 |
-| 动态更新 | 支持 | 静态构建 | 官方支持运行时更新提示词 |
+| Aspect | Official | Our Implementation | Notes |
+|--------|----------|-------------------|-------|
+| Prompt storage | Server-side + local cache | Local build | Official fetches part of prompts from server |
+| OSS loading | Supported | Not yet implemented | Official loads part of config from Alibaba Cloud OSS |
+| Dynamic update | Supported | Static build | Official supports runtime prompt updates |
 
-## 测试验证
+## Test Verification
 
 ```bash
-# 编译
+# Compile
 cd decompiled
 go build ./...
 
-# 验证标志
-./qodercli --help | grep -E "(system-prompt|with-claude|workspace)"
+# Verify flags
+./qodercli-reverse --help | grep -E "(system-prompt|with-claude|workspace)"
 
-# 测试默认构建
-echo "Hello" | ./qodercli -p "Test"
+# Test default build
+echo "Hello" | ./qodercli-reverse -p "Test"
 
-# 测试自定义提示词
-echo "Hello" | ./qodercli -p "Test" --system-prompt "You are a Go expert."
+# Test custom prompt
+echo "Hello" | ./qodercli-reverse -p "Test" --system-prompt "You are a Go expert."
 
-# 测试 Claude 配置
-./qodercli --with-claude-config
+# Test Claude config
+./qodercli-reverse --with-claude-config
 ```
 
-## 参考
+## References
 
-- 官方二进制：`/Users/zhihu/.local/bin/qodercli`
-- 官方帮助：`qodercli --help`
-- 架构文档：`docs/official-architecture.md`
+- Official binary: `/Users/zhihu/.local/bin/qodercli-reverse`
+- Official help: `qodercli-reverse --help`
+- Architecture doc: `docs/official-architecture.md`

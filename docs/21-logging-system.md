@@ -1,144 +1,144 @@
-# qodercli 日志系统文档
+# qodercli-reverse Logging System Documentation
 
-> 更新日期：2026-03-09  
-> 状态：已完成（超越原版）
+> Last updated: 2026-03-09  
+> Status: Completed (surpassed the original)
 
 ---
 
-## 1. 概述
+## 1. Overview
 
-qodercli 实现了一个完整的日志系统，提供比原版更强大的调试能力。
+qodercli-reverse implements a complete logging system that provides more powerful debugging capabilities than the original.
 
-### 1.1 核心特性
+### 1.1 Core Features
 
-- ✅ **多级别日志**: DEBUG, INFO, WARN, ERROR, FATAL
-- ✅ **双输出目标**: 同时输出到 stderr 和文件
-- ✅ **调用者追踪**: 自动记录文件名和行号
-- ✅ **时间戳**: 精确到毫秒
-- ✅ **CLI 控制**: 通过 `--debug` 和 `--log-file` 参数控制
+- ✅ **Multi-level logging**: DEBUG, INFO, WARN, ERROR, FATAL
+- ✅ **Dual output targets**: Outputs to both stderr and a file
+- ✅ **Caller tracking**: Automatically records file name and line number
+- ✅ **Timestamp**: Precise to milliseconds
+- ✅ **CLI control**: Controlled via the `--debug` and `--log-file` parameters
 
-### 1.2 与原版对比
+### 1.2 Comparison with the Original
 
-| 特性 | 原版 | 当前实现 | 说明 |
+| Feature | Original | Current Implementation | Description |
 |------|------|----------|------|
-| 日志级别 | INFO only | 5 级别 | 更细粒度控制 |
-| 输出目标 | stderr only | stderr + 文件 | 便于排查问题 |
-| 调用者信息 | ❌ | ✅ | 快速定位问题 |
-| CLI 参数 | ❌ | ✅ | 灵活控制 |
-| 总体评分 | 2/5 | 5/5 | **超越原版** |
+| Log level | INFO only | 5 levels | Finer-grained control |
+| Output target | stderr only | stderr + file | Easier to troubleshoot |
+| Caller info | ❌ | ✅ | Quickly locate the issue |
+| CLI parameter | ❌ | ✅ | Flexible control |
+| Overall score | 2/5 | 5/5 | **Surpassed the original** |
 
 ---
 
-## 2. 架构设计
+## 2. Architecture Design
 
-### 2.1 包结构
+### 2.1 Package Structure
 
 ```
 core/
 └── log/
-    └── log.go        # 日志系统核心实现
+    └── log.go        # Core implementation of the logging system
 ```
 
-### 2.2 日志级别
+### 2.2 Log Levels
 
 ```go
 type Level int
 
 const (
-    LevelDebug Level = iota  // 0 - 调试信息
-    LevelInfo                // 1 - 一般信息
-    LevelWarn                // 2 - 警告
-    LevelError               // 3 - 错误
-    LevelFatal               // 4 - 致命错误（退出程序）
+    LevelDebug Level = iota  // 0 - Debug information
+    LevelInfo                // 1 - Info
+    LevelWarn                // 2 - Warning
+    LevelError               // 3 - Error
+    LevelFatal               // 4 - Fatal error (exits the program)
 )
 ```
 
-### 2.3 输出格式
+### 2.3 Output Format
 
 ```
-[时间戳] [级别] [调用者] 消息内容
+[Timestamp] [Level] [Caller] Message
 ```
 
-**示例**:
+**Example**:
 ```
-[2026-03-09 20:53:01.110] [INFO] [root.go:138] Starting qodercli in TUI mode
+[2026-03-09 20:53:01.110] [INFO] [root.go:138] Starting qodercli-reverse in TUI mode
 [2026-03-09 20:53:01.110] [DEBUG] [openai.go:56] Starting OpenAI stream request to https://api.openai.com/v1
 [2026-03-09 20:53:01.283] [ERROR] [openai.go:113] API error response: status=401
 ```
 
 ---
 
-## 3. 使用方法
+## 3. Usage
 
-### 3.1 初始化日志
+### 3.1 Initialize Logging
 
 ```go
 import "github.com/alingse/qodercli-reverse/decompiled/core/log"
 
-// 在 main 或入口函数中初始化
+// Initialize in main or the entry function
 func main() {
-    // 初始化日志（默认级别 INFO）
-    log.Init("~/.qoder/qodercli.log", log.LevelInfo)
+    // Initialize logging (default level INFO)
+    log.Init("~/.qoder/qodercli-reverse.log", log.LevelInfo)
     defer log.Close()
     
-    // ... 程序逻辑
+    // ... program logic
 }
 ```
 
-### 3.2 记录日志
+### 3.2 Record Logs
 
 ```go
-// DEBUG - 调试信息（不输出到 stderr）
+// DEBUG - Debug information (does not output to stderr)
 log.Debug("Debug message: %s", data)
 log.Debugf("Request body size: %d bytes", len(body))
 
-// INFO - 一般信息
-log.Info("Starting qodercli in TUI mode")
+// INFO - Info
+log.Info("Starting qodercli-reverse in TUI mode")
 log.Infof("Log file: %s", logFile)
 
-// WARN - 警告
+// WARN - Warning
 log.Warn("Configuration file not found, using defaults")
 
-// ERROR - 错误
+// ERROR - Error
 log.Error("API error: %v", err)
 log.Errorf("Failed to create provider: %v", err)
 
-// FATAL - 致命错误（会退出程序）
+// FATAL - Fatal error (exits the program)
 log.Fatal("Critical error: %v", err)
 log.Fatalf("Cannot continue: %v", err)
 ```
 
-### 3.3 CLI 参数控制
+### 3.3 CLI Parameter Control
 
-**启用调试模式**:
+**Enable debug mode**:
 ```bash
-./qodercli --debug
+./qodercli-reverse --debug
 ```
 
-**指定日志文件**:
+**Specify log file**:
 ```bash
-./qodercli --log-file ./my-log.txt
+./qodercli-reverse --log-file ./my-log.txt
 ```
 
-**组合使用**:
+**Use together**:
 ```bash
-./qodercli --debug --log-file ./debug.log --print "Hello"
+./qodercli-reverse --debug --log-file ./debug.log --print "Hello"
 ```
 
 ---
 
-## 4. 日志覆盖范围
+## 4. Logging Scope
 
-### 4.1 TUI 模式日志
+### 4.1 TUI Mode Logging
 
-**启动阶段**:
+**Startup phase**:
 ```go
-log.Info("Starting qodercli in TUI mode")
+log.Info("Starting qodercli-reverse in TUI mode")
 log.Debug("Log file: %s", logFile)
 log.Debug("Checking environment variables for API keys")
 ```
 
-**Agent 交互**:
+**Agent Interaction**:
 ```go
 log.Debug("Sending user input to agent: %s", input)
 log.Debug("Received agent response: %d chars", len(content))
@@ -146,7 +146,7 @@ log.Debug("Agent processing completed")
 log.Error("Agent processing error: %v", err)
 ```
 
-**事件订阅**:
+**Event Subscription**:
 ```go
 log.Debug("Setting up event subscriptions")
 log.Debug("Tool started: %s", info["name"])
@@ -154,36 +154,36 @@ log.Debug("Token usage: input=%d, output=%d", usage.InputTokens, usage.OutputTok
 log.Error("Event error: %v", err)
 ```
 
-### 4.2 Print 模式日志
+### 4.2 Print Mode Logging
 
 ```go
-log.Info("Starting qodercli in print mode")
+log.Info("Starting qodercli-reverse in print mode")
 log.Debug("Input: %s", input)
 log.Error("Failed to create provider: %v", err)
 log.Info("Request completed with finish reason: %s", reason)
 ```
 
-### 4.3 Provider 层日志
+### 4.3 Provider Layer Logging
 
 **OpenAI Provider**:
 ```go
-// 请求开始
+// Request start
 log.Debug("Starting OpenAI stream request to %s", c.baseURL)
 log.Debug("Request model: %s, max_tokens: %d", req.Model, req.MaxTokens)
 log.Debug("Request body size: %d bytes", len(body))
 
-// HTTP 响应
+// HTTP response
 log.Debug("HTTP response status: %d", resp.StatusCode)
 
-// 错误处理
+// Error handling
 log.Error("HTTP request failed: %v", err)
 log.Error("API error response: status=%d, body=%s", resp.StatusCode, string(resp.Body))
 
-// 完成
+// Completion
 log.Debug("Stream processing completed")
 ```
 
-**响应解析**:
+**Response parsing**:
 ```go
 log.Debug("Response: model=%s, tokens=%d+%d", 
     apiResp.Model, 
@@ -191,7 +191,7 @@ log.Debug("Response: model=%s, tokens=%d+%d",
     apiResp.Usage.OutputTokens)
 ```
 
-### 4.4 工具调用日志
+### 4.4 Tool Call Logging
 
 ```go
 log.Debug("Tool call: %s", call.Name)
@@ -201,176 +201,176 @@ log.Error("Callback error: %v", err)
 
 ---
 
-## 5. 日志文件管理
+## 5. Log File Management
 
-### 5.1 默认位置
+### 5.1 Default Location
 
 ```
-~/.qoder/qodercli.log
+~/.qoder/qodercli-reverse.log
 ```
 
-### 5.2 日志轮转（手动）
+### 5.2 Log Rotation (Manual)
 
-当前未实现自动日志轮转，建议定期清理：
+Automatic log rotation is not implemented yet; it is recommended to clean up periodically:
 
 ```bash
-# 查看日志大小
-ls -lh ~/.qoder/qodercli.log
+# View log size
+ls -lh ~/.qoder/qodercli-reverse.log
 
-# 清空日志
-> ~/.qoder/qodercli.log
+# Clear the log
+> ~/.qoder/qodercli-reverse.log
 
-# 或删除旧日志
-rm ~/.qoder/qodercli.log
+# Or delete old logs
+rm ~/.qoder/qodercli-reverse.log
 ```
 
-### 5.3 日志分析
+### 5.3 Log Analysis
 
-**查看错误日志**:
+**View error logs**:
 ```bash
-grep "\[ERROR\]" ~/.qoder/qodercli.log
+grep "\[ERROR\]" ~/.qoder/qodercli-reverse.log
 ```
 
-**查看 API 调用**:
+**View API calls**:
 ```bash
-grep "OpenAI" ~/.qoder/qodercli.log
+grep "OpenAI" ~/.qoder/qodercli-reverse.log
 ```
 
-**查看工具调用**:
+**View tool calls**:
 ```bash
-grep "Tool" ~/.qoder/qodercli.log
+grep "Tool" ~/.qoder/qodercli-reverse.log
 ```
 
-**实时跟踪**:
+**Real-time tracking**:
 ```bash
-tail -f ~/.qoder/qodercli.log
+tail -f ~/.qoder/qodercli-reverse.log
 ```
 
 ---
 
-## 6. 故障排查
+## 6. Troubleshooting
 
-### 6.1 常见问题
+### 6.1 Common Issues
 
-**问题 1**: 看不到 DEBUG 日志
+**Issue 1**: DEBUG logs are not visible
 
-**解决**:
+**Resolution**:
 ```bash
-# 确保使用了 --debug 参数
-./qodercli --debug
+# Make sure to use the --debug parameter
+./qodercli-reverse --debug
 ```
 
-**问题 2**: 日志文件为空
+**Issue 2**: The log file is empty
 
-**解决**:
+**Resolution**:
 ```bash
-# 检查日志级别（只有 INFO+ 才会写入 stderr）
-# DEBUG 只写入文件
-cat ~/.qoder/qodercli.log
+# Check the log level (only INFO+ is written to stderr)
+# DEBUG is written to the file only
+cat ~/.qoder/qodercli-reverse.log
 ```
 
-**问题 3**: 性能问题（日志太多）
+**Issue 3**: Performance issues (too many logs)
 
-**解决**:
+**Resolution**:
 ```bash
-# 不使用 --debug，只用 INFO 级别
-./qodercli
+# Do not use --debug; use INFO level only
+./qodercli-reverse
 
-# 或禁用文件日志
-./qodercli --log-file ""
+# Or disable file logging
+./qodercli-reverse --log-file ""
 ```
 
-### 6.2 调试技巧
+### 6.2 Debugging Tips
 
-**技巧 1**: 过滤特定组件日志
+**Tip 1**: Filter logs for specific components
 ```bash
-grep "openai.go" ~/.qoder/qodercli.log
+grep "openai.go" ~/.qoder/qodercli-reverse.log
 ```
 
-**技巧 2**: 统计错误数量
+**Tip 2**: Count errors
 ```bash
-grep -c "\[ERROR\]" ~/.qoder/qodercli.log
+grep -c "\[ERROR\]" ~/.qoder/qodercli-reverse.log
 ```
 
-**技巧 3**: 查看最近 100 行
+**Tip 3**: View the last 100 lines
 ```bash
-tail -100 ~/.qoder/qodercli.log
+tail -100 ~/.qoder/qodercli-reverse.log
 ```
 
-**技巧 4**: 时间范围筛选
+**Tip 4**: Time range filtering
 ```bash
-# 查看特定时间的日志
-grep "20:53:" ~/.qoder/qodercli.log
+# View logs from a specific time
+grep "20:53:" ~/.qoder/qodercli-reverse.log
 ```
 
 ---
 
-## 7. 最佳实践
+## 7. Best Practices
 
-### 7.1 日志级别选择
+### 7.1 Log Level Selection
 
-| 场景 | 推荐级别 | 说明 |
+| Scenario | Recommended Level | Description |
 |------|----------|------|
-| 生产环境 | INFO | 记录关键信息 |
-| 开发调试 | DEBUG | 详细调试信息 |
-| 问题排查 | DEBUG | 完整日志追踪 |
-| CI/CD | WARN | 只记录警告和错误 |
+| Production | INFO | Record key information |
+| Development | DEBUG | Detailed debug information |
+| Troubleshooting | DEBUG | Full log tracing |
+| CI/CD | WARN | Only record warnings and errors |
 
-### 7.2 日志内容规范
+### 7.2 Log Content Guidelines
 
-**好的日志**:
+**Good logs**:
 ```go
-// ✅ 包含上下文信息
+// ✅ Include contextual information
 log.Debug("HTTP response status: %d", resp.StatusCode)
 log.Error("API error: status=%d, body=%s", resp.StatusCode, string(resp.Body))
 
-// ✅ 使用一致的格式
-log.Info("Starting qodercli in %s mode", mode)
+// ✅ Use a consistent format
+log.Info("Starting qodercli-reverse in %s mode", mode)
 log.Info("Request completed with finish reason: %s", reason)
 ```
 
-**不好的日志**:
+**Bad logs**:
 ```go
-// ❌ 信息不足
+// ❌ Insufficient information
 log.Debug("Error occurred")
 
-// ❌ 格式不一致
+// ❌ Inconsistent format
 log.Info("Started")
 log.Info("starting...")
 ```
 
-### 7.3 敏感信息处理
+### 7.3 Sensitive Information Handling
 
-**避免记录**:
+**Avoid recording**:
 ```go
-// ❌ 不要记录完整的 API Key
+// ❌ Do not record the full API Key
 log.Debug("API Key: %s", apiKey)
 
-// ✅ 只记录部分信息
+// ✅ Only record partial information
 log.Debug("Using API Key ending with: %s", apiKey[len(apiKey)-4:])
 ```
 
 ---
 
-## 8. 扩展开发
+## 8. Extension Development
 
-### 8.1 添加新的日志输出目标
+### 8.1 Adding a New Log Output Target
 
 ```go
-// 自定义日志处理器
+// Custom log handler
 func init() {
-    // 可以添加网络日志、数据库日志等
+    // You can add network logs, database logs, etc.
     log.AddOutput(os.Stdout)
     log.AddOutput(networkWriter)
 }
 ```
 
-### 8.2 自定义日志格式
+### 8.2 Custom Log Format
 
 ```go
-// 修改 formatLog 函数
+// Modify the formatLog function
 func formatLog(level Level, callerInfo, format string, args ...interface{}) string {
-    // 自定义格式
+    // Custom format
     return fmt.Sprintf("[%s] %s: %s", 
         level.String(), 
         callerInfo, 
@@ -378,13 +378,13 @@ func formatLog(level Level, callerInfo, format string, args ...interface{}) stri
 }
 ```
 
-### 8.3 日志钩子
+### 8.3 Log Hooks
 
 ```go
-// 在特定事件时触发
+// Trigger at specific events
 log.SetHook(func(entry *log.Entry) {
     if entry.Level == log.LevelError {
-        // 发送告警通知
+        // Send alert notifications
         sendAlert(entry.Message)
     }
 })
@@ -392,9 +392,9 @@ log.SetHook(func(entry *log.Entry) {
 
 ---
 
-## 9. API 参考
+## 9. API Reference
 
-### 9.1 初始化函数
+### 9.1 Initialization Functions
 
 ```go
 func Init(logFile string, level Level) error
@@ -403,7 +403,7 @@ func GetLevel() Level
 func Close() error
 ```
 
-### 9.2 日志记录函数
+### 9.2 Log Recording Functions
 
 ```go
 func Debug(format string, args ...interface{})
@@ -412,7 +412,7 @@ func Warn(format string, args ...interface{})
 func Error(format string, args ...interface{})
 func Fatal(format string, args ...interface{})
 
-// 带格式的别名
+// Formatted aliases
 func Debugf(format string, args ...interface{})
 func Infof(format string, args ...interface{})
 func Warnf(format string, args ...interface{})
@@ -420,7 +420,7 @@ func Errorf(format string, args ...interface{})
 func Fatalf(format string, args ...interface{})
 ```
 
-### 9.3 辅助函数
+### 9.3 Helper Functions
 
 ```go
 func GetLogFile() string
@@ -429,14 +429,14 @@ func WithPrefix(prefix string) func(string, ...interface{})
 
 ---
 
-## 10. 总结
+## 10. Summary
 
-qodercli 的日志系统提供了以下优势：
+The qodercli-reverse logging system provides the following advantages:
 
-✅ **完整的日志级别** - 满足不同场景需求  
-✅ **双输出目标** - 便于调试和监控  
-✅ **调用者追踪** - 快速定位问题源头  
-✅ **CLI 灵活控制** - 按需调整日志行为  
-✅ **超越原版** - 比原版提供更强的调试能力  
+✅ **Complete log levels** - Meets different scenario requirements  
+✅ **Dual output targets** - Facilitates debugging and monitoring  
+✅ **Caller tracking** - Quickly locate the source of the issue  
+✅ **Flexible CLI control** - Adjust log behavior as needed  
+✅ **Surpassed the original** - Provides stronger debugging capabilities than the original  
 
-推荐在日常开发中使用 `--debug` 参数，获得最详细的日志信息用于问题排查。
+It is recommended to use the `--debug` parameter during daily development to obtain the most detailed log information for troubleshooting.

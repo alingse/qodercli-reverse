@@ -1,37 +1,37 @@
-# qodercli SubAgent 和 Skill 系统分析
+# qodercli-reverse SubAgent and Skill System Analysis
 
-## 1. SubAgent 系统
+## 1. SubAgent System
 
-### 1.1 包结构
+### 1.1 Package Structure
 
 ```
 core/resource/subagent/
-├── builtin/         # 内置 SubAgent
-└── subagent/        # SubAgent 核心
+├── builtin/         # Built-in SubAgents
+└── subagent/        # SubAgent core
 
 core/agent/task/
-└── Task 工具 (启动 SubAgent)
+└── Task tool (launches SubAgent)
 
 core/generator/subagent/
-└── SubAgent 生成器
+└── SubAgent generator
 ```
 
-### 1.2 内置 SubAgent 类型
+### 1.2 Built-in SubAgent Types
 
-| 类型 | 说明 |
-|------|------|
-| `code-reviewer` | 代码审查 |
-| `design-agent` | 设计文档生成 |
-| `spec-review-agent` | 规格审查 |
-| `task-executor` | 任务执行 |
-| `general-purpose` | 通用代理 |
-| `spec-hld-designer` | 高层设计 |
-| `spec-lld-designer` | 低层设计 |
-| `spec-implementer` | 实现者 |
-| `spec-leader` | 规格领导 |
-| `ExploreAgent` | 代码探索 |
+| Type | Description |
+|------|-------------|
+| `code-reviewer` | Code review |
+| `design-agent` | Design document generation |
+| `spec-review-agent` | Spec review |
+| `task-executor` | Task execution |
+| `general-purpose` | General-purpose agent |
+| `spec-hld-designer` | High-level design |
+| `spec-lld-designer` | Low-level design |
+| `spec-implementer` | Implementer |
+| `spec-leader` | Spec leader |
+| `ExploreAgent` | Code exploration |
 
-### 1.3 SubAgent 配置
+### 1.3 SubAgent Configuration
 
 ```json
 {
@@ -42,34 +42,34 @@ core/generator/subagent/
 }
 ```
 
-### 1.4 SubAgent 执行流程
+### 1.4 SubAgent Execution Flow
 
 ```
-1. Agent 调用 Task 工具
-2. 指定 subagent_type
-3. 创建子进程/协程
-4. 加载 SubAgent 配置
-5. 执行 SubAgent 任务
-6. 返回结果给父 Agent
+1. Agent calls Task tool
+2. Specify subagent_type
+3. Create subprocess/goroutine
+4. Load SubAgent config
+5. Execute SubAgent task
+6. Return result to parent Agent
 ```
 
-## 2. Skill 系统
+## 2. Skill System
 
-### 2.1 包结构
+### 2.1 Package Structure
 
 ```
 core/resource/skill/
-├── builtin/         # 内置 Skill
-└── skills/          # Skill 列表
+├── builtin/         # Built-in skills
+└── skills/          # Skill list
 ```
 
-### 2.2 Skill 定义
+### 2.2 Skill Definition
 
 ```
-SKILL.md 或 skill.md
+SKILL.md or skill.md
 ```
 
-格式:
+Format:
 ```markdown
 ---
 name: skill-name
@@ -81,27 +81,27 @@ description: Skill description
 Detailed instructions for the skill...
 ```
 
-### 2.3 内置 Skill
+### 2.3 Built-in Skills
 
 ```
-create-agent      # 创建新 Agent
-create-skill      # 创建新 Skill
-create-subagent   # 创建新 SubAgent
-pdf               # PDF 处理
-xlsx              # Excel 处理
+create-agent      # Create new Agent
+create-skill      # Create new Skill
+create-subagent   # Create new SubAgent
+pdf               # PDF processing
+xlsx              # Excel processing
 ```
 
-### 2.4 Skill 调用
+### 2.4 Skill Invocation
 
 ```
-Skill 工具
+Skill tool
 ├── skill_name: "skill-name"
 └── arguments: {...}
 ```
 
-## 3. Agent 定义
+## 3. Agent Definitions
 
-### 3.1 配置位置
+### 3.1 Config Locations
 
 ```
 ~/.qoder/agents/
@@ -109,7 +109,7 @@ Skill 工具
 ./.claude/agents/
 ```
 
-### 3.2 Agent 配置格式
+### 3.2 Agent Config Format
 
 ```json
 {
@@ -121,15 +121,15 @@ Skill 工具
 }
 ```
 
-### 3.3 通过 CLI 定义
+### 3.3 Defining via CLI
 
 ```bash
-qodercli --agents '{"reviewer": {"description": "Reviews code", "prompt": "You are a code reviewer"}}'
+qodercli-reverse --agents '{"reviewer": {"description": "Reviews code", "prompt": "You are a code reviewer"}}'
 ```
 
-## 4. Task 工具
+## 4. Task Tool
 
-### 4.1 参数
+### 4.1 Parameters
 
 ```json
 {
@@ -139,36 +139,36 @@ qodercli --agents '{"reviewer": {"description": "Reviews code", "prompt": "You a
 }
 ```
 
-### 4.2 并行执行
+### 4.2 Parallel Execution
 
 ```
 If the user specifies that they want you to run agents "in parallel", 
 you MUST send a single message with multiple Task tool use content blocks.
 ```
 
-## 5. Plugin 系统
+## 5. Plugin System
 
-### 5.1 包结构
+### 5.1 Package Structure
 
 ```
 core/resource/plugin/
-├── bootstrap/       # 插件引导
-├── config/          # 插件配置
-├── errors/          # 插件错误
-├── integration/     # 插件集成
-├── loader/          # 插件加载
-├── manifest/        # 插件清单
-├── registry/        # 插件注册
-└── resolver/        # 插件解析
+├── bootstrap/       # Plugin bootstrap
+├── config/          # Plugin config
+├── errors/          # Plugin errors
+├── integration/     # Plugin integration
+├── loader/          # Plugin loader
+├── manifest/        # Plugin manifest
+├── registry/        # Plugin registry
+└── resolver/        # Plugin resolver
 ```
 
-### 5.2 插件配置
+### 5.2 Plugin Configuration
 
 ```bash
 --plugin-dir <path>
 ```
 
-### 5.3 插件清单
+### 5.3 Plugin Manifest
 
 ```json
 {
@@ -181,21 +181,21 @@ core/resource/plugin/
 }
 ```
 
-## 6. 自定义命令
+## 6. Custom Commands
 
-### 6.1 包结构
+### 6.1 Package Structure
 
 ```
 core/resource/command/
-├── builtin/         # 内置命令
-└── commands/        # 命令列表
+├── builtin/         # Built-in commands
+└── commands/        # Command list
 ```
 
-### 6.2 命令定义
+### 6.2 Command Definition
 
-位置: `.claude/commands/` 或 `.qoder/commands/`
+Location: `.claude/commands/` or `.qoder/commands/`
 
-格式:
+Format:
 ```markdown
 ---
 name: command-name
@@ -207,7 +207,7 @@ description: Command description
 
 ## 7. AGENTS.md
 
-### 7.1 格式
+### 7.1 Format
 
 ```markdown
 # Project Agents
@@ -218,7 +218,7 @@ Prompt: |
   You are a code reviewer...
 ```
 
-### 7.2 位置
+### 7.2 Locations
 
 ```
 ./AGENTS.md
@@ -227,19 +227,19 @@ global/AGENTS.md
 project/AGENTS.md
 ```
 
-## 8. 配置加载顺序
+## 8. Config Load Order
 
 ```
-1. 内置定义
-2. 全局配置 (~/.qoder/)
-3. 项目配置 (./.qoder/)
-4. Claude 兼容配置 (./.claude/)
-5. 命令行参数
+1. Built-in definitions
+2. Global config (~/.qoder/)
+3. Project config (./.qoder/)
+4. Claude compatible config (./.claude/)
+5. Command-line arguments
 ```
 
-## 9. 追踪事件
+## 9. Tracking Events
 
 ```
-qodercli_subagent_execution
-qodercli_skill_tool_execution
+qodercli-reverse_subagent_execution
+qodercli-reverse_skill_tool_execution
 ```

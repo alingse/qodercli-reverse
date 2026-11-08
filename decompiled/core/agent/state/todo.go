@@ -1,5 +1,5 @@
-// Package state 状态管理 - Todo 任务列表
-// 反编译自 qodercli v0.1.29
+// Package state State management - Todo task list
+// Decompiled from qodercli-reverse v0.1.29
 package state
 
 import (
@@ -9,23 +9,23 @@ import (
 	"sync"
 )
 
-// TodoStatus 任务状态类型
+// TodoStatus Task status type
 type TodoStatus string
 
 const (
-	// TodoStatusInProgress 进行中
+	// TodoStatusInProgress In progress
 	TodoStatusInProgress TodoStatus = "in_progress"
-	// TodoStatusCompleted 已完成
+	// TodoStatusCompleted Completed
 	TodoStatusCompleted TodoStatus = "completed"
-	// TodoStatusPending 待处理
+	// TodoStatusPending Pending
 	TodoStatusPending TodoStatus = "pending"
-	// TodoStatusDone 完成
+	// TodoStatusDone Done
 	TodoStatusDone TodoStatus = "done"
-	// TodoStatusCancelled 已取消
+	// TodoStatusCancelled Cancelled
 	TodoStatusCancelled TodoStatus = "cancelled"
 )
 
-// IsValidTodoStatus 检查状态是否有效
+// IsValidTodoStatus Checks whether the status is valid
 func IsValidTodoStatus(status string) bool {
 	switch TodoStatus(status) {
 	case TodoStatusInProgress, TodoStatusCompleted, TodoStatusPending, TodoStatusDone, TodoStatusCancelled:
@@ -35,19 +35,19 @@ func IsValidTodoStatus(status string) bool {
 	}
 }
 
-// Todo 任务项
+// Todo Task item
 type Todo struct {
-	// ID 任务唯一标识
+	// ID Unique task identifier
 	ID string `json:"id"`
-	// Content 任务内容描述
+	// Content Task content description
 	Content string `json:"content"`
-	// Status 任务状态
+	// Status Task status
 	Status string `json:"status"`
-	// ActiveForm 执行时的进行态描述 (如 "Running tests")
+	// ActiveForm Description of the in-progress state during execution (e.g. "Running tests")
 	ActiveForm string `json:"activeForm"`
 }
 
-// Validate 验证 Todo 有效性
+// Validate Validates Todo validity
 func (t *Todo) Validate() error {
 	if strings.TrimSpace(t.ID) == "" {
 		return fmt.Errorf("todo id cannot be empty")
@@ -64,26 +64,26 @@ func (t *Todo) Validate() error {
 	return nil
 }
 
-// TodoState 任务状态管理接口
+// TodoState Task state management interface
 type TodoState interface {
-	// LoadTodos 加载任务列表
+	// LoadTodos Loads the task list
 	LoadTodos() ([]Todo, error)
-	// SaveTodos 保存任务列表
+	// SaveTodos Saves the task list
 	SaveTodos(todos []Todo) error
-	// GetTodos 获取当前任务列表
+	// GetTodos Retrieves the current task list
 	GetTodos() []Todo
-	// TodosToText 将任务列表转换为文本描述
+	// TodosToText Converts the task list to a text description
 	TodosToText() string
 }
 
-// defaultTodoState 默认实现
+// defaultTodoState Default implementation
 type defaultTodoState struct {
 	mu     sync.RWMutex
 	todos  []Todo
-	memory *SessionMemory // 关联到会话内存
+	memory *SessionMemory // Associated session memory
 }
 
-// NewTodoState 创建新的 TodoState
+// NewTodoState Creates a new TodoState
 func NewTodoState(memory *SessionMemory) TodoState {
 	return &defaultTodoState{
 		todos:  make([]Todo, 0),
@@ -91,12 +91,12 @@ func NewTodoState(memory *SessionMemory) TodoState {
 	}
 }
 
-// LoadTodos 从内存加载任务列表
+// LoadTodos Loads the task list from memory
 func (s *defaultTodoState) LoadTodos() ([]Todo, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	// 从会话内存中读取
+	// Read from session memory
 	if s.memory != nil {
 		if data, ok := s.memory.Get("todos"); ok {
 			var todos []Todo
@@ -111,12 +111,12 @@ func (s *defaultTodoState) LoadTodos() ([]Todo, error) {
 	return result, nil
 }
 
-// SaveTodos 保存任务列表到内存
+// SaveTodos Saves the task list to memory
 func (s *defaultTodoState) SaveTodos(todos []Todo) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// 验证所有任务
+	// Validate all tasks
 	for i, todo := range todos {
 		if err := todo.Validate(); err != nil {
 			return fmt.Errorf("todo[%d]: %w", i, err)
@@ -126,7 +126,7 @@ func (s *defaultTodoState) SaveTodos(todos []Todo) error {
 	s.todos = make([]Todo, len(todos))
 	copy(s.todos, todos)
 
-	// 保存到会话内存
+	// Save to session memory
 	if s.memory != nil {
 		data, err := json.Marshal(s.todos)
 		if err == nil {
@@ -137,7 +137,7 @@ func (s *defaultTodoState) SaveTodos(todos []Todo) error {
 	return nil
 }
 
-// GetTodos 获取当前任务列表
+// GetTodos Retrieves the current task list
 func (s *defaultTodoState) GetTodos() []Todo {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -147,7 +147,7 @@ func (s *defaultTodoState) GetTodos() []Todo {
 	return result
 }
 
-// TodosToText 将任务列表转换为文本描述
+// TodosToText Converts the task list to a text description
 func (s *defaultTodoState) TodosToText() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -175,17 +175,17 @@ func (s *defaultTodoState) TodosToText() string {
 	return sb.String()
 }
 
-// AutoFixEmptyTodos 自动修复空数组
-// 规则: 不允许传递空数组清除列表，当所有任务完成时，保持任务并将状态设为 completed
+// AutoFixEmptyTodos Automatically fixes empty arrays
+// Rule: empty arrays are not allowed to clear the list; when all tasks are completed, keep the tasks and set their status to completed
 func AutoFixEmptyTodos(todos []Todo) []Todo {
 	if len(todos) == 0 {
-		// 返回空列表，但外部应该处理这种情况
+		// Return an empty list, but the caller should handle this case
 		return []Todo{}
 	}
 	return todos
 }
 
-// CountByStatus 按状态统计任务数量
+// CountByStatus Counts tasks by status
 func CountByStatus(todos []Todo, status string) int {
 	count := 0
 	for _, todo := range todos {
@@ -196,7 +196,7 @@ func CountByStatus(todos []Todo, status string) int {
 	return count
 }
 
-// HasInProgress 检查是否有进行中的任务
+// HasInProgress Checks whether there is an in-progress task
 func HasInProgress(todos []Todo) bool {
 	for _, todo := range todos {
 		if TodoStatus(todo.Status) == TodoStatusInProgress {
