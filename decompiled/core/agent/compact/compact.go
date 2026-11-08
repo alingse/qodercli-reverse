@@ -1,5 +1,5 @@
-// Package compact 提供上下文压缩功能
-// 支持多种压缩策略、Token 管理、Session Memory 集成
+// Package compact provides context compaction
+// Supports multiple compaction strategies, token management, and Session Memory integration
 package compact
 
 import (
@@ -13,55 +13,55 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/types"
 )
 
-// CompactTrigger 压缩触发类型
+// CompactTrigger compaction trigger type
 type CompactTrigger string
 
 const (
-	// TriggerAuto 自动触发（上下文接近模型限制）
+	// TriggerAuto auto trigger (context close to model limit)
 	TriggerAuto CompactTrigger = "auto"
-	// TriggerManual 手动触发（用户执行 /compact 命令）
+	// TriggerManual manual trigger (user runs /compact command)
 	TriggerManual CompactTrigger = "manual"
-	// TriggerReload 重载触发（会话恢复时）
+	// TriggerReload reload trigger (session restore)
 	TriggerReload CompactTrigger = "reload"
 )
 
-// CompactStrategy 压缩策略
+// CompactStrategy compaction strategy
 type CompactStrategy int
 
 const (
-	// StrategySummary 摘要策略 - 使用 LLM 生成摘要
+	// StrategySummary summary strategy - uses LLM to generate a summary
 	StrategySummary CompactStrategy = iota
-	// StrategyTruncate 截断策略 - 保留最近 N 条消息
+	// StrategyTruncate truncation strategy - keeps the last N messages
 	StrategyTruncate
-	// StrategySelective 选择性策略 - 基于重要性选择消息
+	// StrategySelective selective strategy - selects messages based on importance
 	StrategySelective
-	// StrategyHybrid 混合策略 - 结合多种策略
+	// StrategyHybrid hybrid strategy - combines multiple strategies
 	StrategyHybrid
-	// StrategyTokenAware Token 感知策略 - 基于 Token 使用量优化
+	// StrategyTokenAware token-aware strategy - optimizes based on token usage
 	StrategyTokenAware
 )
 
-// CompactOptions 压缩选项
+// CompactOptions compaction options
 type CompactOptions struct {
-	// 压缩策略
+	// compaction strategy
 	Strategy CompactStrategy
-	// 触发类型
+	// trigger type
 	Trigger CompactTrigger
-	// 目标 Token 数（压缩后）
+	// target token count (after compaction)
 	TargetTokens int
-	// 最大 Token 数（模型限制）
+	// max token count (model limit)
 	MaxTokens int
-	// 保留系统消息
+	// keep system messages
 	KeepSystemMessages bool
-	// 保留工具调用
+	// keep tool calls
 	KeepToolCalls bool
-	// 保留最近 N 轮对话
+	// keep last N conversation turns
 	KeepRecentTurns int
-	// 自定义提示词（用于 LLM 摘要）
+	// custom prompt (for LLM summary)
 	CustomPrompt string
 }
 
-// DefaultOptions 默认压缩选项
+// DefaultOptions default compaction options
 func DefaultOptions() *CompactOptions {
 	return &CompactOptions{
 		Strategy:           StrategyHybrid,
@@ -75,51 +75,51 @@ func DefaultOptions() *CompactOptions {
 	}
 }
 
-// CompactResult 压缩结果
+// CompactResult compaction result
 type CompactResult struct {
-	// 原始消息数
+	// original message count
 	OriginalMessageCount int
-	// 压缩后消息数
+	// compressed message count
 	CompressedMessageCount int
-	// 原始 Token 数
+	// original token count
 	OriginalTokens int
-	// 压缩后 Token 数
+	// compressed token count
 	CompressedTokens int
-	// 节省的 Token 数
+	// saved token count
 	SavedTokens int
-	// 压缩率
+	// compression ratio
 	CompressionRatio float64
-	// 使用的策略
+	// strategy used
 	Strategy CompactStrategy
-	// 摘要内容（如果有）
+	// summary content (if any)
 	Summary string
-	// 压缩元数据
+	// compaction metadata
 	Metadata *CompactMetadata
 }
 
-// CompactMetadata 压缩元数据
+// CompactMetadata compaction metadata
 type CompactMetadata struct {
-	// 压缩时间
+	// compaction time
 	Timestamp time.Time `json:"timestamp"`
-	// 触发类型
+	// trigger type
 	Trigger CompactTrigger `json:"trigger"`
-	// 压缩策略
+	// compaction strategy
 	Strategy CompactStrategy `json:"strategy"`
-	// 模型信息
+	// model info
 	Model string `json:"model"`
-	// 压缩版本
+	// compaction version
 	Version string `json:"version"`
 }
 
-// Compactor 压缩器接口
+// Compactor compactor interface
 type Compactor interface {
-	// Compact 执行压缩
+	// Compact performs compaction
 	Compact(ctx context.Context, messages []types.Message, options *CompactOptions) (*CompactResult, error)
-	// EstimateTokens 估算 Token 数
+	// EstimateTokens estimates token count
 	EstimateTokens(messages []types.Message) int
 }
 
-// Manager 压缩管理器
+// Manager compaction manager
 type Manager struct {
 	mu          sync.RWMutex
 	provider    provider.Client
@@ -129,27 +129,27 @@ type Manager struct {
 	lastCompact *CompactResult
 }
 
-// Tokenizer Token 计算器接口
+// Tokenizer token counter interface
 type Tokenizer interface {
 	Count(text string) int
 }
 
-// PreCompactHook Pre-Compact Hook 接口
+// PreCompactHook pre-compaction hook interface
 type PreCompactHook interface {
 	Execute(ctx context.Context, messages []types.Message, options *CompactOptions) error
 }
 
-// PostCompactHook Post-Compact Hook 接口
+// PostCompactHook post-compaction hook interface
 type PostCompactHook interface {
 	Execute(ctx context.Context, result *CompactResult) error
 }
 
-// ThresholdHook Token 阈值 Hook 接口
+// ThresholdHook token threshold hook interface
 type ThresholdHook interface {
 	Execute(ctx context.Context, currentTokens int, maxTokens int, threshold float64) bool
 }
 
-// NewManager 创建压缩管理器
+// NewManager creates a compaction manager
 func NewManager(provider provider.Client, tokenizer Tokenizer) *Manager {
 	return &Manager{
 		provider:  provider,
@@ -158,21 +158,21 @@ func NewManager(provider provider.Client, tokenizer Tokenizer) *Manager {
 	}
 }
 
-// SetStrategy 设置压缩策略
+// SetStrategy sets compaction strategy
 func (m *Manager) SetStrategy(strategy CompactStrategy) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.strategy = strategy
 }
 
-// AddHook 添加 Pre-Compact Hook
+// AddHook adds a pre-compaction hook
 func (m *Manager) AddHook(hook PreCompactHook) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.hooks = append(m.hooks, hook)
 }
 
-// Compact 执行压缩
+// Compact performs compaction
 func (m *Manager) Compact(ctx context.Context, messages []types.Message, options *CompactOptions) (*CompactResult, error) {
 	m.mu.RLock()
 	strategy := m.strategy
@@ -183,32 +183,32 @@ func (m *Manager) Compact(ctx context.Context, messages []types.Message, options
 		options = DefaultOptions()
 	}
 
-	// 使用配置的压缩策略
+	// use configured compaction strategy
 	if options.Strategy == 0 {
 		options.Strategy = strategy
 	}
 
-	// 执行 Pre-Compact Hooks
+	// execute pre-compaction hooks
 	for _, hook := range hooks {
 		if err := hook.Execute(ctx, messages, options); err != nil {
 			return nil, fmt.Errorf("pre-compact hook error: %w", err)
 		}
 	}
 
-	// 记录开始时间
+	// record start time
 	startTime := time.Now()
 	log.Debug("Starting compact: %d messages, strategy: %v", len(messages), options.Strategy)
 
-	// 获取压缩器
+	// get compactor
 	compactor := m.getCompactor(options.Strategy)
 
-	// 执行压缩
+	// perform compaction
 	result, err := compactor.Compact(ctx, messages, options)
 	if err != nil {
 		return nil, fmt.Errorf("compact error: %w", err)
 	}
 
-	// 填充元数据
+	// fill metadata
 	result.Metadata = &CompactMetadata{
 		Timestamp: startTime,
 		Trigger:   options.Trigger,
@@ -216,7 +216,7 @@ func (m *Manager) Compact(ctx context.Context, messages []types.Message, options
 		Version:   "1.0.0",
 	}
 
-	// 保存最后一次压缩结果
+	// save last compaction result
 	m.mu.Lock()
 	m.lastCompact = result
 	m.mu.Unlock()
@@ -230,7 +230,7 @@ func (m *Manager) Compact(ctx context.Context, messages []types.Message, options
 	return result, nil
 }
 
-// getCompactor 获取压缩器
+// getCompactor gets a compactor
 func (m *Manager) getCompactor(strategy CompactStrategy) Compactor {
 	switch strategy {
 	case StrategySummary:
@@ -248,7 +248,7 @@ func (m *Manager) getCompactor(strategy CompactStrategy) Compactor {
 	}
 }
 
-// EstimateTokens 估算 Token 数
+// EstimateTokens estimates token count
 func (m *Manager) EstimateTokens(messages []types.Message) int {
 	if m.tokenizer == nil {
 		return estimateTokensSimple(messages)
@@ -264,7 +264,7 @@ func (m *Manager) EstimateTokens(messages []types.Message) int {
 				total += m.tokenizer.Count(part.Thinking)
 			}
 		}
-		// 工具调用的额外开销
+		// extra overhead for tool calls
 		for _, tc := range msg.ToolCalls {
 			total += m.tokenizer.Count(tc.Name) + m.tokenizer.Count(tc.Arguments)
 		}
@@ -272,29 +272,29 @@ func (m *Manager) EstimateTokens(messages []types.Message) int {
 	return total
 }
 
-// estimateTokensSimple 简单的 Token 估算（备用方案）
+// estimateTokensSimple simple token estimate (fallback)
 func estimateTokensSimple(messages []types.Message) int {
 	total := 0
 	for _, msg := range messages {
 		for _, part := range msg.Content {
-			// 按字符数粗略估算（英文约 4 字符/token，中文约 2 字符/token）
+			// rough estimate by character count (English ~4 chars/token, Chinese ~2 chars/token)
 			total += len(part.Text) / 3
 			total += len(part.Thinking) / 3
 		}
-		// 每条消息的基础开销
+		// base overhead per message
 		total += 4
 	}
 	return total
 }
 
-// GetLastCompact 获取最后一次压缩结果
+// GetLastCompact gets the last compaction result
 func (m *Manager) GetLastCompact() *CompactResult {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return m.lastCompact
 }
 
-// ShouldTriggerAuto 是否应该触发自动压缩
+// ShouldTriggerAuto whether auto compaction should trigger
 func (m *Manager) ShouldTriggerAuto(currentTokens int, maxTokens int, threshold float64) bool {
 	return float64(currentTokens)/float64(maxTokens) > threshold
 }

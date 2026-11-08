@@ -12,9 +12,9 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/tui/app"
 )
 
-// Run 运行 TUI 模式
+// Run runs TUI mode
 func Run(flags *utils.Flags, systemPrompt string) error {
-	log.Info("Starting qodercli in TUI mode")
+	log.Info("Starting qodercli-reverse in TUI mode")
 	if flags.Debug {
 		log.Info("Debug mode enabled - streaming trace will be saved to /tmp")
 	}
@@ -26,12 +26,12 @@ func Run(flags *utils.Flags, systemPrompt string) error {
 		return fmt.Errorf("failed to create provider: %w", err)
 	}
 
-	// 如果环境变量指定了模型，使用它
+	// If model specified via env var, use it
 	if modelOverride != "" {
 		cfg.Model = modelOverride
 	}
 
-	// 如果没有提供系统提示词，自动构建（官方行为）
+	// If no system prompt provided, auto-build (official behavior)
 	if systemPrompt == "" {
 		var buildErr error
 		workDir := flags.Workspace
@@ -41,13 +41,13 @@ func Run(flags *utils.Flags, systemPrompt string) error {
 		systemPrompt, buildErr = utils.BuildSystemPromptAuto(workDir, flags.WithClaudeConfig)
 		if buildErr != nil {
 			log.Error("Failed to build system prompt: %v", buildErr)
-			// 使用默认提示词
+			// Use default prompt
 			systemPrompt = utils.GetDefaultSystemPrompt()
 		}
 	}
 
 	ps := pubsub.New()
-	_ = ps // 保留 ps 用于未来扩展
+	_ = ps // keep ps for future extension
 
 	agentCfg := &agent.Config{
 		Model:          cfg.Model,
@@ -64,7 +64,7 @@ func Run(flags *utils.Flags, systemPrompt string) error {
 		return fmt.Errorf("failed to create agent: %w", err)
 	}
 
-	// 启动 TUI
+	// Start TUI
 	opts := app.Options{
 		Config: cfg,
 		Agent:  ag,

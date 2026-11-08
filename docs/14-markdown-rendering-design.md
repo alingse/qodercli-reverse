@@ -1,44 +1,44 @@
-# qodercli Markdown 渲染方案设计
+# qodercli-reverse Markdown Rendering Design
 
-## 一、官方实现分析
+## 1. Official Implementation Analysis
 
-### 1.1 使用的包
+### 1.1 Packages Used
 
-| 包名 | 版本 | 用途 |
-|------|------|------|
-| `github.com/charmbracelet/glamour` | v0.10.0 | 核心 markdown 终端渲染库 |
-| `github.com/yuin/goldmark` | - | markdown 解析器（glamour 内部使用） |
-| `github.com/yuin/goldmark-emoji` | - | emoji 扩展支持 |
-| `github.com/catppuccin/go` | v0.3.0 | Catppuccin 主题颜色定义 |
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `github.com/charmbracelet/glamour` | v0.10.0 | Core markdown terminal rendering library |
+| `github.com/yuin/goldmark` | - | Markdown parser (used internally by glamour) |
+| `github.com/yuin/goldmark-emoji` | - | Emoji extension support |
+| `github.com/catppuccin/go` | v0.3.0 | Catppuccin theme color definitions |
 
-### 1.2 glamour 核心 API
+### 1.2 glamour Core API
 
 ```go
-// 创建渲染器
+// Create renderer
 renderer, err := glamour.NewTermRenderer(
-    glamour.WithStandardStyle("dark"),  // 使用内置主题
-    glamour.WithWordWrap(width),         // 设置自动换行宽度
-    glamour.WithAutoStyle(),             // 自动检测终端主题
+    glamour.WithStandardStyle("dark"),  // Use built-in theme
+    glamour.WithWordWrap(width),         // Set auto-wrap width
+    glamour.WithAutoStyle(),             // Auto-detect terminal theme
 )
 
-// 渲染方法
-rendered, err := renderer.Render(markdown string)              // 渲染字符串
-renderedBytes, err := renderer.RenderBytes(markdownBytes)      // 渲染字节
+// Render methods
+rendered, err := renderer.Render(markdown string)              // Render string
+renderedBytes, err := renderer.RenderBytes(markdownBytes)      // Render bytes
 
-// 实现了 io.Reader/io.Writer 接口
+// Implements io.Reader/io.Writer interfaces
 renderer.Read(p []byte)
 renderer.Write(p []byte)
 renderer.Close()
 ```
 
-### 1.3 官方支持的主题列表
+### 1.3 Officially Supported Theme List
 
- glamour 内置主题：
-- `dark` (默认暗色)
-- `light` (亮色)
-- `github-dark` / `github-light` (GitHub 风格)
-- `monokai` / `monokailight` (代码编辑器风格)
-- `dracula` (深色高对比)
+glamour built-in themes:
+- `dark` (default dark)
+- `light` (light)
+- `github-dark` / `github-light` (GitHub style)
+- `monokai` / `monokailight` (code editor style)
+- `dracula` (dark high contrast)
 - `tokyonight-day` / `tokyonight-night` / `tokyonight-moon` / `tokyonight-storm`
 - `catppuccin-latte` / `catppuccin-frappe` / `catppuccin-macchiato` / `catppuccin-mocha`
 - `solarized-dark` / `solarized-light`
@@ -49,51 +49,51 @@ renderer.Close()
 - `paraiso-dark` / `paraiso-light` / `rainbow_dash`
 - `algol_nu` / `colorful` / `doom-one` / `friendly` / `lovelace` / `pygments`
 
-### 1.4 官方错误处理模式
+### 1.4 Official Error Handling Pattern
 
-从反编译分析中发现官方的错误处理：
+Error handling discovered from decompilation analysis:
 ```
 glamour: error reading from buffer: %w
 glamour: error converting markdown: %w
 glamour: error rendering: %w
 ```
 
-## 二、当前代码现状
+## 2. Current Code Status
 
-### 2.1 已有实现
+### 2.1 Existing Implementation
 
 `decompiled/tui/components/messages/message_view.go`:
-- 已导入 glamour 包
-- 已创建 `TermRenderer` 实例
-- 但未实际使用来渲染消息内容
+- glamour package already imported
+- `TermRenderer` instance already created
+- But not actually used to render message content
 
 ```go
-// 当前：创建但未用于消息渲染
+// Current: created but not used for message rendering
 renderer, _ := glamour.NewTermRenderer(
     glamour.WithStandardStyle("dark"),
     glamour.WithWordWrap(76),
 )
 ```
 
-### 2.2 问题分析
+### 2.2 Problem Analysis
 
 `decompiled/tui/components/messages/types.go`:
 
 ```go
-// AssistantMessage 当前纯文本渲染
+// AssistantMessage currently rendered as plain text
 func (m *AssistantMessage) Render() string {
     return fmt.Sprintf("⏺ %s", strings.TrimSpace(m.Content))
 }
 ```
 
-**问题**：
-1. 助手返回的 markdown 内容被当作文本直接显示
-2. 代码块、列表、表格等失去格式化
-3. 链接显示为原始 markdown 格式 `[text](url)`
+**Problems**:
+1. Assistant's markdown content is displayed directly as text
+2. Code blocks, lists, tables, etc. lose formatting
+3. Links displayed in raw markdown format `[text](url)`
 
-## 三、设计方案
+## 3. Design
 
-### 3.1 架构设计
+### 3.1 Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -117,9 +117,9 @@ func (m *AssistantMessage) Render() string {
 └─────────────────────────────────────────────────────────┘
 ```
 
-### 3.2 核心实现
+### 3.2 Core Implementation
 
-#### 3.2.1 创建 Markdown 渲染器
+#### 3.2.1 Create Markdown Renderer
 
 ```go
 // core/utils/markdown/renderer.go
@@ -131,7 +131,7 @@ import (
     "github.com/charmbracelet/lipgloss"
 )
 
-// Renderer markdown 终端渲染器
+// Renderer markdown terminal renderer
 type Renderer struct {
     renderer *glamour.TermRenderer
     mu       sync.RWMutex
@@ -139,12 +139,12 @@ type Renderer struct {
     style    string
 }
 
-// NewRenderer 创建新的 markdown 渲染器
+// NewRenderer creates a new markdown renderer
 func NewRenderer(width int, style string) (*Renderer, error) {
     if style == "" {
         style = "dark"
     }
-    
+
     r, err := glamour.NewTermRenderer(
         glamour.WithStandardStyle(style),
         glamour.WithWordWrap(width),
@@ -152,7 +152,7 @@ func NewRenderer(width int, style string) (*Renderer, error) {
     if err != nil {
         return nil, err
     }
-    
+
     return &Renderer{
         renderer: r,
         width:    width,
@@ -160,23 +160,23 @@ func NewRenderer(width int, style string) (*Renderer, error) {
     }, nil
 }
 
-// Render 渲染 markdown 为终端可显示的格式
+// Render renders markdown into terminal-displayable format
 func (r *Renderer) Render(content string) (string, error) {
     r.mu.RLock()
     defer r.mu.RUnlock()
-    
+
     return r.renderer.Render(content)
 }
 
-// SetSize 更新渲染器尺寸
+// SetSize updates renderer dimensions
 func (r *Renderer) SetSize(width int) error {
     r.mu.Lock()
     defer r.mu.Unlock()
-    
+
     if r.width == width {
         return nil
     }
-    
+
     r.width = width
     newRenderer, err := glamour.NewTermRenderer(
         glamour.WithStandardStyle(r.style),
@@ -185,20 +185,20 @@ func (r *Renderer) SetSize(width int) error {
     if err != nil {
         return err
     }
-    
+
     r.renderer = newRenderer
     return nil
 }
 
-// SetStyle 切换主题
+// SetStyle switches theme
 func (r *Renderer) SetStyle(style string) error {
     r.mu.Lock()
     defer r.mu.Unlock()
-    
+
     if r.style == style {
         return nil
     }
-    
+
     r.style = style
     newRenderer, err := glamour.NewTermRenderer(
         glamour.WithStandardStyle(style),
@@ -207,13 +207,13 @@ func (r *Renderer) SetStyle(style string) error {
     if err != nil {
         return err
     }
-    
+
     r.renderer = newRenderer
     return nil
 }
 ```
 
-#### 3.2.2 在 MessageView 中集成
+#### 3.2.2 Integration in MessageView
 
 ```go
 // tui/components/messages/message_view.go
@@ -221,7 +221,7 @@ func (r *Renderer) SetStyle(style string) error {
 type MessageView struct {
     viewport viewport.Model
     messages []Message
-    renderer *markdown.Renderer  // 替换 glamour.TermRenderer
+    renderer *markdown.Renderer  // replaces glamour.TermRenderer
     width    int
     height   int
     // ...
@@ -231,10 +231,10 @@ func NewMessageView() *MessageView {
     vp := viewport.New(80, 20)
     vp.SetContent("")
     vp.MouseWheelEnabled = true
-    
-    // 创建 markdown 渲染器
+
+    // Create markdown renderer
     renderer, _ := markdown.NewRenderer(76, "dark")
-    
+
     return &MessageView{
         viewport: vp,
         messages: make([]Message, 0),
@@ -246,50 +246,50 @@ func NewMessageView() *MessageView {
 func (mv *MessageView) SetSize(width, height int) {
     mv.width = width
     mv.height = height
-    
+
     mv.viewport.Width = width
     mv.viewport.Height = height
-    
-    // 更新渲染器尺寸
+
+    // Update renderer dimensions
     if mv.renderer != nil {
-        mv.renderer.SetSize(width - 4) // 留边距
+        mv.renderer.SetSize(width - 4) // leave margin
     }
-    
-    // 重新渲染所有消息
+
+    // Re-render all messages
     mv.renderContent()
 }
 ```
 
-#### 3.2.3 修改消息类型支持 Markdown
+#### 3.2.3 Modify Message Types to Support Markdown
 
 ```go
 // tui/components/messages/types.go
 
 type AssistantMessage struct {
     Content      string
-    Rendered     string  // 缓存渲染后的内容
-    NeedsRender  bool    // 是否需要重新渲染
+    Rendered     string  // cached rendered content
+    NeedsRender  bool    // whether re-render is needed
     MsgTime      time.Time
 }
 
 func (m *AssistantMessage) Type() MessageType    { return MsgTypeAssistant }
 func (m *AssistantMessage) Timestamp() time.Time { return m.MsgTime }
 
-// RenderMarkdown 渲染 markdown（由 MessageView 调用）
+// RenderMarkdown renders markdown (called by MessageView)
 func (m *AssistantMessage) RenderMarkdown(renderer *markdown.Renderer) string {
     if !m.NeedsRender && m.Rendered != "" {
         return m.Rendered
     }
-    
+
     if renderer == nil {
         m.Rendered = m.Content
         m.NeedsRender = false
         return m.Rendered
     }
-    
+
     rendered, err := renderer.Render(m.Content)
     if err != nil {
-        // 渲染失败回退到纯文本
+        // Fall back to plain text on render failure
         m.Rendered = m.Content
     } else {
         m.Rendered = rendered
@@ -299,47 +299,47 @@ func (m *AssistantMessage) RenderMarkdown(renderer *markdown.Renderer) string {
 }
 
 func (m *AssistantMessage) Render() string {
-    // 返回原始内容，实际渲染由 MessageView 统一处理
+    // Return raw content; actual rendering handled centrally by MessageView
     return m.Content
 }
 
-// AppendContent 追加内容并标记需要重新渲染
+// AppendContent appends content and marks as needing re-render
 func (m *AssistantMessage) AppendContent(content string) {
     m.Content += content
     m.NeedsRender = true
 }
 ```
 
-#### 3.2.4 MessageView 统一渲染流程
+#### 3.2.4 MessageView Unified Rendering Flow
 
 ```go
 // tui/components/messages/message_view.go
 
 func (mv *MessageView) renderContent() {
     var sb strings.Builder
-    
+
     for i, msg := range mv.messages {
         if i > 0 {
             sb.WriteString("\n\n")
         }
-        
+
         switch m := msg.(type) {
         case *AssistantMessage:
-            // 使用 glamour 渲染 markdown
+            // Render markdown with glamour
             rendered := m.RenderMarkdown(mv.renderer)
             sb.WriteString(rendered)
         case *UserMessage:
-            // 用户消息保持简单格式
+            // User messages keep simple format
             sb.WriteString(mv.renderUserMessage(m))
         case *ToolCallInfo:
-            // 工具调用使用 lipgloss 样式
+            // Tool calls use lipgloss styles
             sb.WriteString(m.Render())
-        // ... 其他消息类型
+        // ... other message types
         default:
             sb.WriteString(msg.Render())
         }
     }
-    
+
     mv.cachedContent = sb.String()
 }
 
@@ -347,46 +347,46 @@ func (mv *MessageView) renderUserMessage(m *UserMessage) string {
     style := lipgloss.NewStyle().
         Foreground(lipgloss.Color("252")).
         Bold(true)
-    
+
     return style.Render("> ") + strings.TrimSpace(m.Content)
 }
 ```
 
-### 3.3 配置支持
+### 3.3 Config Support
 
 ```go
 // core/config/config.go
 
 type Config struct {
-    // ... 其他配置
-    
-    // Markdown 渲染配置
+    // ... other config
+
+    // Markdown rendering config
     Markdown MarkdownConfig `yaml:"markdown" json:"markdown"`
 }
 
 type MarkdownConfig struct {
-    Enabled   bool   `yaml:"enabled" json:"enabled"`     // 是否启用
-    Style     string `yaml:"style" json:"style"`         // 主题名称
-    WordWrap  int    `yaml:"word_wrap" json:"word_wrap"` // 自动换行宽度
+    Enabled   bool   `yaml:"enabled" json:"enabled"`     // Whether enabled
+    Style     string `yaml:"style" json:"style"`         // Theme name
+    WordWrap  int    `yaml:"word_wrap" json:"word_wrap"` // Auto-wrap width
 }
 
 func DefaultMarkdownConfig() MarkdownConfig {
     return MarkdownConfig{
         Enabled:  true,
         Style:    "dark",
-        WordWrap: 0, // 0 表示自动根据终端宽度
+        WordWrap: 0, // 0 means auto based on terminal width
     }
 }
 ```
 
-### 3.4 主题自动检测
+### 3.4 Theme Auto-Detection
 
 ```go
 // core/utils/markdown/style.go
 
 import "github.com/charmbracelet/lipgloss"
 
-// DetectStyle 检测终端主题并返回合适的 glamour 样式
+// DetectStyle detects terminal theme and returns appropriate glamour style
 func DetectStyle() string {
     if lipgloss.HasDarkBackground() {
         return "dark"
@@ -394,7 +394,7 @@ func DetectStyle() string {
     return "light"
 }
 
-// GetAvailableStyles 返回所有可用的主题列表
+// GetAvailableStyles returns all available theme list
 func GetAvailableStyles() []string {
     return []string{
         "dark", "light",
@@ -409,62 +409,62 @@ func GetAvailableStyles() []string {
 }
 ```
 
-## 四、实现步骤
+## 4. Implementation Steps
 
-### Phase 1: 基础渲染器 (P0)
+### Phase 1: Basic Renderer (P0)
 
-1. **创建 `core/utils/markdown/renderer.go`**
-   - 封装 glamour.TermRenderer
-   - 提供 Render/SetSize/SetStyle 方法
-   - 支持并发安全
+1. **Create `core/utils/markdown/renderer.go`**
+   - Wrap glamour.TermRenderer
+   - Provide Render/SetSize/SetStyle methods
+   - Support concurrency safety
 
-2. **修改 `tui/components/messages/message_view.go`**
-   - 集成 markdown.Renderer
-   - 在 SetSize 时更新渲染器尺寸
-   - 在 renderContent 中调用 markdown 渲染
+2. **Modify `tui/components/messages/message_view.go`**
+   - Integrate markdown.Renderer
+   - Update renderer dimensions on SetSize
+   - Call markdown rendering in renderContent
 
-3. **修改 `tui/components/messages/types.go`**
-   - AssistantMessage 支持缓存渲染结果
-   - 添加 RenderMarkdown 方法
+3. **Modify `tui/components/messages/types.go`**
+   - AssistantMessage supports caching render results
+   - Add RenderMarkdown method
 
-### Phase 2: 配置与优化 (P1)
+### Phase 2: Config and Optimization (P1)
 
-4. **添加配置支持**
-   - 在 Config 中添加 MarkdownConfig
-   - 支持从配置文件加载主题设置
+4. **Add config support**
+   - Add MarkdownConfig to Config
+   - Support loading theme settings from config file
 
-5. **主题自动检测**
-   - 检测终端背景色
-   - 自动选择 dark/light 主题
+5. **Theme auto-detection**
+   - Detect terminal background color
+   - Auto-select dark/light theme
 
-6. **性能优化**
-   - 渲染结果缓存
-   - 增量渲染（流式响应）
+6. **Performance optimization**
+   - Render result caching
+   - Incremental rendering (streaming responses)
 
-### Phase 3: 增强功能 (P2)
+### Phase 3: Enhanced Features (P2)
 
-7. **代码块语法高亮增强**
-   - 支持更多语言的高亮
-   - 自定义代码块样式
+7. **Code block syntax highlighting enhancement**
+   - Support highlighting for more languages
+   - Custom code block styles
 
-8. **图片链接处理**
-   - 将图片链接转为可点击的文本
-   - 支持终端图片预览（如 iTerm2）
+8. **Image link handling**
+   - Convert image links to clickable text
+   - Support terminal image preview (e.g., iTerm2)
 
-9. **表格渲染优化**
-   - 自动调整列宽
-   - 处理过宽表格
+9. **Table rendering optimization**
+   - Auto-adjust column widths
+   - Handle overly wide tables
 
-## 五、关键代码示例
+## 5. Key Code Examples
 
-### 5.1 完整渲染流程
+### 5.1 Complete Rendering Flow
 
 ```go
-// 初始化
+// Initialize
 mv := NewMessageView()
 mv.SetSize(100, 30)
 
-// 添加助手消息（包含 markdown）
+// Add assistant message (with markdown)
 mv.AddAssistantMessage(`
 # Hello World
 
@@ -481,13 +481,13 @@ func main() {
 - Item 3
 `)
 
-// renderContent 内部处理
-// 1. AssistantMessage.RenderMarkdown(renderer) 被调用
-// 2. glamour 将 markdown 转为 ANSI 格式
-// 3. 结果显示在终端，带有语法高亮和格式
+// renderContent internal processing
+// 1. AssistantMessage.RenderMarkdown(renderer) is called
+// 2. glamour converts markdown to ANSI format
+// 3. Result displayed in terminal with syntax highlighting and formatting
 ```
 
-### 5.2 流式响应处理
+### 5.2 Streaming Response Handling
 
 ```go
 func (mv *MessageView) AppendToLastMessage(content string) {
@@ -498,13 +498,13 @@ func (mv *MessageView) AppendToLastMessage(content string) {
 
     lastMsg := mv.messages[len(mv.messages)-1]
     if am, ok := lastMsg.(*AssistantMessage); ok {
-        am.AppendContent(content)  // 标记 NeedsRender = true
-        mv.renderContent()         // 重新渲染
+        am.AppendContent(content)  // marks NeedsRender = true
+        mv.renderContent()         // re-render
     }
 }
 ```
 
-## 六、测试方案
+## 6. Testing Plan
 
 ```go
 // core/utils/markdown/renderer_test.go
@@ -512,27 +512,27 @@ func (mv *MessageView) AppendToLastMessage(content string) {
 func TestRenderer_Render(t *testing.T) {
     r, err := NewRenderer(80, "dark")
     require.NoError(t, err)
-    
+
     input := "# Hello\n\n**bold** text"
     output, err := r.Render(input)
     require.NoError(t, err)
-    
-    // 验证输出包含 ANSI 转义序列
-    assert.Contains(t, output, "\x1b[")  // ANSI 转义码
+
+    // Verify output contains ANSI escape sequences
+    assert.Contains(t, output, "\x1b[")  // ANSI escape code
 }
 
 func TestRenderer_SetSize(t *testing.T) {
     r, _ := NewRenderer(80, "dark")
-    
+
     err := r.SetSize(120)
     assert.NoError(t, err)
     assert.Equal(t, 120, r.width)
 }
 ```
 
-## 七、参考文档
+## 7. Reference Documents
 
 - [glamour GitHub](https://github.com/charmbracelet/glamour)
-- [glamour 主题预览](https://github.com/charmbracelet/glamour/tree/master/styles)
-- [goldmark 文档](https://github.com/yuin/goldmark)
-- [lipgloss 文档](https://github.com/charmbracelet/lipgloss)
+- [glamour Theme Preview](https://github.com/charmbracelet/glamour/tree/master/styles)
+- [goldmark Documentation](https://github.com/yuin/goldmark)
+- [lipgloss Documentation](https://github.com/charmbracelet/lipgloss)

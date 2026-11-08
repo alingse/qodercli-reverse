@@ -1,4 +1,4 @@
-// Package main qodercli 反编译版本入口
+// Package main qodercli-reverse decompiled entry point
 package main
 
 import (

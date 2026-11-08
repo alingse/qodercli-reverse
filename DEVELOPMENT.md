@@ -1,11 +1,11 @@
-# Independent Development Guide for qodercli (Reconstructed)
+# Independent Development Guide for qodercli-reverse (Reconstructed)
 
 ## Status of the codebase
 
-- **Official source**: Qoder does NOT publish the qodercli CLI source. The published
-  artifact is a proprietary Mach-O binary (`qodercli`).
+- **Official source**: Qoder does NOT publish the qodercli-reverse CLI source. The published
+  artifact is a proprietary Mach-O binary (`qodercli-reverse`).
 - **Reference implementation**: `alingse/qodercli-reverse` is a community
-  reverse-engineered reconstruction of qodercli v0.1.29/v0.1.30. It is NOT
+  reverse-engineered reconstruction of qodercli-reverse v0.1.29/v0.1.30. It is NOT
   official source and may differ from the vendor implementation.
 - **License**: The upstream repository does not ship a `LICENSE` file. Treat the
   contents as "learning/research only" and do not redistribute proprietary
@@ -15,7 +15,7 @@
 ## Repository layout
 
 ```
-qodercli-source/
+qodercli-reverse-source/
 ├── decompiled/          # Reconstructed Go project (module: github.com/alingse/qodercli-reverse/decompiled)
 │   ├── cmd/             # CLI entry points (root, print, tui, utils)
 │   ├── core/            # agent, config, resource/mcp, pubsub, types, utils
@@ -32,7 +32,7 @@ qodercli-source/
 ```bash
 cd decompiled
 go mod tidy
-go build -o /tmp/qodercli-decompiled .
+go build -o /tmp/qodercli-reverse-decompiled .
 ```
 
 Verified: builds successfully on Go 1.25.6 / darwin arm64 (2026-11-08).

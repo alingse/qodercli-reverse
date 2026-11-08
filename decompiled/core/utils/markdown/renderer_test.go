@@ -61,7 +61,7 @@ func TestNewRenderer(t *testing.T) {
 				return
 			}
 
-			// 验证宽度
+			// verify width
 			expectedWidth := tt.width
 			if expectedWidth <= 0 {
 				expectedWidth = 80
@@ -129,12 +129,12 @@ func TestRenderer_Render(t *testing.T) {
 				return
 			}
 
-			// 验证输出不为空（除非输入为空）
+			// verify output is not empty (unless input is empty)
 			if tt.input != "" && output == "" {
 				t.Error("Render() returned empty output for non-empty input")
 			}
 
-			// 验证输出包含 ANSI 转义序列（markdown 格式化的标志）
+			// verify output contains ANSI escape sequences (sign of markdown formatting)
 			if tt.input != "" && !strings.Contains(output, "\x1b[") {
 				t.Logf("Warning: Render() output may not contain ANSI codes: %q", output)
 			}
@@ -234,7 +234,7 @@ func TestRenderer_SetStyle(t *testing.T) {
 
 func TestDetectStyle(t *testing.T) {
 	style := DetectStyle()
-	// 只验证返回值为 dark 或 light
+	// only verify return value is dark or light
 	if style != "dark" && style != "light" {
 		t.Errorf("DetectStyle() returned unexpected value: %v", style)
 	}
@@ -246,7 +246,7 @@ func TestGetAvailableStyles(t *testing.T) {
 		t.Error("GetAvailableStyles() returned empty list")
 	}
 
-	// 验证包含一些常见主题
+	// verify it contains some common themes
 	expectedStyles := []string{"dark", "light", "dracula", "ascii", "notty"}
 	for _, expected := range expectedStyles {
 		found := false
@@ -302,7 +302,7 @@ func TestRenderer_RenderBytes(t *testing.T) {
 func TestRenderer_NilSafety(t *testing.T) {
 	var r *Renderer
 
-	// 测试 nil 渲染器不会 panic
+	// test that a nil renderer does not panic
 	output, err := r.Render("test")
 	if err != nil {
 		t.Errorf("nil Renderer.Render() error = %v", err)
@@ -311,7 +311,7 @@ func TestRenderer_NilSafety(t *testing.T) {
 		t.Errorf("nil Renderer.Render() = %v, want %v", output, "test")
 	}
 
-	// 测试 nil 渲染器的其他方法
+	// test other methods on a nil renderer
 	if r.GetStyle() != "dark" {
 		t.Errorf("nil Renderer.GetStyle() = %v, want dark", r.GetStyle())
 	}
@@ -320,12 +320,12 @@ func TestRenderer_NilSafety(t *testing.T) {
 		t.Errorf("nil Renderer.GetWidth() = %v, want 80", r.GetWidth())
 	}
 
-	// SetSize 和 SetStyle 不应该 panic
+	// SetSize and SetStyle should not panic
 	r.SetSize(100)
 	r.SetStyle("light")
 }
 
-// TestRendererNoPrefix 测试渲染器是否在开头添加额外字符
+// TestRendererNoPrefix tests whether the renderer adds extra characters at the start
 func TestRendererNoPrefix(t *testing.T) {
 	renderer, err := NewRenderer(80, "dark")
 	if err != nil {
@@ -333,7 +333,7 @@ func TestRendererNoPrefix(t *testing.T) {
 	}
 
 	testCases := []string{
-		"这是项目的 README.md 文件内容。从 README 可以看出，这是一个 qodercli 的反编译代码项目。",
+		"This is the project's README.md file content. From the README it can be seen that this is a decompiled code project for qodercli-reverse.",
 		"**Bold** text",
 		"- List item",
 		"1. Numbered item",
@@ -348,8 +348,8 @@ func TestRendererNoPrefix(t *testing.T) {
 				t.Fatalf("Render failed: %v", err)
 			}
 
-			// 检查输出是否以输入开头（忽略可能的 ANSI 转义序列）
-			// 简单检查：输出的字符数应该大于等于输入的字符数
+			// check that output does not start with extra characters (ignoring possible ANSI escape sequences)
+			// simple check: output character count should be >= input character count
 			inputRunes := len([]rune(input))
 			outputRunes := len([]rune(output))
 
@@ -360,14 +360,14 @@ func TestRendererNoPrefix(t *testing.T) {
 			t.Logf("Input bytes: %d", len(input))
 			t.Logf("Output bytes: %d", len(output))
 
-			// 渲染后的内容可能包含 ANSI 转义序列，所以字节数会增加
-			// 但 rune 数应该保持相似（除非渲染器添加了实际字符）
+			// rendered content may contain ANSI escape sequences, so byte count increases
+			// but rune count should stay similar (unless the renderer adds actual characters)
 			if outputRunes < inputRunes {
 				t.Errorf("Output has fewer runes than input: %d < %d", outputRunes, inputRunes)
 			}
 
-			// 检查输入文本是否在输出中（考虑到 markdown 转换）
-			// 对于纯文本，输出应该包含输入
+			// check that input text is in the output (considering markdown transformation)
+			// for plain text, output should contain the input
 			if !containsMarkdownFormatted(output, input) {
 				t.Logf("Warning: Input text not found in output (may have been transformed by markdown)")
 			}
@@ -375,15 +375,15 @@ func TestRendererNoPrefix(t *testing.T) {
 	}
 }
 
-// containsMarkdownFormatted 检查输入文本是否在渲染后的输出中
-// 考虑到 markdown 渲染可能会改变格式（如添加加粗、列表符号等）
+// containsMarkdownFormatted checks whether the input text is in the rendered output
+// considering that markdown rendering may change formatting (e.g. adding bold, list markers, etc.)
 func containsMarkdownFormatted(output, input string) bool {
-	// 移除 ANSI 转义序列后再检查
-	// 这里简化处理：直接检查输入的字符是否按顺序出现在输出中
+	// remove ANSI escape sequences before checking
+	// simplified: directly check whether input characters appear in order in the output
 	outputRunes := removeANSI([]rune(output))
 	inputRunes := []rune(input)
 
-	// 查找输入的连续字符序列在输出中的位置
+	// find the position of the input's contiguous character sequence in the output
 	for i := 0; i <= len(outputRunes)-len(inputRunes); i++ {
 		match := true
 		for j := 0; j < len(inputRunes); j++ {
@@ -397,7 +397,7 @@ func containsMarkdownFormatted(output, input string) bool {
 		}
 	}
 
-	// 如果没有完全匹配，检查是否大部分字符存在
+	// if no exact match, check whether most characters are present
 	matchCount := 0
 	for _, o := range outputRunes {
 		if matchCount < len(inputRunes) && o == inputRunes[matchCount] {
@@ -405,11 +405,11 @@ func containsMarkdownFormatted(output, input string) bool {
 		}
 	}
 
-	// 如果匹配的字符数超过输入的 80%，认为包含
+	// if matched characters exceed 80% of input, consider it contained
 	return matchCount > len(inputRunes)*4/5
 }
 
-// removeANSI 移除 ANSI 转义序列
+// removeANSI removes ANSI escape sequences
 func removeANSI(runes []rune) []rune {
 	var result []rune
 	inEscape := false

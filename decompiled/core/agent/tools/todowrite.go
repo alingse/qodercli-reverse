@@ -1,5 +1,5 @@
-// Package tools TodoWrite 工具实现
-// 反编译自 qodercli v0.1.29
+// Package tools TodoWrite tool implementation
+// Decompiled from qodercli-reverse v0.1.29
 package tools
 
 import (
@@ -10,41 +10,41 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/agent/state"
 )
 
-// TodoWriteParams TodoWrite 工具参数
+// TodoWriteParams TodoWrite tool parameters
 type TodoWriteParams struct {
-	// Todos 任务列表
+	// Todos task list
 	Todos []state.Todo `json:"todos"`
 }
 
-// NotPresent 表示该工具不需要权限参数
+// NotPresent indicates this tool requires no permission parameters
 type NotPresent struct{}
 
-// TodoWriteResponseMetadata 响应元数据
+// TodoWriteResponseMetadata response metadata
 type TodoWriteResponseMetadata struct {
-	// OldTodos 更新前的任务列表
+	// OldTodos task list before update
 	OldTodos []state.Todo `json:"oldTodos"`
-	// NewTodos 更新后的任务列表
+	// NewTodos task list after update
 	NewTodos []state.Todo `json:"newTodos"`
 }
 
-// todoWriteTool TodoWrite 工具实现
+// todoWriteTool TodoWrite tool implementation
 type todoWriteTool struct {
 	todoState state.TodoState
 }
 
-// NewTodoWriteTool 创建 TodoWrite 工具
+// NewTodoWriteTool creates the TodoWrite tool
 func NewTodoWriteTool(todoState state.TodoState) Tool {
 	return &todoWriteTool{
 		todoState: todoState,
 	}
 }
 
-// Name 返回工具名称
+// Name returns the tool name
 func (t *todoWriteTool) Name() string {
 	return "TodoWrite"
 }
 
-// Description 返回工具描述
+// Description returns the tool description
 func (t *todoWriteTool) Description() string {
 	return `Use this tool to create and update a todo list to track your progress on the user's task.
 
@@ -63,7 +63,7 @@ Task States:
 - cancelled: No longer needed`
 }
 
-// InputSchema 返回输入 Schema
+// InputSchema returns the input schema
 func (t *todoWriteTool) InputSchema() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -100,44 +100,44 @@ func (t *todoWriteTool) InputSchema() map[string]interface{} {
 	}
 }
 
-// Execute 执行工具
+// Execute executes the tool
 func (t *todoWriteTool) Execute(ctx context.Context, input string) (string, error) {
 	var params TodoWriteParams
 	if err := json.Unmarshal([]byte(input), &params); err != nil {
 		return "", fmt.Errorf("failed to parse TodoWrite params: %w", err)
 	}
 
-	// 加载旧的 todos
+	// load old todos
 	oldTodos, err := t.todoState.LoadTodos()
 	if err != nil {
 		return "", fmt.Errorf("failed to load todos: %w", err)
 	}
 
-	// 处理空数组情况
+	// handle empty array case
 	params.Todos = autoFixEmptyTodos(params.Todos)
 
-	// 验证新的 todos
+	// validate new todos
 	if err := t.validateTodos(params.Todos); err != nil {
 		return "", err
 	}
 
-	// 保存新的 todos
+	// save new todos
 	if err := t.todoState.SaveTodos(params.Todos); err != nil {
 		return "", fmt.Errorf("failed to save todos: %w", err)
 	}
 
-	// 构建响应元数据
+	// build response metadata
 	metadata := TodoWriteResponseMetadata{
 		OldTodos: oldTodos,
 		NewTodos: params.Todos,
 	}
 
-	// 构建响应文本
+	// build response text
 	result := t.buildResponse(metadata)
 	return result, nil
 }
 
-// validateTodos 验证任务列表
+// validateTodos validates the task list
 func (t *todoWriteTool) validateTodos(todos []state.Todo) error {
 	for i, todo := range todos {
 		if err := todo.Validate(); err != nil {
@@ -147,21 +147,21 @@ func (t *todoWriteTool) validateTodos(todos []state.Todo) error {
 	return nil
 }
 
-// autoFixEmptyTodos 自动修复空数组
-// 规则: 不允许传递空数组清除列表
-// 当所有任务完成时，保持任务并将状态设为 completed
+// autoFixEmptyTodos auto-fixes empty array
+// rule: empty array not allowed to clear list
+// when all tasks complete, keep tasks with status completed
 func autoFixEmptyTodos(todos []state.Todo) []state.Todo {
 	if len(todos) == 0 {
-		// 返回空列表，但需要特殊处理
-		// 实际上不应该用空数组调用此工具
+		// return empty list, but needs special handling
+		// this tool should not actually be called with empty array
 		return []state.Todo{}
 	}
 	return todos
 }
 
-// buildResponse 构建响应文本
+// buildResponse builds response text
 func (t *todoWriteTool) buildResponse(metadata TodoWriteResponseMetadata) string {
-	// 计算统计信息
+	// calculate statistics
 	oldCount := len(metadata.OldTodos)
 	newCount := len(metadata.NewTodos)
 
@@ -180,7 +180,7 @@ func (t *todoWriteTool) buildResponse(metadata TodoWriteResponseMetadata) string
 		}
 	}
 
-	// 构建响应
+	// build response
 	var result string
 	if oldCount == 0 {
 		result = fmt.Sprintf("Created todo list with %d task(s).\n", newCount)
@@ -210,5 +210,5 @@ func (t *todoWriteTool) buildResponse(metadata TodoWriteResponseMetadata) string
 	return result
 }
 
-// TodoWriteToolName 工具名称常量
+// TodoWriteToolName tool name constant
 const TodoWriteToolName = "TodoWrite"

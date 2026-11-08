@@ -1,80 +1,80 @@
-# 原版 qodercli Compact 实现深度分析
+# Deep Analysis of Original qodercli-reverse Compact Implementation
 
-> **分析方法**: 通过 `which qodercli` 定位二进制文件，使用 `strings` 提取符号表，结合 grep 分析编译后的函数签名和包结构。
+> **Analysis Method**: Locate the binary via `which qodercli-reverse`, use `strings` to extract the symbol table, and analyze compiled function signatures and package structure with grep.
 
-## 执行摘要
+## Executive Summary
 
-本文档是通过对 qodercli 二进制文件 (`/Users/zhihu/.local/bin/qodercli`) 进行逆向工程分析得出的结论。使用 `strings` 工具提取了 157,441 行字符串，从中筛选出 364 行与 compact 相关的内容，并分析了完整的 Go 函数符号表。
+This document presents conclusions from reverse engineering analysis of the qodercli-reverse binary (`/Users/zhihu/.local/bin/qodercli-reverse`). The `strings` tool extracted 157,441 lines of strings, from which 364 compact-related lines were filtered, and the complete Go function symbol table was analyzed.
 
-**关键发现**: 原版 compact 是一个约 4000+ 行的复杂系统，而当前反编译代码只有约 50 行的简化实现。
+**Key Finding**: The original compact is a complex system of ~4000+ lines, while the current decompiled code has only ~50 lines of simplified implementation.
 
-## 目录
+## Table of Contents
 
-- [1. 核心包结构](#1-核心包结构从符号路径推断)
-- [2. CompactTrigger 类型](#2-compacttrigger-类型-typescompacttrigger)
-- [3. 多种压缩策略](#3-多种压缩策略)
-- [4. Token 管理机制](#4-token-管理机制)
-- [5. Session Memory 详细架构](#5-session-memory-详细架构)
-- [6. Pre-Compact Hook 系统](#6-pre-compact-hook-系统)
-- [7. 配置系统](#7-配置系统)
-- [8. TUI 集成](#8-tui-集成)
-- [9. ACP 协议集成](#9-acp-协议集成)
-- [10. 当前实现对比](#10-当前实现对比)
+- [1. Core Package Structure](#1-core-package-structure-inferred-from-symbol-paths)
+- [2. CompactTrigger Type](#2-compacttrigger-type-typescompacttrigger)
+- [3. Multiple Compression Strategies](#3-multiple-compression-strategies)
+- [4. Token Management Mechanism](#4-token-management-mechanism)
+- [5. Session Memory Detailed Architecture](#5-session-memory-detailed-architecture)
+- [6. Pre-Compact Hook System](#6-pre-compact-hook-system)
+- [7. Configuration System](#7-configuration-system)
+- [8. TUI Integration](#8-tui-integration)
+- [9. ACP Protocol Integration](#9-acp-protocol-integration)
+- [10. Current Implementation Comparison](#10-current-implementation-comparison)
 
 ---
 
-## 基于二进制符号的完整架构分析
+## Complete Architecture Analysis Based on Binary Symbols
 
-### 1. 核心包结构 (从符号路径推断)
+### 1. Core Package Structure (inferred from symbol paths)
 
 ```
 core/agent/
-├── compact.go                     # Compact 核心实现
-├── session_memory.go              # Session Memory 集成
-├── hooks/pre_compact/              # Pre-Compact Hook 系统
-│   ├── external.go                # 外部 Hook 实现
-│   └── pre_compact.go             # PreCompactHook 定义
+├── compact.go                     # Compact core implementation
+├── session_memory.go              # Session Memory integration
+├── hooks/pre_compact/              # Pre-Compact Hook system
+│   ├── external.go                # External Hook implementation
+│   └── pre_compact.go             # PreCompactHook definition
 ├── state/
-│   ├── agent_state.go             # Agent 状态管理
-│   ├── model_context.go           # 模型上下文管理
-│   └── session_memory/             # Session Memory 独立包
-│       ├── state.go               # 状态管理
-│       ├── queue.go               # 串行队列
-│       └── limits.go              # 限制配置
+│   ├── agent_state.go             # Agent state management
+│   ├── model_context.go           # Model context management
+│   └── session_memory/             # Session Memory independent package
+│       ├── state.go               # State management
+│       ├── queue.go               # Serial queue
+│       └── limits.go              # Limit configuration
 └── prompt/
-    └── session_memory.go          # Session Memory 提示词
+    └── session_memory.go          # Session Memory prompts
 ```
 
-### 2. CompactTrigger 类型 (types.CompactTrigger)
+### 2. CompactTrigger Type (types.CompactTrigger)
 
-从符号推断有三种触发方式:
-- `IsAuto()` - 自动触发 (上下文超阈值时)
-- `IsManual()` - 手动触发 (/compact 命令)
-- `IsReload()` - 重载触发 (会话恢复时)
+Three trigger modes inferred from symbols:
+- `IsAuto()` - Automatic trigger (when context exceeds threshold)
+- `IsManual()` - Manual trigger (/compact command)
+- `IsReload()` - Reload trigger (on session recovery)
 
-### 3. 多种压缩策略
+### 3. Multiple Compression Strategies
 
-#### 3.1 MicroCompact (微型压缩)
-- 快速、轻量级压缩
-- 有独立的阈值判断 (`shouldRunMicroCompact`)
-- 适用于小幅超限场景
+#### 3.1 MicroCompact (Micro Compression)
+- Fast, lightweight compression
+- Independent threshold judgment (`shouldRunMicroCompact`)
+- Suitable for slight overflow scenarios
 
-#### 3.2 FullCompact (完整压缩)
-- 完整的压缩流程
-- 可能调用 LLM 生成摘要
+#### 3.2 FullCompact (Full Compression)
+- Complete compression flow
+- May call LLM to generate summary
 
-#### 3.3 SessionMemoryCompact (会话记忆压缩)
-- 使用 Session Memory 机制
-- 持久化存储压缩结果
-- 支持断点续传
+#### 3.3 SessionMemoryCompact (Session Memory Compression)
+- Uses Session Memory mechanism
+- Persists compression results
+- Supports resumption
 
-#### 3.4 SummarizeCompact (摘要式压缩)
-- 调用 LLM 生成语义摘要
-- 有配置选项 (`shouldSummarizeCompact`)
+#### 3.4 SummarizeCompact (Summary Compression)
+- Calls LLM to generate semantic summary
+- Has configuration options (`shouldSummarizeCompact`)
 
-#### 3.5 TraditionalSummarizeCompact (传统摘要)
-- 旧版摘要方法 (可能是 fallback)
-- 有多个配置器:
+#### 3.5 TraditionalSummarizeCompact (Traditional Summary)
+- Legacy summary method (possibly fallback)
+- Has multiple configurators:
   - WithMeta
   - WithMetadata
   - WithModelConfig
@@ -82,111 +82,111 @@ core/agent/
   - WithSystemPrompt
   - WithTools
 
-### 4. Token 管理机制
+### 4. Token Management Mechanism
 
-从字符串证据:
-- `getCompactThreshold` - 获取压缩阈值
-- `WarningThreshold %dK` - 警告阈值 (以 K 为单位)
+From string evidence:
+- `getCompactThreshold` - Get compression threshold
+- `WarningThreshold %dK` - Warning threshold (in K units)
 - `Skip micro compact: total history tokens %d less than WarningThreshold %dK`
-- `compact_input_tokens` - 输入 token 计数
-- `compact_output_tokens` - 输出 token 计数
-- `savedTokens` - 节省的 token 数
-- `compressed_count` - 压缩的消息数
-- `total_candidates` - 候选消息总数
-- `kept_messages` - 保留的消息数
+- `compact_input_tokens` - Input token count
+- `compact_output_tokens` - Output token count
+- `savedTokens` - Tokens saved
+- `compressed_count` - Number of compressed messages
+- `total_candidates` - Total candidate messages
+- `kept_messages` - Number of kept messages
 
-### 5. Session Memory 详细架构
+### 5. Session Memory Detailed Architecture
 
-#### 5.1 核心类型
-- `session_memory.State` - 状态接口
-- `session_memory.SMCompactConfig` - 压缩配置
-- `session_memory.SMUpdateConfig` - 更新配置
-- `session_memory.SerialQueue` - 串行队列 (保证顺序)
-- `session_memory.SectionTokenInfo` - 分块 Token 信息
+#### 5.1 Core Types
+- `session_memory.State` - State interface
+- `session_memory.SMCompactConfig` - Compression config
+- `session_memory.SMUpdateConfig` - Update config
+- `session_memory.SerialQueue` - Serial queue (guarantees order)
+- `session_memory.SectionTokenInfo` - Chunk token info
 
-#### 5.2 核心方法
-- `GetCompactConfig()` - 获取压缩配置
-- `GetCurrentMemory()` - 获取当前记忆
-- `GetLastSummarizedMsgId()` - 获取最后摘要的消息 ID
-- `EnsureTemplate()` - 确保模板存在
-- `TriggerUpdate()` - 触发更新
-- `WaitForUpdate()` - 等待更新完成
-- `MarkUpdateStart/Complete()` - 标记更新状态
-- `ResetState()` - 重置状态
-- `countToolCallsSince()` - 统计工具调用次数
-- `hasPendingContent()` - 检查待处理内容
-- `hasPendingToolUse()` - 检查待处理工具调用
+#### 5.2 Core Methods
+- `GetCompactConfig()` - Get compression config
+- `GetCurrentMemory()` - Get current memory
+- `GetLastSummarizedMsgId()` - Get last summarized message ID
+- `EnsureTemplate()` - Ensure template exists
+- `TriggerUpdate()` - Trigger update
+- `WaitForUpdate()` - Wait for update completion
+- `MarkUpdateStart/Complete()` - Mark update status
+- `ResetState()` - Reset state
+- `countToolCallsSince()` - Count tool calls
+- `hasPendingContent()` - Check pending content
+- `hasPendingToolUse()` - Check pending tool use
 
-#### 5.3 截断机制
-- `TruncateContent` - 截断内容
-- `truncateSections` - 截断分块
-- `GenerateOverLimitWarning` - 生成超限警告
-- `GetOverLimitInfo` - 获取超限信息
-- `ParseSectionTokens` - 解析分块 Token
+#### 5.3 Truncation Mechanism
+- `TruncateContent` - Truncate content
+- `truncateSections` - Truncate chunks
+- `GenerateOverLimitWarning` - Generate over-limit warning
+- `GetOverLimitInfo` - Get over-limit info
+- `ParseSectionTokens` - Parse chunk tokens
 
-#### 5.4 持久化
-- `GetMemoryPath()` - 获取记忆文件路径
-- `getMemoryDir()` - 获取记忆目录
-- `IsTemplateEmpty()` - 检查模板是否为空
+#### 5.4 Persistence
+- `GetMemoryPath()` - Get memory file path
+- `getMemoryDir()` - Get memory directory
+- `IsTemplateEmpty()` - Check if template is empty
 
-### 6. Pre-Compact Hook 系统
+### 6. Pre-Compact Hook System
 
-#### 6.1 Hook 类型
-- `pre_compact.PreCompactHook` - 基础 Hook 接口
-- `pre_compact.PreCompactExternalHook` - 外部 Hook
+#### 6.1 Hook Types
+- `pre_compact.PreCompactHook` - Base Hook interface
+- `pre_compact.PreCompactExternalHook` - External Hook
 
-#### 6.2 Hook 输入
-- `hook.PreCompactInput` - Hook 输入数据
-  - `EventName()` - 事件名称
-  - `ToolUseID()` - 工具调用 ID
+#### 6.2 Hook Input
+- `hook.PreCompactInput` - Hook input data
+  - `EventName()` - Event name
+  - `ToolUseID()` - Tool call ID
 
-#### 6.3 Agent Runner 方法
-- `handlePreCompact()` - 处理压缩前逻辑
-- `handleSessionStartAfterCompact()` - 压缩后会话恢复
+#### 6.3 Agent Runner Methods
+- `handlePreCompact()` - Handle pre-compact logic
+- `handleSessionStartAfterCompact()` - Session recovery after compact
 
-### 7. 配置系统
+### 7. Configuration System
 
-#### 7.1 环境配置
-- `IsSessionMemoryCompactEnabled` - Session Memory 开关
-- `AutoCompactEnabled` - 自动压缩开关 (JSON 配置)
-- `GetAutoCompactEnabled()` / `SetAutoCompactEnabled()` - 配置访问
+#### 7.1 Environment Configuration
+- `IsSessionMemoryCompactEnabled` - Session Memory switch
+- `AutoCompactEnabled` - Auto compact switch (JSON config)
+- `GetAutoCompactEnabled()` / `SetAutoCompactEnabled()` - Config access
 
-#### 7.2 阈值配置
-- `getCompactThreshold()` - 获取压缩阈值
+#### 7.2 Threshold Configuration
+- `getCompactThreshold()` - Get compression threshold
 
-### 8. TUI 集成
+### 8. TUI Integration
 
-#### 8.1 CompactCommand 组件
+#### 8.1 CompactCommand Component
 - `tui/components/command/compact.go`
-- 完整的 UI 组件，支持:
-  - 键盘处理 (AddKeyHandler, Default*Handler)
-  - 渲染 (RenderView, RenderItem, RenderProgress)
-  - 状态管理 (GetCheckboxState, SetCheckboxStates)
-  - 刷新机制 (SetRefreshHandler, CancelRefreshHandler)
+- Complete UI component supporting:
+  - Keyboard handling (AddKeyHandler, Default*Handler)
+  - Rendering (RenderView, RenderItem, RenderProgress)
+  - State management (GetCheckboxState, SetCheckboxStates)
+  - Refresh mechanism (SetRefreshHandler, CancelRefreshHandler)
 
-#### 8.2 消息视图
+#### 8.2 Message View
 - `tui/components/messages.CompactResult`
-  - `Render()` - 渲染结果
-  - `IsError()` - 错误检查
-  - `NoContentTips()` - 无内容提示
+  - `Render()` - Render result
+  - `IsError()` - Error check
+  - `NoContentTips()` - No content tip
 
-#### 8.3 处理流程
-- `processCompactPayload` - 处理压缩载荷
-- `handleCompactComplete` - 处理压缩完成
+#### 8.3 Processing Flow
+- `processCompactPayload` - Process compact payload
+- `handleCompactComplete` - Handle compact completion
 
-### 9. ACP (Agent Communication Protocol) 集成
+### 9. ACP (Agent Communication Protocol) Integration
 
-- `acp.(*Session).Compact` - ACP Session 压缩
-- `acp.(*Session).handleCompactEvent` - 处理压缩事件
-- `acp.(*Session).sendCompactionNotification` - 发送压缩通知
+- `acp.(*Session).Compact` - ACP Session compact
+- `acp.(*Session).handleCompactEvent` - Handle compact event
+- `acp.(*Session).sendCompactionNotification` - Send compaction notification
 
-### 10. 关键日志/状态字符串
+### 10. Key Log/Status Strings
 
 ```
-"compaction_triggered"      - 压缩被触发
-"compaction_start"          - 压缩开始
-"compaction_cancel"         - 压缩取消
-"compact_complete"          - 压缩完成
+"compaction_triggered"      - compaction triggered
+"compaction_start"          - compaction started
+"compaction_cancel"         - compaction cancelled
+"compact_complete"          - compaction completed
 "micro compact complete, compressedResults: %d, savedTokens: %d"
 "Starting summarize compact"
 "Finished summarize compact"
@@ -197,9 +197,9 @@ core/agent/
 
 ---
 
-## 当前反编译代码与原版对比
+## Current Decompiled Code vs Original Comparison
 
-### 当前实现 (agent.go:502-557)
+### Current Implementation (agent.go:502-557)
 
 ```go
 func (a *Agent) compactContext(ctx context.Context) error {
@@ -208,65 +208,65 @@ func (a *Agent) compactContext(ctx context.Context) error {
         return nil
     }
     
-    // 1. 保留系统消息
-    // 2. 简单截取前 50 字符生成摘要
-    // 3. 添加摘要作为 system 消息
-    // 4. 保留最后 2 条消息
-    // 5. 更新状态
+    // 1. Keep system messages
+    // 2. Simple truncation, take first 50 chars as summary
+    // 3. Add summary as system message
+    // 4. Keep last 2 messages
+    // 5. Update state
     
     return nil
 }
 ```
 
-### 功能差距分析
+### Feature Gap Analysis
 
-| 功能模块 | 原版 | 当前反编译版 | 差距 |
-|---------|------|-------------|------|
-| **触发方式** | Auto/Manual/Reload | 仅 Manual | 🔴 缺少自动触发 |
-| **Token 计数** | 完整追踪 | 无 | 🔴 完全缺失 |
-| **阈值检测** | getCompactThreshold | 无 | 🔴 完全缺失 |
-| **MicroCompact** | 有 | 无 | 🔴 完全缺失 |
-| **Session Memory** | 独立包，完整实现 | 无 | 🔴 完全缺失 |
-| **LLM 摘要** | summarizeCompact | 无 | 🔴 完全缺失 |
-| **Pre-Compact Hook** | 完整 Hook 系统 | 无 | 🔴 完全缺失 |
-| **配置系统** | AutoCompactEnabled 等 | 无 | 🔴 完全缺失 |
-| **持久化** | Session Memory 文件 | 无 | 🔴 完全缺失 |
-| **TUI 组件** | CompactCommand| 无 | 🔴 完全缺失 |
-| **ACP 集成** | sendCompactionNotification | 无 | 🔴 完全缺失 |
-| **压缩策略** | 5 种策略 | 1 种简单策略 | 🔴 严重简化 |
-| **状态管理** | SerialQueue 保证顺序 | 简单切片 | 🟡 简化 |
-| **分块处理** | SectionTokenInfo | 无 | 🔴 完全缺失 |
+| Feature Module | Original | Current Decompiled | Gap |
+|----------------|----------|-------------------|-----|
+| **Trigger Methods** | Auto/Manual/Reload | Manual only | 🔴 Missing auto trigger |
+| **Token Counting** | Full tracking | None | 🔴 Completely missing |
+| **Threshold Detection** | getCompactThreshold | None | 🔴 Completely missing |
+| **MicroCompact** | Yes | No | 🔴 Completely missing |
+| **Session Memory** | Independent package, full impl | None | 🔴 Completely missing |
+| **LLM Summary** | summarizeCompact | None | 🔴 Completely missing |
+| **Pre-Compact Hook** | Full Hook system | None | 🔴 Completely missing |
+| **Config System** | AutoCompactEnabled etc. | None | 🔴 Completely missing |
+| **Persistence** | Session Memory files | None | 🔴 Completely missing |
+| **TUI Component** | CompactCommand | None | 🔴 Completely missing |
+| **ACP Integration** | sendCompactionNotification | None | 🔴 Completely missing |
+| **Compression Strategy** | 5 strategies | 1 simple strategy | 🔴 Severely simplified |
+| **State Management** | SerialQueue ensures order | Simple slice | 🟡 Simplified |
+| **Chunk Processing** | SectionTokenInfo | None | 🔴 Completely missing |
 
-### 代码行数对比
+### Code Line Count Comparison
 
-| 项目 | 原版 (推测) | 当前 |
-|-----|----------|------|
-| Compact 核心 | ~2000+ 行 | ~50 行 |
-| Session Memory | ~1000+ 行 | 0 行 |
-| Hooks | ~500+ 行 | 0 行 |
-| TUI 组件 | ~800+ 行 | 0 行 |
-| **总计** | **~4000+ 行** | **~50 行** |
+| Project | Original (estimated) | Current |
+|---------|---------------------|---------|
+| Compact core | ~2000+ lines | ~50 lines |
+| Session Memory | ~1000+ lines | 0 lines |
+| Hooks | ~500+ lines | 0 lines |
+| TUI components | ~800+ lines | 0 lines |
+| **Total** | **~4000+ lines** | **~50 lines** |
 
 ---
 
-## 增强建议优先级
+## Enhancement Priority Suggestions
 
-### P0 - 核心功能 (必须实现)
-1. Token 计数和阈值检测
-2. 自动 Compact 触发机制
-3. CompactTrigger 类型定义
+### P0 - Core Features (must implement)
+1. Token counting and threshold detection
+2. Auto Compact trigger mechanism
+3. CompactTrigger type definition
 
-### P1 - 重要增强
-4. MicroCompact 快速压缩
-5. Pre-Compact Hook 系统
-6. Session Memory 基础框架
+### P1 - Important Enhancements
+4. MicroCompact fast compression
+5. Pre-Compact Hook system
+6. Session Memory basic framework
 
-### P2 - 体验优化
-7. TUI CompactCommand 组件
-8. 配置系统 (AutoCompactEnabled)
-9. 压缩统计 (savedTokens 等)
+### P2 - UX Optimization
+7. TUI CompactCommand component
+8. Config system (AutoCompactEnabled)
+9. Compression statistics (savedTokens, etc.)
 
-### P3 - 高级功能
-10. LLM 摘要 (summarizeCompact)
-11. ACP 集成
-12. 持久化和断点续传
+### P3 - Advanced Features
+10. LLM summary (summarizeCompact)
+11. ACP integration
+12. Persistence and resumption

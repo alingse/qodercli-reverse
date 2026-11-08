@@ -1,69 +1,69 @@
 # System Prompt Builder
 
-qodercli 的系统提示词构建器，参考官方二进制逆向分析实现。
+System prompt builder for qodercli-reverse, implemented based on reverse engineering analysis of the official binary.
 
-## 功能特性
+## Features
 
-- **模块化设计**: 角色定义、工具指南、权限规则、环境信息、项目上下文分离
-- **自动检测**: 自动检测项目类型 (Go/Node/Python/Rust/Java)
-- **项目上下文**: 加载 AGENTS.md, .claude/, .cursorrules 等项目特定指令
-- **环境信息**: 自动收集 OS, Git 状态, 开发环境版本
-- **模板支持**: 使用 Go template 支持变量替换
+- **Modular design**: Role definition, tool guide, permission rules, environment info, and project context are separated
+- **Auto detection**: Automatically detects project type (Go/Node/Python/Rust/Java)
+- **Project context**: Loads project-specific instructions such as AGENTS.md, .claude/, .cursorrules
+- **Environment info**: Automatically collects OS, Git status, and development environment versions
+- **Template support**: Supports variable substitution using Go templates
 
-## 快速开始
+## Quick Start
 
-### 基础用法
+### Basic Usage
 
 ```go
-// 使用默认配置构建系统提示词
+// Build system prompt with default configuration
 config := utils.DefaultSystemPromptConfig()
 prompt, err := utils.BuildSystemPrompt(config)
 ```
 
-### 命令行使用
+### Command Line Usage
 
 ```bash
-# 自动构建（默认）- 包含项目上下文和环境信息
-qodercli
+# Auto build (default) - includes project context and environment info
+qodercli-reverse
 
-# 使用最小化提示词
-qodercli --minimal-prompt
+# Use minimal prompt
+qodercli-reverse --minimal-prompt
 
-# 禁用项目信息
-qodercli --no-project-info
+# Disable project info
+qodercli-reverse --no-project-info
 
-# 使用自定义提示词文件
-qodercli --system-prompt-file ./my_prompt.md
+# Use custom prompt file
+qodercli-reverse --system-prompt-file ./my_prompt.md
 ```
 
-## 架构设计
+## Architecture Design
 
-### 组件层次
+### Component Hierarchy
 
 ```
 SystemPromptBuilderV2
-├── 角色定义 (Role Definition)     [P0]
-├── 核心指令 (Core Instructions)   [P0]
-├── 工具指南 (Tool Guide)          [P0]
-├── 权限规则 (Permission Rules)    [P0]
-├── 环境信息 (Environment Info)    [P1] - 可禁用
-├── 项目上下文 (Project Context)   [P1] - 可禁用
-├── 编码规范 (Coding Standards)    [P1] - 可禁用
-└── 会话上下文 (Session Context)   [P2] - 可选
+├── Role Definition [P0]
+├── Core Instructions [P0]
+├── Tool Guide [P0]
+├── Permission Rules [P0]
+├── Environment Info [P1] - can be disabled
+├── Project Context [P1] - can be disabled
+├── Coding Standards [P1] - can be disabled
+└── Session Context [P2] - optional
 ```
 
-### 核心类型
+### Core Types
 
 ```go
-// 系统提示词构建器
+// System prompt builder
 type SystemPromptBuilderV2 struct {
-    vars *TemplateVars           // 模板变量
-    envCollector *EnvironmentCollector      // 环境收集器
-    projectLoader *ProjectContextLoader     // 项目加载器
-    sessionContext *SessionContext          // 会话上下文
+    vars *TemplateVars           // Template variables
+    envCollector *EnvironmentCollector      // Environment collector
+    projectLoader *ProjectContextLoader     // Project loader
+    sessionContext *SessionContext          // Session context
 }
 
-// 环境信息
+// Environment info
 type EnvironmentInfo struct {
     OS, Architecture, Shell string
     WorkingDir, HomeDir string
@@ -72,24 +72,24 @@ type EnvironmentInfo struct {
     // ...
 }
 
-// 项目上下文
+// Project context
 type ProjectContext struct {
     Name, Type, RootPath string
-    AgentsMDContent string      // AGENTS.md 内容
-    ClaudeDirContent string     // .claude/ 目录内容
-    CodingStandards string      // 编码规范
+    AgentsMDContent string      // AGENTS.md content
+    ClaudeDirContent string     // .claude/ directory content
+    CodingStandards string      // Coding standards
     // ...
 }
 ```
 
-## 配置选项
+## Configuration Options
 
-### 构建器配置
+### Builder Configuration
 
 ```go
 builder := prompts.NewSystemPromptBuilderV2(vars)
 
-// 启用/禁用组件
+// Enable/disable components
 builder.WithRoleDefinition(true).
     WithToolGuide(true).
     WithPermissionRules(true).
@@ -98,21 +98,21 @@ builder.WithRoleDefinition(true).
     WithCodingStandards(true).
     WithSessionContext(false)
 
-// 设置自定义角色
+// Set custom role
 builder.WithCustomRole("You are a React expert.")
 
-// 添加自定义章节
+// Add custom section
 builder.AddCustomSection("Custom Rules", "1. Do this\n2. Do that", 100)
 
-// 构建
+// Build
 prompt, err := builder.Build()
 ```
 
-### 命令行配置
+### Command Line Configuration
 
 ```go
 config := &utils.SystemPromptConfig{
-    AppName:              "qodercli",
+    AppName:              "qodercli-reverse",
     BrandName:            "Qoder",
     Mode:                 "main",  // "main", "subagent", "minimal"
     EnableProjectContext: true,
@@ -125,11 +125,11 @@ config := &utils.SystemPromptConfig{
 prompt, err := utils.BuildSystemPrompt(config)
 ```
 
-## 项目特定指令
+## Project-Specific Instructions
 
 ### AGENTS.md
 
-在项目根目录创建 `AGENTS.md` 文件：
+Create an `AGENTS.md` file in the project root:
 
 ```markdown
 # Project Guidelines
@@ -150,20 +150,20 @@ prompt, err := utils.BuildSystemPrompt(config)
 - Service layer for business logic
 ```
 
-### .claude/ 目录
+### .claude/ Directory
 
-创建 `.claude/` 目录存放配置：
+Create a `.claude/` directory to store configuration:
 
 ```
 .claude/
-├── CLAUDE.md          # 主要配置
-├── instructions.md    # 额外指令
-└── context.md         # 项目上下文
+├── CLAUDE.md          # Main configuration
+├── instructions.md    # Additional instructions
+└── context.md         # Project context
 ```
 
 ### .cursorrules
 
-支持 `.cursorrules` 文件：
+Supports `.cursorrules` files:
 
 ```
 Always use TypeScript strict mode
@@ -171,45 +171,45 @@ Prefer functional components over class components
 Use tailwind for styling
 ```
 
-## 项目类型检测
+## Project Type Detection
 
-自动检测以下项目类型：
+Automatically detects the following project types:
 
-| 文件 | 类型 | 语言 |
-|------|------|------|
+| File | Type | Language |
+|------|------|----------|
 | go.mod | go | Go |
 | package.json | node | JavaScript/TypeScript |
 | pyproject.toml/setup.py | python | Python |
 | Cargo.toml | rust | Rust |
 | pom.xml/build.gradle | java | Java |
 
-## 环境信息收集
+## Environment Info Collection
 
-自动收集以下信息：
+Automatically collects the following info:
 
-### 系统信息
+### System Info
 - OS (linux/darwin/windows)
 - Architecture (amd64/arm64)
 - Shell (bash/zsh/powershell)
 - Working Directory
 
-### Git 信息
+### Git Info
 - Repository status
 - Current branch
 - Latest commit
 - Remote URL
 - Modified/untracked files count
 
-### 开发环境
+### Development Environment
 - Go version
 - Node.js version
 - Python version
 - Java version
 - Rust version
 
-## 高级用法
+## Advanced Usage
 
-### 子 Agent 提示词
+### Subagent Prompt
 
 ```go
 config := &utils.SystemPromptConfig{
@@ -219,7 +219,7 @@ config := &utils.SystemPromptConfig{
 prompt, err := utils.BuildSystemPrompt(config)
 ```
 
-### 最小化提示词
+### Minimal Prompt
 
 ```go
 config := &utils.SystemPromptConfig{
@@ -228,18 +228,18 @@ config := &utils.SystemPromptConfig{
 prompt, err := utils.BuildSystemPrompt(config)
 ```
 
-### 手动构建
+### Manual Build
 
 ```go
 builder := prompts.NewSystemPromptBuilderV2(vars)
 
-// 收集环境信息
+// Collect environment info
 envInfo, err := builder.CollectEnvironment()
 
-// 收集项目上下文
+// Collect project context
 projectCtx, err := builder.CollectProjectContext("/path/to/project")
 
-// 设置会话上下文
+// Set session context
 builder.SetSessionContext(&prompts.SessionContext{
     SessionID:       "session-123",
     PreviousSummary: "Previously we discussed...",
@@ -249,47 +249,47 @@ builder.SetSessionContext(&prompts.SessionContext{
 prompt, err := builder.Build()
 ```
 
-## 模板变量
+## Template Variables
 
-可用的模板变量：
+Available template variables:
 
-| 变量 | 说明 | 默认值 |
-|------|------|--------|
-| `{{.AppName}}` | 应用名称 | qodercli |
-| `{{.BrandName}}` | 品牌名称 | Qoder |
-| `{{.ProductName}}` | 产品名称 | Qoder CLI |
-| `{{.AgentName}}` | Agent 名称 | "" |
-| `{{.ReadToolName}}` | 读取工具名 | Read |
-| `{{.BashToolName}}` | Bash 工具名 | Bash |
-| `{{.SearchCodebaseTool}}` | 搜索工具名 | SearchCodebase |
-| `{{.SearchSymbolTool}}` | 符号搜索工具名 | SearchSymbol |
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `{{.AppName}}` | Application name | qodercli-reverse |
+| `{{.BrandName}}` | Brand name | Qoder |
+| `{{.ProductName}}` | Product name | Qoder CLI |
+| `{{.AgentName}}` | Agent name | "" |
+| `{{.ReadToolName}}` | Read tool name | Read |
+| `{{.BashToolName}}` | Bash tool name | Bash |
+| `{{.SearchCodebaseTool}}` | Search tool name | SearchCodebase |
+| `{{.SearchSymbolTool}}` | Symbol search tool name | SearchSymbol |
 
-## 与官方架构对齐
+## Alignment with Official Architecture
 
-参考官方二进制分析：
+Reference official binary analysis:
 
 ```
-code.alibaba-inc.com/qoder-core/qodercli/acp.(*QoderAcpAgent).buildPrompt
-code.alibaba-inc.com/qoder-core/qodercli/core/agent.(*agentContext).GetSystemPrompt
-code.alibaba-inc.com/qoder-core/qodercli/core/resource/command.loadBuiltinPromptsCommands
-code.alibaba-inc.com/qoder-core/qodercli/tui/texts.(*Service).GetText
+code.alibaba-inc.com/qoder-core/qodercli-reverse/acp.(*QoderAcpAgent).buildPrompt
+code.alibaba-inc.com/qoder-core/qodercli-reverse/core/agent.(*agentContext).GetSystemPrompt
+code.alibaba-inc.com/qoder-core/qodercli-reverse/core/resource/command.loadBuiltinPromptsCommands
+code.alibaba-inc.com/qoder-core/qodercli-reverse/tui/texts.(*Service).GetText
 ```
 
-实现对应关系：
+Implementation correspondence:
 - `acp.buildPrompt` → `SystemPromptBuilderV2.Build()`
 - `agent.GetSystemPrompt` → `utils.BuildSystemPrompt()`
 - `command.loadBuiltinPromptsCommands` → `builtin.go`
 - `texts.GetText` → `ProjectContextLoader`
 
-## 调试
+## Debugging
 
-启用调试日志查看构建过程：
+Enable debug logging to view the build process:
 
 ```bash
-qodercli --debug
+qodercli-reverse --debug
 ```
 
-日志输出：
+Log output:
 ```
 [DEBUG] Building system prompt with mode: main
 [DEBUG] Detected project type: go
@@ -297,9 +297,9 @@ qodercli --debug
 [DEBUG] Built system prompt, length: 3500
 ```
 
-## 示例
+## Examples
 
-### 完整示例
+### Complete Example
 
 ```go
 package main
@@ -324,9 +324,9 @@ func main() {
 }
 ```
 
-### 自定义项目指令
+### Custom Project Instructions
 
-创建 `AGENTS.md`：
+Create `AGENTS.md`:
 
 ```markdown
 # My Project
@@ -347,15 +347,15 @@ func main() {
 - Context-first function parameters
 ```
 
-运行：
+Run:
 ```bash
-qodercli
+qodercli-reverse
 ```
 
-系统提示词将自动包含 AGENTS.md 的内容。
+The system prompt will automatically include the content of AGENTS.md.
 
-## 参考
+## References
 
-- `extracted_system_prompts.md` - 提取的系统提示词
-- `extracted_system_prompts_v2.md` - 完整版系统提示词
-- `docs/official-architecture.md` - 官方架构分析
+- `extracted_system_prompts.md` - Extracted system prompts
+- `extracted_system_prompts_v2.md` - Full version system prompts
+- `docs/official-architecture.md` - Official architecture analysis

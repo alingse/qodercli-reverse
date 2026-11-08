@@ -1,5 +1,5 @@
-// Package mcp MCP (Model Context Protocol) 客户端实现
-// 反编译自 qodercli v0.1.29
+// Package mcp MCP (Model Context Protocol) client implementation
+// Reverse-engineered from qodercli-reverse v0.1.29
 package mcp
 
 import (
@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-// ServerConfig MCP 服务器配置
+// ServerConfig MCP server configuration.
 type ServerConfig struct {
 	Name    string            `json:"name"`
 	Command string            `json:"command"`
@@ -26,12 +26,12 @@ type ServerConfig struct {
 	URL     string            `json:"url,omitempty"`
 }
 
-// ServersConfig MCP 服务器配置列表
+// ServersConfig MCP server configuration list.
 type ServersConfig struct {
 	Servers map[string]*ServerConfig `json:"mcpServers"`
 }
 
-// Client MCP 客户端
+// Client MCP client.
 type Client struct {
 	config       *ServerConfig
 	cmd          *exec.Cmd
@@ -47,30 +47,30 @@ type Client struct {
 	capabilities ServerCapabilities
 }
 
-// ServerCapabilities 服务器能力
+// ServerCapabilities server capabilities.
 type ServerCapabilities struct {
 	Tools     *ToolsCapability     `json:"tools,omitempty"`
 	Resources *ResourcesCapability `json:"resources,omitempty"`
 	Prompts   *PromptsCapability   `json:"prompts,omitempty"`
 }
 
-// ToolsCapability 工具能力
+// ToolsCapability tool capability.
 type ToolsCapability struct {
 	ListChanged bool `json:"listChanged,omitempty"`
 }
 
-// ResourcesCapability 资源能力
+// ResourcesCapability resource capability.
 type ResourcesCapability struct {
 	Subscribe   bool `json:"subscribe,omitempty"`
 	ListChanged bool `json:"listChanged,omitempty"`
 }
 
-// PromptsCapability 提示能力
+// PromptsCapability prompt capability.
 type PromptsCapability struct {
 	ListChanged bool `json:"listChanged,omitempty"`
 }
 
-// Request JSON-RPC 请求
+// Request JSON-RPC request.
 type Request struct {
 	JSONRPC string          `json:"jsonrpc"`
 	ID      int             `json:"id,omitempty"`
@@ -78,7 +78,7 @@ type Request struct {
 	Params  json.RawMessage `json:"params,omitempty"`
 }
 
-// Response JSON-RPC 响应
+// Response JSON-RPC response.
 type Response struct {
 	JSONRPC string          `json:"jsonrpc"`
 	ID      int             `json:"id,omitempty"`
@@ -86,26 +86,26 @@ type Response struct {
 	Error   *Error          `json:"error,omitempty"`
 }
 
-// Error JSON-RPC 错误
+// Error JSON-RPC error.
 type Error struct {
 	Code    int             `json:"code"`
 	Message string          `json:"message"`
 	Data    json.RawMessage `json:"data,omitempty"`
 }
 
-// Notification JSON-RPC 通知
+// Notification JSON-RPC notification.
 type Notification struct {
 	JSONRPC string          `json:"jsonrpc"`
 	Method  string          `json:"method"`
 	Params  json.RawMessage `json:"params,omitempty"`
 }
 
-// Error 实现 error 接口
+// Error implements the error interface.
 func (e *Error) Error() string {
 	return fmt.Sprintf("JSON-RPC error %d: %s", e.Code, e.Message)
 }
 
-// NewClient 创建 MCP 客户端
+// NewClient creates an MCP client.
 func NewClient(config *ServerConfig) (*Client, error) {
 	return &Client{
 		config:    config,
@@ -114,29 +114,29 @@ func NewClient(config *ServerConfig) (*Client, error) {
 	}, nil
 }
 
-// Start 启动 MCP 服务器
+// Start starts the MCP server.
 func (c *Client) Start(ctx context.Context) error {
 	if c.config.Type != "" && c.config.Type != "stdio" {
 		return fmt.Errorf("unsupported server type: %s", c.config.Type)
 	}
 
-	// 构建命令
+	// build command
 	cmd := exec.CommandContext(ctx, c.config.Command, c.config.Args...)
 
-	// 设置工作目录
+	// set working directory
 	if c.config.Cwd != "" {
 		cmd.Dir = c.config.Cwd
 	} else {
 		cmd.Dir, _ = os.Getwd()
 	}
 
-	// 设置环境变量
+	// set environment variables
 	cmd.Env = os.Environ()
 	for k, v := range c.config.Env {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("%s=%s", k, v))
 	}
 
-	// 获取管道
+	// get pipes
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return fmt.Errorf("failed to create stdin pipe: %w", err)
@@ -152,7 +152,7 @@ func (c *Client) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to create stderr pipe: %w", err)
 	}
 
-	// 启动进程
+	// start process
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start server: %w", err)
 	}
@@ -162,10 +162,10 @@ func (c *Client) Start(ctx context.Context) error {
 	c.stdout = stdout
 	c.stderr = stderr
 
-	// 启动消息读取循环
+	// start message read loop
 	go c.readLoop(ctx)
 
-	// 初始化
+	// initialize
 	if err := c.initialize(ctx); err != nil {
 		c.Stop()
 		return fmt.Errorf("failed to initialize: %w", err)
@@ -174,7 +174,7 @@ func (c *Client) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop 停止 MCP 服务器
+// Stop stops the MCP server.
 func (c *Client) Stop() error {
 	c.mu.Lock()
 	if c.closed {
@@ -185,7 +185,7 @@ func (c *Client) Stop() error {
 	close(c.closeChan)
 	c.mu.Unlock()
 
-	// 关闭管道
+	// close pipes
 	if c.stdin != nil {
 		c.stdin.Close()
 	}
@@ -196,7 +196,7 @@ func (c *Client) Stop() error {
 		c.stderr.Close()
 	}
 
-	// 终止进程
+	// terminate process
 	if c.cmd != nil && c.cmd.Process != nil {
 		c.cmd.Process.Kill()
 		c.cmd.Wait()
@@ -205,7 +205,7 @@ func (c *Client) Stop() error {
 	return nil
 }
 
-// readLoop 消息读取循环
+// readLoop message read loop.
 func (c *Client) readLoop(ctx context.Context) {
 	scanner := bufio.NewScanner(c.stdout)
 
@@ -227,7 +227,7 @@ func (c *Client) readLoop(ctx context.Context) {
 			continue
 		}
 
-		// 解析消息
+		// parse message
 		var msg struct {
 			JSONRPC string `json:"jsonrpc"`
 			ID      int    `json:"id"`
@@ -238,7 +238,7 @@ func (c *Client) readLoop(ctx context.Context) {
 			continue
 		}
 
-		// 处理响应
+		// handle response
 		if msg.ID > 0 && msg.Method == "" {
 			var resp Response
 			if err := json.Unmarshal([]byte(line), &resp); err == nil {
@@ -246,7 +246,7 @@ func (c *Client) readLoop(ctx context.Context) {
 			}
 		}
 
-		// 处理通知
+		// handle notification
 		if msg.Method != "" && msg.ID == 0 {
 			var notif Notification
 			if err := json.Unmarshal([]byte(line), &notif); err == nil {
@@ -256,7 +256,7 @@ func (c *Client) readLoop(ctx context.Context) {
 	}
 }
 
-// handleResponse 处理响应
+// handleResponse handles a response.
 func (c *Client) handleResponse(resp *Response) {
 	c.mu.Lock()
 	ch, exists := c.pending[resp.ID]
@@ -270,19 +270,19 @@ func (c *Client) handleResponse(resp *Response) {
 	}
 }
 
-// handleNotification 处理通知
+// handleNotification handles a notification.
 func (c *Client) handleNotification(notif *Notification) {
 	switch notif.Method {
 	case "notifications/tools/list_changed":
-		// 工具列表变更
+		// tool list changed
 	case "notifications/resources/list_changed":
-		// 资源列表变更
+		// resource list changed
 	case "notifications/prompts/list_changed":
-		// 提示列表变更
+		// prompt list changed
 	}
 }
 
-// call 调用方法
+// call invokes a method.
 func (c *Client) call(ctx context.Context, method string, params interface{}) (*Response, error) {
 	c.mu.Lock()
 	if c.closed {
@@ -293,7 +293,7 @@ func (c *Client) call(ctx context.Context, method string, params interface{}) (*
 	c.requestID++
 	id := c.requestID
 
-	// 构建请求
+	// build request
 	req := &Request{
 		JSONRPC: "2.0",
 		ID:      id,
@@ -309,12 +309,12 @@ func (c *Client) call(ctx context.Context, method string, params interface{}) (*
 		req.Params = data
 	}
 
-	// 创建响应通道
+	// create response channel
 	ch := make(chan *Response, 1)
 	c.pending[id] = ch
 	c.mu.Unlock()
 
-	// 发送请求
+	// send request
 	data, err := json.Marshal(req)
 	if err != nil {
 		c.mu.Lock()
@@ -330,7 +330,7 @@ func (c *Client) call(ctx context.Context, method string, params interface{}) (*
 		return nil, fmt.Errorf("write request: %w", err)
 	}
 
-	// 等待响应
+	// wait for response
 	select {
 	case <-ctx.Done():
 		c.mu.Lock()
@@ -350,7 +350,7 @@ func (c *Client) call(ctx context.Context, method string, params interface{}) (*
 	}
 }
 
-// initialize 初始化连接
+// initialize initializes the connection.
 func (c *Client) initialize(ctx context.Context) error {
 	params := map[string]interface{}{
 		"protocolVersion": "2024-11-05",
@@ -367,7 +367,7 @@ func (c *Client) initialize(ctx context.Context) error {
 			},
 		},
 		"clientInfo": map[string]string{
-			"name":    "qodercli",
+			"name":    "qodercli-reverse",
 			"version": "0.1.29",
 		},
 	}
@@ -393,7 +393,7 @@ func (c *Client) initialize(ctx context.Context) error {
 	c.capabilities = result.Capabilities
 	c.initDone = true
 
-	// 发送 initialized 通知
+	// send initialized notification
 	notif := &Notification{
 		JSONRPC: "2.0",
 		Method:  "notifications/initialized",
@@ -404,7 +404,7 @@ func (c *Client) initialize(ctx context.Context) error {
 	return nil
 }
 
-// ListTools 列出工具
+// ListTools lists tools.
 func (c *Client) ListTools(ctx context.Context) ([]Tool, error) {
 	resp, err := c.call(ctx, "tools/list", nil)
 	if err != nil {
@@ -422,7 +422,7 @@ func (c *Client) ListTools(ctx context.Context) ([]Tool, error) {
 	return result.Tools, nil
 }
 
-// CallTool 调用工具
+// CallTool calls a tool.
 func (c *Client) CallTool(ctx context.Context, name string, arguments map[string]interface{}) (*ToolResult, error) {
 	params := map[string]interface{}{
 		"name":      name,
@@ -442,7 +442,7 @@ func (c *Client) CallTool(ctx context.Context, name string, arguments map[string
 	return &result, nil
 }
 
-// ListResources 列出资源
+// ListResources lists resources.
 func (c *Client) ListResources(ctx context.Context) ([]Resource, error) {
 	resp, err := c.call(ctx, "resources/list", nil)
 	if err != nil {
@@ -460,7 +460,7 @@ func (c *Client) ListResources(ctx context.Context) ([]Resource, error) {
 	return result.Resources, nil
 }
 
-// ReadResource 读取资源
+// ReadResource reads a resource.
 func (c *Client) ReadResource(ctx context.Context, uri string) (*ResourceContent, error) {
 	params := map[string]string{
 		"uri": uri,
@@ -479,7 +479,7 @@ func (c *Client) ReadResource(ctx context.Context, uri string) (*ResourceContent
 	return &result, nil
 }
 
-// ListPrompts 列出提示
+// ListPrompts lists prompts.
 func (c *Client) ListPrompts(ctx context.Context) ([]Prompt, error) {
 	resp, err := c.call(ctx, "prompts/list", nil)
 	if err != nil {
@@ -497,7 +497,7 @@ func (c *Client) ListPrompts(ctx context.Context) ([]Prompt, error) {
 	return result.Prompts, nil
 }
 
-// GetPrompt 获取提示
+// GetPrompt gets a prompt.
 func (c *Client) GetPrompt(ctx context.Context, name string, arguments map[string]string) (*PromptMessage, error) {
 	params := map[string]interface{}{
 		"name":      name,
@@ -517,26 +517,26 @@ func (c *Client) GetPrompt(ctx context.Context, name string, arguments map[strin
 	return &result, nil
 }
 
-// Tool MCP 工具
+// Tool MCP tool.
 type Tool struct {
 	Name        string                 `json:"name"`
 	Description string                 `json:"description"`
 	InputSchema map[string]interface{} `json:"inputSchema"`
 }
 
-// ToolResult 工具结果
+// ToolResult tool result.
 type ToolResult struct {
 	Content []Content `json:"content"`
 	IsError bool      `json:"isError,omitempty"`
 }
 
-// Content 内容
+// Content content.
 type Content struct {
 	Type string `json:"type"`
 	Text string `json:"text,omitempty"`
 }
 
-// Resource MCP 资源
+// Resource MCP resource.
 type Resource struct {
 	URI         string `json:"uri"`
 	Name        string `json:"name"`
@@ -544,7 +544,7 @@ type Resource struct {
 	MimeType    string `json:"mimeType,omitempty"`
 }
 
-// ResourceContent 资源内容
+// ResourceContent resource content.
 type ResourceContent struct {
 	URI      string `json:"uri"`
 	MimeType string `json:"mimeType,omitempty"`
@@ -552,33 +552,33 @@ type ResourceContent struct {
 	Blob     []byte `json:"blob,omitempty"`
 }
 
-// Prompt MCP 提示
+// Prompt MCP prompt.
 type Prompt struct {
 	Name        string     `json:"name"`
 	Description string     `json:"description,omitempty"`
 	Arguments   []Argument `json:"arguments,omitempty"`
 }
 
-// Argument 参数
+// Argument argument.
 type Argument struct {
 	Name        string `json:"name"`
 	Description string `json:"description,omitempty"`
 	Required    bool   `json:"required,omitempty"`
 }
 
-// PromptMessage 提示消息
+// PromptMessage prompt message.
 type PromptMessage struct {
 	Description string    `json:"description,omitempty"`
 	Messages    []Message `json:"messages"`
 }
 
-// Message 消息
+// Message message.
 type Message struct {
 	Role    string  `json:"role"`
 	Content Content `json:"content"`
 }
 
-// LoadConfig 加载 MCP 配置
+// LoadConfig loads MCP config.
 func LoadConfig(path string) (*ServersConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -593,7 +593,7 @@ func LoadConfig(path string) (*ServersConfig, error) {
 	return &config, nil
 }
 
-// LoadGlobalConfig 加载全局配置
+// LoadGlobalConfig loads global config.
 func LoadGlobalConfig() (*ServersConfig, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -604,7 +604,7 @@ func LoadGlobalConfig() (*ServersConfig, error) {
 	return LoadConfig(configPath)
 }
 
-// LoadProjectConfig 加载项目配置
+// LoadProjectConfig loads project config.
 func LoadProjectConfig() (*ServersConfig, error) {
 	configPath := ".mcp.json"
 	return LoadConfig(configPath)

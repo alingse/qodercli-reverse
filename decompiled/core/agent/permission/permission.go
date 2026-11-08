@@ -1,5 +1,5 @@
-// Package permission 权限系统实现
-// 反编译自 qodercli v0.1.29
+// Package permission Permission system implementation
+// Decompiled from qodercli-reverse v0.1.29
 package permission
 
 import (
@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-// Mode 权限模式
+// Mode Permission mode
 type Mode string
 
 const (
@@ -20,7 +20,7 @@ const (
 	ModeAutoDeny    Mode = "auto-deny"
 )
 
-// Decision 权限决策
+// Decision Permission decision
 type Decision string
 
 const (
@@ -29,14 +29,14 @@ const (
 	DecisionAsk   Decision = "ask"
 )
 
-// Rule 权限规则
+// Rule Permission rule
 type Rule struct {
 	Pattern string   `json:"pattern"`
 	Action  Decision `json:"action"`
 	Type    string   `json:"type,omitempty"` // file, bash, mcp, web
 }
 
-// Request 权限请求
+// Request Permission request
 type Request struct {
 	ToolName  string            `json:"tool_name"`
 	ToolInput string            `json:"tool_input,omitempty"`
@@ -48,18 +48,18 @@ type Request struct {
 	Metadata  map[string]string `json:"metadata,omitempty"`
 }
 
-// Result 权限结果
+// Result Permission result
 type Result struct {
 	Decision Decision `json:"decision"`
 	Reason   string   `json:"reason,omitempty"`
 }
 
-// Checker 权限检查器接口
+// Checker Permission checker interface
 type Checker interface {
 	Check(ctx context.Context, req *Request) (*Result, error)
 }
 
-// Coordinator 权限协调器
+// Coordinator Permission coordinator
 type Coordinator struct {
 	mode            Mode
 	allowedTools    []string
@@ -71,7 +71,7 @@ type Coordinator struct {
 	askCallback     func(ctx context.Context, req *Request) (Decision, error)
 }
 
-// NewCoordinator 创建权限协调器
+// NewCoordinator Creates a permission coordinator
 func NewCoordinator(mode Mode) *Coordinator {
 	return &Coordinator{
 		mode:        mode,
@@ -82,24 +82,24 @@ func NewCoordinator(mode Mode) *Coordinator {
 	}
 }
 
-// SetAllowedTools 设置允许的工具
+// SetAllowedTools Sets the allowed tools
 func (c *Coordinator) SetAllowedTools(tools []string) {
 	c.allowedTools = tools
 }
 
-// SetDisallowedTools 设置禁止的工具
+// SetDisallowedTools Sets the disallowed tools
 func (c *Coordinator) SetDisallowedTools(tools []string) {
 	c.disallowedTools = tools
 }
 
-// SetAskCallback 设置询问回调
+// SetAskCallback Sets the ask callback
 func (c *Coordinator) SetAskCallback(callback func(ctx context.Context, req *Request) (Decision, error)) {
 	c.askCallback = callback
 }
 
-// Check 检查权限
+// Check Checks permission
 func (c *Coordinator) Check(ctx context.Context, req *Request) (*Result, error) {
-	// 1. 检查工具级别权限
+	// 1. Check tool-level permission
 	toolDecision := c.checkToolPermission(req.ToolName)
 	if toolDecision == DecisionDeny {
 		return &Result{
@@ -108,7 +108,7 @@ func (c *Coordinator) Check(ctx context.Context, req *Request) (*Result, error) 
 		}, nil
 	}
 
-	// 2. 根据工具类型检查具体权限
+	// 2. Check specific permissions based on tool type
 	var decision Decision
 	var reason string
 
@@ -120,16 +120,16 @@ func (c *Coordinator) Check(ctx context.Context, req *Request) (*Result, error) 
 	case "WebFetch", "WebSearch":
 		decision, reason = c.checkWebPermission(req)
 	default:
-		// 检查是否是 MCP 工具
+		// Check whether it is an MCP tool
 		if strings.HasPrefix(req.ToolName, "mcp__") {
 			decision, reason = c.checkMCPPermission(req)
 		} else {
-			// 其他工具默认允许
+			// Other tools are allowed by default
 			decision = DecisionAllow
 		}
 	}
 
-	// 3. 应用权限模式
+	// 3. Apply permission mode
 	if decision == DecisionAsk {
 		switch c.mode {
 		case ModeAutoApprove:
@@ -156,16 +156,16 @@ func (c *Coordinator) Check(ctx context.Context, req *Request) (*Result, error) 
 	}, nil
 }
 
-// checkToolPermission 检查工具级别权限
+// checkToolPermission Checks tool-level permission
 func (c *Coordinator) checkToolPermission(toolName string) Decision {
-	// 检查禁止列表
+	// Check disallowed list
 	for _, t := range c.disallowedTools {
 		if t == toolName {
 			return DecisionDeny
 		}
 	}
 
-	// 检查允许列表
+	// Check allowed list
 	if len(c.allowedTools) > 0 {
 		for _, t := range c.allowedTools {
 			if t == toolName {
@@ -178,73 +178,73 @@ func (c *Coordinator) checkToolPermission(toolName string) Decision {
 	return DecisionAllow
 }
 
-// checkFilePermission 检查文件权限
+// checkFilePermission Checks file permission
 func (c *Coordinator) checkFilePermission(req *Request) (Decision, string) {
 	d := c.fileMatcher.Match(req.FilePath)
 	return d, ""
 }
 
-// checkBashPermission 检查 Bash 权限
+// checkBashPermission Checks Bash permission
 func (c *Coordinator) checkBashPermission(req *Request) (Decision, string) {
 	return c.bashMatcher.Match(req.Command)
 }
 
-// checkMCPPermission 检查 MCP 权限
+// checkMCPPermission Checks MCP permission
 func (c *Coordinator) checkMCPPermission(req *Request) (Decision, string) {
 	return c.mcpMatcher.Match(req.MCPName, req.MCPMethod)
 }
 
-// checkWebPermission 检查 Web 权限
+// checkWebPermission Checks Web permission
 func (c *Coordinator) checkWebPermission(req *Request) (Decision, string) {
 	return c.webMatcher.Match(req.URL)
 }
 
-// FileRuleMatcher 文件规则匹配器
+// FileRuleMatcher File rule matcher
 type FileRuleMatcher struct {
 	rules []Rule
 }
 
-// NewFileRuleMatcher 创建文件规则匹配器
+// NewFileRuleMatcher Creates a file rule matcher
 func NewFileRuleMatcher() *FileRuleMatcher {
 	return &FileRuleMatcher{
 		rules: loadDefaultFileRules(),
 	}
 }
 
-// AddRule 添加规则
+// AddRule Adds a rule
 func (m *FileRuleMatcher) AddRule(rule Rule) {
 	m.rules = append(m.rules, rule)
 }
 
-// Match 匹配路径
+// Match Matches a path
 func (m *FileRuleMatcher) Match(path string) Decision {
 	if path == "" {
 		return DecisionAllow
 	}
 
-	// 规范化路径
+	// Normalize path
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return DecisionAsk
 	}
 
-	// 检查特殊保护路径
+	// Check special protected paths
 	if isProtectedPath(absPath) {
 		return DecisionAsk
 	}
 
-	// 检查规则
+	// Check rules
 	for _, rule := range m.rules {
 		if match, _ := filepath.Match(rule.Pattern, absPath); match {
 			return rule.Action
 		}
-		// 尝试 glob 匹配
+		// Try glob match
 		if matched, _ := filepath.Match(rule.Pattern, filepath.Base(absPath)); matched {
 			return rule.Action
 		}
 	}
 
-	// 默认策略：项目内允许，项目外询问
+	// Default policy: allow inside project, ask outside
 	if isInProject(absPath) {
 		return DecisionAllow
 	}
@@ -252,37 +252,37 @@ func (m *FileRuleMatcher) Match(path string) Decision {
 	return DecisionAsk
 }
 
-// BashRuleMatcher Bash 规则匹配器
+// BashRuleMatcher Bash rule matcher
 type BashRuleMatcher struct {
 	denyPatterns []*regexp.Regexp
 }
 
-// NewBashRuleMatcher 创建 Bash 规则匹配器
+// NewBashRuleMatcher Creates a Bash rule matcher
 func NewBashRuleMatcher() *BashRuleMatcher {
 	return &BashRuleMatcher{
 		denyPatterns: loadDefaultBashDenyPatterns(),
 	}
 }
 
-// Match 匹配命令
+// Match Matches a command
 func (m *BashRuleMatcher) Match(command string) (Decision, string) {
 	if command == "" {
 		return DecisionAllow, ""
 	}
 
-	// 检查危险命令模式
+	// Check dangerous command patterns
 	for _, pattern := range m.denyPatterns {
 		if pattern.MatchString(command) {
 			return DecisionDeny, fmt.Sprintf("matches deny pattern: %s", pattern.String())
 		}
 	}
 
-	// 检查 sudo
+	// Check sudo
 	if strings.Contains(command, "sudo ") {
 		return DecisionAsk, "sudo command requires confirmation"
 	}
 
-	// 检查 rm -rf
+	// Check rm -rf
 	if strings.Contains(command, "rm -rf") {
 		return DecisionAsk, "rm -rf requires confirmation"
 	}
@@ -290,19 +290,19 @@ func (m *BashRuleMatcher) Match(command string) (Decision, string) {
 	return DecisionAllow, ""
 }
 
-// MCPRuleMatcher MCP 规则匹配器
+// MCPRuleMatcher MCP rule matcher
 type MCPRuleMatcher struct {
 	rules []Rule
 }
 
-// NewMCPRuleMatcher 创建 MCP 规则匹配器
+// NewMCPRuleMatcher Creates an MCP rule matcher
 func NewMCPRuleMatcher() *MCPRuleMatcher {
 	return &MCPRuleMatcher{
 		rules: loadDefaultMCPRules(),
 	}
 }
 
-// Match 匹配 MCP 调用
+// Match Matches an MCP call
 func (m *MCPRuleMatcher) Match(serverName, method string) (Decision, string) {
 	fullName := fmt.Sprintf("mcp__%s__%s", serverName, method)
 
@@ -315,13 +315,13 @@ func (m *MCPRuleMatcher) Match(serverName, method string) (Decision, string) {
 	return DecisionAllow, ""
 }
 
-// WebFetchRuleMatcher WebFetch 规则匹配器
+// WebFetchRuleMatcher WebFetch rule matcher
 type WebFetchRuleMatcher struct {
 	allowList []string
 	denyList  []string
 }
 
-// NewWebFetchRuleMatcher 创建 WebFetch 规则匹配器
+// NewWebFetchRuleMatcher Creates a WebFetch rule matcher
 func NewWebFetchRuleMatcher() *WebFetchRuleMatcher {
 	return &WebFetchRuleMatcher{
 		allowList: loadDefaultWebAllowList(),
@@ -329,20 +329,20 @@ func NewWebFetchRuleMatcher() *WebFetchRuleMatcher {
 	}
 }
 
-// Match 匹配 URL
+// Match Matches a URL
 func (m *WebFetchRuleMatcher) Match(url string) (Decision, string) {
 	if url == "" {
 		return DecisionAllow, ""
 	}
 
-	// 检查拒绝列表
+	// Check deny list
 	for _, pattern := range m.denyList {
 		if strings.Contains(url, pattern) {
 			return DecisionDeny, fmt.Sprintf("URL in deny list: %s", pattern)
 		}
 	}
 
-	// 检查允许列表
+	// Check allow list
 	if len(m.allowList) > 0 {
 		for _, pattern := range m.allowList {
 			if strings.Contains(url, pattern) {
@@ -355,12 +355,12 @@ func (m *WebFetchRuleMatcher) Match(url string) (Decision, string) {
 	return DecisionAllow, ""
 }
 
-// 辅助函数
+// Helper functions
 
 func isProtectedPath(path string) bool {
 	protected := []string{
 		".qoder",
-		".qodercli",
+		".qodercli-reverse",
 		".qodercli-reverse",
 		".mcp.json",
 		"settings.json",
@@ -376,13 +376,13 @@ func isProtectedPath(path string) bool {
 }
 
 func isInProject(path string) bool {
-	// 获取当前工作目录
+	// Get current working directory
 	cwd, err := os.Getwd()
 	if err != nil {
 		return false
 	}
 
-	// 检查路径是否在工作目录内
+	// Check whether the path is within the working directory
 	rel, err := filepath.Rel(cwd, path)
 	if err != nil {
 		return false
@@ -420,7 +420,7 @@ func loadDefaultBashDenyPatterns() []*regexp.Regexp {
 
 func loadDefaultMCPRules() []Rule {
 	return []Rule{
-		// 默认允许所有 MCP 工具
+		// Allow all MCP tools by default
 	}
 }
 

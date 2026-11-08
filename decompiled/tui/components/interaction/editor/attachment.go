@@ -7,13 +7,13 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// AttachmentHandler 附件处理器
+// AttachmentHandler attachment handler
 type AttachmentHandler struct {
 	attachments      []string
 	highlightedIndex int
 }
 
-// NewAttachmentHandler 创建新的附件处理器
+// NewAttachmentHandler creates a new attachment handler
 func NewAttachmentHandler() *AttachmentHandler {
 	return &AttachmentHandler{
 		attachments:      make([]string, 0),
@@ -21,7 +21,7 @@ func NewAttachmentHandler() *AttachmentHandler {
 	}
 }
 
-// AddAttachment 添加附件
+// AddAttachment adds an attachment
 func (ah *AttachmentHandler) AddAttachment(path string) error {
 	if ah.ValidateAttachment(path) {
 		ah.attachments = append(ah.attachments, path)
@@ -30,22 +30,22 @@ func (ah *AttachmentHandler) AddAttachment(path string) error {
 	return fmt.Errorf("invalid attachment: %s", path)
 }
 
-// SetAttachments 设置附件列表
+// SetAttachments sets attachment list
 func (ah *AttachmentHandler) SetAttachments(paths []string) {
 	ah.attachments = paths
 }
 
-// GetAttachments 获取附件列表
+// GetAttachments gets attachment list
 func (ah *AttachmentHandler) GetAttachments() []string {
 	return ah.attachments
 }
 
-// HasAttachments 是否有附件
+// HasAttachments whether has attachments
 func (ah *AttachmentHandler) HasAttachments() bool {
 	return len(ah.attachments) > 0
 }
 
-// DeleteAttachment 删除指定附件
+// DeleteAttachment deletes specified attachment
 func (ah *AttachmentHandler) DeleteAttachment(index int) {
 	if index >= 0 && index < len(ah.attachments) {
 		ah.attachments = append(ah.attachments[:index], ah.attachments[index+1:]...)
@@ -55,19 +55,19 @@ func (ah *AttachmentHandler) DeleteAttachment(index int) {
 	}
 }
 
-// DeleteHighlightedAttachment 删除高亮的附件
+// DeleteHighlightedAttachment deletes highlighted attachment
 func (ah *AttachmentHandler) DeleteHighlightedAttachment() {
 	if ah.highlightedIndex >= 0 {
 		ah.DeleteAttachment(ah.highlightedIndex)
 	}
 }
 
-// HasHighlightedAttachment 是否有高亮的附件
+// HasHighlightedAttachment whether has highlighted attachment
 func (ah *AttachmentHandler) HasHighlightedAttachment() bool {
 	return ah.highlightedIndex >= 0 && ah.highlightedIndex < len(ah.attachments)
 }
 
-// CycleHighlightAttachment 循环高亮附件
+// CycleHighlightAttachment cycles highlighted attachment
 func (ah *AttachmentHandler) CycleHighlightAttachment() {
 	if len(ah.attachments) == 0 {
 		ah.highlightedIndex = -1
@@ -76,13 +76,13 @@ func (ah *AttachmentHandler) CycleHighlightAttachment() {
 	ah.highlightedIndex = (ah.highlightedIndex + 1) % len(ah.attachments)
 }
 
-// Reset 重置
+// Reset resets
 func (ah *AttachmentHandler) Reset() {
 	ah.attachments = make([]string, 0)
 	ah.highlightedIndex = -1
 }
 
-// Render 渲染附件列表
+// Render renders attachment list
 func (ah *AttachmentHandler) Render() string {
 	if !ah.HasAttachments() {
 		return ""
@@ -110,7 +110,7 @@ func (ah *AttachmentHandler) Render() string {
 	return sb.String()
 }
 
-// ValidateAttachment 验证附件
+// ValidateAttachment validates attachment
 func (ah *AttachmentHandler) ValidateAttachment(path string) bool {
 	return path != "" && !strings.Contains(path, "\x00")
 }

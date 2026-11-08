@@ -1,13 +1,13 @@
-# Official qodercli Architecture
+# Official qodercli-reverse Architecture
 
-This document describes the package structure of the official qodercli binary, extracted through reverse engineering analysis using `strings` and `nm` tools.
+This document describes the package structure of the official qodercli-reverse binary, extracted through reverse engineering analysis using `strings` and `nm` tools.
 
 ## Package Structure
 
-The official qodercli follows a well-organized package structure:
+The official qodercli-reverse follows a well-organized package structure:
 
 ```
-code.alibaba-inc.com/qoder-core/qodercli/
+code.alibaba-inc.com/qoder-core/qodercli-reverse/
 ├── cmd/                    # Command-line interface
 │   ├── jobs/              # Job management commands
 │   ├── start/             # Start command implementation
@@ -168,6 +168,6 @@ core/
 ## Notes
 
 - This analysis is based on reverse engineering the official binary
-- Package paths use `code.alibaba-inc.com/qoder-core/qodercli` as the base
+- Package paths use `code.alibaba-inc.com/qoder-core/qodercli-reverse` as the base
 - The official code likely has additional internal packages not visible in the binary
 - Refactoring should be done incrementally to maintain stability

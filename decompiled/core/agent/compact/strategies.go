@@ -1,4 +1,4 @@
-// Package compact 提供上下文压缩功能 - 压缩策略实现
+// Package compact provides context compaction - compaction strategy implementations
 package compact
 
 import (
@@ -11,13 +11,13 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/types"
 )
 
-// SummaryCompactor 摘要压缩器 - 使用 LLM 生成摘要
+// SummaryCompactor summary compactor - uses LLM to generate a summary
 type SummaryCompactor struct {
 	provider  provider.Client
 	tokenizer Tokenizer
 }
 
-// Compact 执行摘要压缩
+// Compact performs summary compaction
 func (c *SummaryCompactor) Compact(ctx context.Context, messages []types.Message, options *CompactOptions) (*CompactResult, error) {
 	if len(messages) <= 2 {
 		return &CompactResult{
@@ -31,7 +31,7 @@ func (c *SummaryCompactor) Compact(ctx context.Context, messages []types.Message
 		}, nil
 	}
 
-	// 分离系统消息
+	// separate system messages
 	var systemMessages []types.Message
 	var conversationMessages []types.Message
 
@@ -43,22 +43,22 @@ func (c *SummaryCompactor) Compact(ctx context.Context, messages []types.Message
 		}
 	}
 
-	// 保留最后 N 轮对话
+	// keep the last N conversation turns
 	recentTurns := options.KeepRecentTurns
 	if recentTurns <= 0 {
 		recentTurns = 5
 	}
 
-	// 计算需要保留的消息数（每轮对话包含用户和助手消息）
+	// calculate number of messages to keep (each turn includes user and assistant messages)
 	keepCount := recentTurns * 2
 	if keepCount > len(conversationMessages) {
 		keepCount = len(conversationMessages)
 	}
 
-	// 提取需要压缩的消息
+	// extract messages to compress
 	messagesToSummarize := conversationMessages[:len(conversationMessages)-keepCount]
 	if len(messagesToSummarize) == 0 {
-		// 无需压缩
+		// no compaction needed
 		return &CompactResult{
 			OriginalMessageCount:   len(messages),
 			CompressedMessageCount: len(messages),
@@ -70,32 +70,32 @@ func (c *SummaryCompactor) Compact(ctx context.Context, messages []types.Message
 		}, nil
 	}
 
-	// 构建摘要请求
+	// build summary request
 	summaryText, err := c.generateSummary(ctx, messagesToSummarize, options)
 	if err != nil {
 		log.Error("Failed to generate summary: %v", err)
-		// 降级为简单摘要
+		// fall back to simple summary
 		summaryText = c.simpleSummary(messagesToSummarize)
 	}
 
-	// 构建摘要消息
+	// build summary message
 	summaryMsg := types.Message{
 		Role:    types.RoleSystem,
 		Content: []types.ContentPart{{Type: "text", Text: summaryText}},
 	}
 
-	// 构建压缩后的消息
+	// build compressed messages
 	var compressed []types.Message
 
-	// 添加原始系统消息
+	// add original system messages
 	if options.KeepSystemMessages {
 		compressed = append(compressed, systemMessages...)
 	}
 
-	// 添加摘要消息
+	// add summary message
 	compressed = append(compressed, summaryMsg)
 
-	// 添加保留的最近对话
+	// add kept recent conversation
 	compressed = append(compressed, conversationMessages[len(conversationMessages)-keepCount:]...)
 
 	originalTokens := c.EstimateTokens(messages)
@@ -119,25 +119,25 @@ func (c *SummaryCompactor) Compact(ctx context.Context, messages []types.Message
 	}, nil
 }
 
-// generateSummary 使用 LLM 生成摘要
+// generateSummary uses LLM to generate a summary
 func (c *SummaryCompactor) generateSummary(ctx context.Context, messages []types.Message, options *CompactOptions) (string, error) {
 	if c.provider == nil {
 		return "", fmt.Errorf("no provider available")
 	}
 
-	// 构建摘要请求的消息
+	// build summary request messages
 	var builder strings.Builder
-	builder.WriteString("请总结以下对话的关键信息，包括：\n")
-	builder.WriteString("1. 用户的主要需求和问题\n")
-	builder.WriteString("2. 已解决的关键点\n")
-	builder.WriteString("3. 重要的上下文信息\n")
-	builder.WriteString("4. 待完成的任务\n\n")
-	builder.WriteString("对话内容：\n")
+	builder.WriteString("Please summarize the key information of the following conversation, including:\n")
+	builder.WriteString("1. The user's main needs and questions\n")
+	builder.WriteString("2. Key points already resolved\n")
+	builder.WriteString("3. Important context information\n")
+	builder.WriteString("4. Tasks yet to be completed\n\n")
+	builder.WriteString("Conversation content:\n")
 
 	for i, msg := range messages {
 		switch msg.Role {
 		case types.RoleUser:
-			builder.WriteString(fmt.Sprintf("[用户 %d]: ", i+1))
+			builder.WriteString(fmt.Sprintf("[User %d]: ", i+1))
 			for _, part := range msg.Content {
 				if part.Type == "text" {
 					builder.WriteString(part.Text)
@@ -145,7 +145,7 @@ func (c *SummaryCompactor) generateSummary(ctx context.Context, messages []types
 			}
 			builder.WriteString("\n")
 		case types.RoleAssistant:
-			builder.WriteString(fmt.Sprintf("[助手 %d]: ", i+1))
+			builder.WriteString(fmt.Sprintf("[Assistant %d]: ", i+1))
 			for _, part := range msg.Content {
 				if part.Type == "text" && part.Thinking == "" {
 					builder.WriteString(part.Text)
@@ -155,16 +155,16 @@ func (c *SummaryCompactor) generateSummary(ctx context.Context, messages []types
 		}
 	}
 
-	// 使用自定义提示词（如果有）
+	// use custom prompt if provided
 	prompt := builder.String()
 	if options.CustomPrompt != "" {
-		prompt = options.CustomPrompt + "\n\n对话内容：\n" + prompt
+		prompt = options.CustomPrompt + "\n\nConversation content:\n" + prompt
 	}
 
-	// 构建请求
+	// build request
 	req := &provider.ModelRequest{
 		Model:        "default",
-		SystemPrompt: "你是一个专业的对话摘要助手。请用简洁的语言总结对话内容，保留关键信息。",
+		SystemPrompt: "You are a professional conversation summary assistant. Please summarize the conversation content concisely while retaining key information.",
 		Messages: []types.Message{
 			{
 				Role:    types.RoleUser,
@@ -176,17 +176,17 @@ func (c *SummaryCompactor) generateSummary(ctx context.Context, messages []types
 		Stream:      false,
 	}
 
-	// 发送请求（非流式）
+	// send request (non-streaming)
 	resp, err := c.provider.Send(ctx, req)
 	if err != nil {
 		return "", err
 	}
 
-	// 提取响应（简化处理）
+	// extract response (simplified handling)
 	return resp.Content, nil
 }
 
-// simpleSummary 简单的摘要生成（降级方案）
+// simpleSummary simple summary generation (fallback)
 func (c *SummaryCompactor) simpleSummary(messages []types.Message) string {
 	var builder strings.Builder
 	builder.WriteString("Previous conversation summary:\n\n")
@@ -197,7 +197,7 @@ func (c *SummaryCompactor) simpleSummary(messages []types.Message) string {
 		if msg.Role == types.RoleUser {
 			for _, part := range msg.Content {
 				if part.Type == "text" {
-					// 提取前 50 个字符作为主题
+					// extract first 50 characters as topic
 					text := part.Text
 					if len(text) > 50 {
 						text = text[:50] + "..."
@@ -224,7 +224,7 @@ func (c *SummaryCompactor) simpleSummary(messages []types.Message) string {
 	return builder.String()
 }
 
-// EstimateTokens 估算 Token 数
+// EstimateTokens estimates token count
 func (c *SummaryCompactor) EstimateTokens(messages []types.Message) int {
 	if c.tokenizer != nil {
 		total := 0
@@ -239,12 +239,12 @@ func (c *SummaryCompactor) EstimateTokens(messages []types.Message) int {
 	return estimateTokensSimple(messages)
 }
 
-// TruncateCompactor 截断压缩器 - 保留最近 N 条消息
+// TruncateCompactor truncation compactor - keeps the last N messages
 type TruncateCompactor struct {
 	tokenizer Tokenizer
 }
 
-// Compact 执行截断压缩
+// Compact performs truncation compaction
 func (c *TruncateCompactor) Compact(ctx context.Context, messages []types.Message, options *CompactOptions) (*CompactResult, error) {
 	if len(messages) <= 2 {
 		return &CompactResult{
@@ -258,7 +258,7 @@ func (c *TruncateCompactor) Compact(ctx context.Context, messages []types.Messag
 		}, nil
 	}
 
-	// 分离系统消息
+	// separate system messages
 	var systemMessages []types.Message
 	var conversationMessages []types.Message
 
@@ -270,14 +270,14 @@ func (c *TruncateCompactor) Compact(ctx context.Context, messages []types.Messag
 		}
 	}
 
-	// 计算保留的消息数
+	// calculate number of messages to keep
 	keepCount := options.KeepRecentTurns * 2
 	if keepCount <= 0 {
-		keepCount = 10 // 默认保留 5 轮对话
+		keepCount = 10 // default keep 5 conversation turns
 	}
 
 	if keepCount >= len(conversationMessages) {
-		// 无需压缩
+		// no compaction needed
 		return &CompactResult{
 			OriginalMessageCount:   len(messages),
 			CompressedMessageCount: len(messages),
@@ -289,15 +289,15 @@ func (c *TruncateCompactor) Compact(ctx context.Context, messages []types.Messag
 		}, nil
 	}
 
-	// 构建压缩后的消息
+	// build compressed messages
 	var compressed []types.Message
 
-	// 添加系统消息
+	// add system messages
 	if options.KeepSystemMessages {
 		compressed = append(compressed, systemMessages...)
 	}
 
-	// 添加最近的对话
+	// add recent conversation
 	startIndex := len(conversationMessages) - keepCount
 	compressed = append(compressed, conversationMessages[startIndex:]...)
 
@@ -321,7 +321,7 @@ func (c *TruncateCompactor) Compact(ctx context.Context, messages []types.Messag
 	}, nil
 }
 
-// EstimateTokens 估算 Token 数
+// EstimateTokens estimates token count
 func (c *TruncateCompactor) EstimateTokens(messages []types.Message) int {
 	if c.tokenizer != nil {
 		total := 0
@@ -336,19 +336,19 @@ func (c *TruncateCompactor) EstimateTokens(messages []types.Message) int {
 	return estimateTokensSimple(messages)
 }
 
-// SelectiveCompactor 选择性压缩器 - 基于重要性选择消息
+// SelectiveCompactor selective compactor - selects messages based on importance
 type SelectiveCompactor struct {
 	tokenizer Tokenizer
 }
 
-// messageImportance 消息重要性评分
+// messageImportance message importance score
 type messageImportance struct {
 	message    types.Message
 	importance int
 	index      int
 }
 
-// Compact 执行选择性压缩
+// Compact performs selective compaction
 func (c *SelectiveCompactor) Compact(ctx context.Context, messages []types.Message, options *CompactOptions) (*CompactResult, error) {
 	if len(messages) <= 2 {
 		return &CompactResult{
@@ -362,7 +362,7 @@ func (c *SelectiveCompactor) Compact(ctx context.Context, messages []types.Messa
 		}, nil
 	}
 
-	// 评估每条消息的重要性
+	// evaluate importance of each message
 	var scored []messageImportance
 	for i, msg := range messages {
 		score := c.scoreImportance(msg)
@@ -373,7 +373,7 @@ func (c *SelectiveCompactor) Compact(ctx context.Context, messages []types.Messa
 		})
 	}
 
-	// 分离系统消息（总是保留）
+	// separate system messages (always kept)
 	var systemMessages []messageImportance
 	var conversationScored []messageImportance
 
@@ -385,20 +385,20 @@ func (c *SelectiveCompactor) Compact(ctx context.Context, messages []types.Messa
 		}
 	}
 
-	// 按重要性排序
+	// sort by importance
 	sortByImportance(conversationScored)
 
-	// 计算需要保留的消息数
+	// calculate number of messages to keep
 	targetTokens := options.TargetTokens
 	if targetTokens <= 0 {
 		targetTokens = c.EstimateTokens(messages) / 2
 	}
 
-	// 累加 Token 直到达到目标
+	// accumulate tokens until target reached
 	var selected []messageImportance
 	currentTokens := 0
 
-	// 首先保留最重要的消息
+	// first keep the most important messages
 	for _, s := range conversationScored {
 		msgTokens := c.EstimateTokens([]types.Message{s.message})
 		if currentTokens+msgTokens <= targetTokens || len(selected) < 3 {
@@ -407,10 +407,10 @@ func (c *SelectiveCompactor) Compact(ctx context.Context, messages []types.Messa
 		}
 	}
 
-	// 按原始顺序重新排序
+	// re-sort by original order
 	sortByIndex(selected)
 
-	// 构建压缩后的消息
+	// build compressed messages
 	var compressed []types.Message
 
 	if options.KeepSystemMessages {
@@ -443,21 +443,21 @@ func (c *SelectiveCompactor) Compact(ctx context.Context, messages []types.Messa
 	}, nil
 }
 
-// scoreImportance 评估消息重要性
+// scoreImportance evaluates message importance
 func (c *SelectiveCompactor) scoreImportance(msg types.Message) int {
 	score := 0
 
-	// 用户消息通常更重要
+	// user messages are usually more important
 	if msg.Role == types.RoleUser {
 		score += 10
 	}
 
-	// 包含工具调用的消息重要
+	// messages containing tool calls are important
 	if len(msg.ToolCalls) > 0 {
 		score += 20
 	}
 
-	// 长消息可能包含更多信息
+	// long messages may contain more information
 	contentLen := 0
 	for _, part := range msg.Content {
 		contentLen += len(part.Text) + len(part.Thinking)
@@ -469,7 +469,7 @@ func (c *SelectiveCompactor) scoreImportance(msg types.Message) int {
 		score += 3
 	}
 
-	// 包含代码的消息重要
+	// messages containing code are important
 	for _, part := range msg.Content {
 		if strings.Contains(part.Text, "```") {
 			score += 15
@@ -477,8 +477,8 @@ func (c *SelectiveCompactor) scoreImportance(msg types.Message) int {
 		}
 	}
 
-	// 包含关键词的消息重要
-	keywords := []string{"important", "key", "remember", "note", "总结", "关键", "注意"}
+	// messages containing keywords are important
+	keywords := []string{"important", "key", "remember", "note", "summary", "key", "note"}
 	for _, part := range msg.Content {
 		for _, kw := range keywords {
 			if strings.Contains(strings.ToLower(part.Text), kw) {
@@ -490,7 +490,7 @@ func (c *SelectiveCompactor) scoreImportance(msg types.Message) int {
 	return score
 }
 
-// sortByImportance 按重要性降序排序
+// sortByImportance sorts by importance descending
 func sortByImportance(scored []messageImportance) {
 	for i := 0; i < len(scored)-1; i++ {
 		for j := i + 1; j < len(scored); j++ {
@@ -501,7 +501,7 @@ func sortByImportance(scored []messageImportance) {
 	}
 }
 
-// sortByIndex 按索引升序排序
+// sortByIndex sorts by index ascending
 func sortByIndex(scored []messageImportance) {
 	for i := 0; i < len(scored)-1; i++ {
 		for j := i + 1; j < len(scored); j++ {
@@ -512,7 +512,7 @@ func sortByIndex(scored []messageImportance) {
 	}
 }
 
-// EstimateTokens 估算 Token 数
+// EstimateTokens estimates token count
 func (c *SelectiveCompactor) EstimateTokens(messages []types.Message) int {
 	if c.tokenizer != nil {
 		total := 0

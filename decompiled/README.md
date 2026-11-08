@@ -1,61 +1,61 @@
-# qodercli 反编译代码
+# qodercli-reverse Decompiled Code
 
-本目录包含基于二进制分析和文档推导的反编译 Go 代码。
+This directory contains decompiled Go code derived from binary analysis and documentation.
 
-## 目录结构
+## Directory Structure
 
 ```
 decompiled/
 ├── core/
 │   ├── types/
-│   │   └── types.go              # 核心类型定义
+│   │   └── types.go              # Core type definitions
 │   ├── agent/
 │   │   ├── agent/
-│   │   │   └── agent.go          # Agent 主循环
+│   │   │   └── agent.go          # Agent main loop
 │   │   ├── provider/
-│   │   │   ├── provider.go       # Provider 接口
-│   │   │   └── qoder.go          # Qoder Provider 实现
+│   │   │   ├── provider.go       # Provider interface
+│   │   │   └── qoder.go          # Qoder Provider implementation
 │   │   ├── tools/
-│   │   │   ├── tools.go          # 工具系统接口
-│   │   │   ├── bash.go           # Bash 工具实现
-│   │   │   └── file.go           # 文件操作工具
+│   │   │   ├── tools.go          # Tool system interface
+│   │   │   ├── bash.go           # Bash tool implementation
+│   │   │   └── file.go           # File operation tools
 │   │   └── permission/
-│   │       └── permission.go     # 权限系统
+│   │       └── permission.go     # Permission system
 │   ├── resource/
 │   │   └── mcp/
-│   │       └── mcp.go            # MCP 客户端
+│   │       └── mcp.go            # MCP client
 │   └── pubsub/
-│       └── pubsub.go             # 事件发布订阅
+│       └── pubsub.go             # Event publish/subscribe
 ├── tui/
 │   ├── app/
-│   │   ├── model.go              # TUI 应用模型
-│   │   └── run.go                # 应用启动器
+│   │   ├── model.go              # TUI application model
+│   │   └── run.go                # Application launcher
 │   └── components/
 │       ├── editor/
-│       │   └── editor.go         # 消息编辑器
+│       │   └── editor.go         # Message editor
 │       ├── messages/
-│       │   └── messages.go       # 消息列表
+│       │   └── messages.go       # Message list
 │       ├── chat/
-│       │   └── chat.go           # 聊天视图
+│       │   └── chat.go           # Chat view
 │       └── status/
-│           └── status.go         # 状态栏
-└── README.md                     # 本文件
+│           └── status.go          # Status bar
+└── README.md                     # This file
 ```
 
-## 代码统计
+## Code Statistics
 
-| 模块 | 文件数 | 代码行数 | 说明 |
-|------|--------|----------|------|
-| core/types | 1 | ~200 | 基础类型定义 |
-| core/agent | 6 | ~1800 | Agent 核心实现 |
-| core/resource | 1 | ~350 | MCP 客户端 |
-| core/pubsub | 1 | ~100 | 事件系统 |
-| tui | 6 | ~900 | TUI 组件 |
-| **总计** | **15** | **~3350** | |
+| Module | Files | Lines | Description |
+|--------|-------|-------|-------------|
+| core/types | 1 | ~200 | Basic type definitions |
+| core/agent | 6 | ~1800 | Agent core implementation |
+| core/resource | 1 | ~350 | MCP client |
+| core/pubsub | 1 | ~100 | Event system |
+| tui | 6 | ~900 | TUI components |
+| **Total** | **15** | **~3350** | |
 
-## 核心架构
+## Core Architecture
 
-### 1. Agent 架构
+### 1. Agent Architecture
 
 ```
 ┌─────────────────────────────────────────┐
@@ -73,7 +73,7 @@ decompiled/
 └─────────────────────────────────────────┘
 ```
 
-### 2. Provider 架构
+### 2. Provider Architecture
 
 ```
 ┌─────────────────────────────────────────┐
@@ -88,7 +88,7 @@ decompiled/
 └─────────────────────────────────────────┘
 ```
 
-### 3. 工具系统架构
+### 3. Tool System Architecture
 
 ```
 ┌─────────────────────────────────────────┐
@@ -106,9 +106,9 @@ decompiled/
 └─────────────────────────────────────────┘
 ```
 
-## 关键类型
+## Key Types
 
-### Message 结构
+### Message Structure
 ```go
 type Message struct {
     Role       Role          `json:"role"`
@@ -118,7 +118,7 @@ type Message struct {
 }
 ```
 
-### ToolCall 结构
+### ToolCall Structure
 ```go
 type ToolCall struct {
     ID        string `json:"id"`
@@ -127,7 +127,7 @@ type ToolCall struct {
 }
 ```
 
-### Provider 接口
+### Provider Interface
 ```go
 type Client interface {
     Stream(ctx context.Context, req *ModelRequest) <-chan Event
@@ -136,22 +136,24 @@ type Client interface {
 }
 ```
 
-## 注意事项
+## Notes
 
-1. **代码性质**: 本代码基于二进制反编译和文档推导，可能与原始代码存在差异
-2. **完整性**: 部分内部实现细节可能不完整或需要调整
-3. **依赖关系**: 代码中使用了推断的包路径 `code.alibaba-inc.com/qoder-core/qodercli`
-4. **第三方库**: 依赖 Bubble Tea、Lipgloss、Cobra 等开源库
+1. **Code nature**: This code is derived from binary decompilation and documentation inference, and may differ from the original code
+2. **Completeness**: Some internal implementation details may be incomplete or require adjustment
+3. **Dependencies**: The code uses the inferred package path `code.alibaba-inc.com/qoder-core/qodercli-reverse`
+4. **Third-party libraries**: Depends on open-source libraries such as Bubble Tea, Lipgloss, and Cobra
 
-## 使用建议
+## Usage Recommendations
 
-这些反编译代码可用于：
-- 理解 qodercli 的架构设计
-- 学习 Agent 系统的实现模式
-- 参考 TUI 应用的构建方式
-- 分析 MCP 协议的实现
+These decompiled codes can be used for:
 
-不建议直接用于生产环境，因为：
-- 代码未经测试
-- 可能包含不准确的推断
-- 缺少原始项目的完整上下文
+- Understanding the architecture design of qodercli-reverse
+- Learning implementation patterns of the Agent system
+- Referencing TUI application construction
+- Analyzing MCP protocol implementation
+
+Not recommended for direct use in production because:
+
+- The code is untested
+- May contain inaccurate inferences
+- Lacks the complete context of the original project

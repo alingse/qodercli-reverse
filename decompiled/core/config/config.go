@@ -1,78 +1,78 @@
-// Package config 配置管理
+// Package config configuration management
 package config
 
 import "os"
 
-// MarkdownConfig Markdown 渲染配置
+// MarkdownConfig Markdown rendering configuration
 type MarkdownConfig struct {
-	Enabled  bool   // 是否启用 markdown 渲染
-	Style    string // 主题名称（如 dark, light, github-dark 等）
-	WordWrap int    // 自动换行宽度（0 表示自动根据终端宽度）
+	Enabled  bool   // whether markdown rendering is enabled
+	Style    string // theme name (e.g. dark, light, github-dark, etc.)
+	WordWrap int    // auto line-wrap width (0 means auto based on terminal width)
 }
 
-// DefaultMarkdownConfig 返回默认 markdown 配置
+// DefaultMarkdownConfig returns the default markdown configuration
 func DefaultMarkdownConfig() MarkdownConfig {
 	return MarkdownConfig{
 		Enabled:  true,
-		Style:    "", // 空字符串表示自动检测
+		Style:    "", // empty string means auto-detect
 		WordWrap: 0,
 	}
 }
 
-// Config 配置结构
+// Config configuration structure
 type Config struct {
-	// 模型配置
+	// Model configuration
 	Model string
 
-	// API 配置
+	// API configuration
 	Provider string
 	APIKey   string
 	BaseURL  string
 
-	// 请求配置
+	// Request configuration
 	MaxTokens   int
 	Temperature float64
 	MaxTurns    int
 
-	// 权限配置
+	// Permission configuration
 	PermissionMode string
 
-	// 输出配置
+	// Output configuration
 	OutputFormat string
 
-	// 工具配置
+	// Tool configuration
 	AllowedTools    []string
 	DisallowedTools []string
 
-	// 会话配置
+	// Session configuration
 	ContinueSession bool
 	ResumeSessionID string
 
-	// 工作区配置
+	// Workspace configuration
 	Workspace string
 
-	// Markdown 渲染配置
+	// Markdown rendering configuration
 	Markdown MarkdownConfig
 }
 
-// LoadFromEnv 从环境变量加载配置
+// LoadFromEnv loads configuration from environment variables
 func LoadFromEnv() *Config {
 	cfg := &Config{
 		Markdown: DefaultMarkdownConfig(),
 	}
 
-	// 模型配置（优先级：QODER_MODEL > OPENAI_MODEL > 默认值）
+	// Model configuration (priority: QODER_MODEL > OPENAI_MODEL > default)
 	cfg.Model = getEnvOrDefault("QODER_MODEL",
 		getEnvOrDefault("OPENAI_MODEL", "auto"))
 
-	// API 配置
+	// API configuration
 	cfg.Provider = getEnvOrDefault("QODER_PROVIDER", "openai")
 	cfg.APIKey = getEnvOrDefault("OPENAI_API_KEY",
 		getEnvOrDefault("QODER_PERSONAL_ACCESS_TOKEN", ""))
 	cfg.BaseURL = getEnvOrDefault("OPENAI_BASE_URL",
 		getEnvOrDefault("QODER_OPENAI_BASE_URL", "https://api.openai.com/v1"))
 
-	// Markdown 配置
+	// Markdown configuration
 	if os.Getenv("QODER_MARKDOWN_DISABLED") == "true" {
 		cfg.Markdown.Enabled = false
 	}
@@ -81,7 +81,7 @@ func LoadFromEnv() *Config {
 	return cfg
 }
 
-// getEnvOrDefault 获取环境变量或默认值
+// getEnvOrDefault gets an environment variable or its default value
 func getEnvOrDefault(key, defaultValue string) string {
 	if value := os.Getenv(key); value != "" {
 		return value

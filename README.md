@@ -1,101 +1,101 @@
-# qodercli 逆向分析项目
+# qodercli-reverse Reverse Engineering Project
 
-> **注意**: qodercli 是阿里巴巴内部的闭源项目。本项目通过逆向分析还原其架构，反编译结果可编译运行，仅供学习和研究使用。
+> **Note**: qodercli-reverse is an internal closed-source project by Alibaba. This project reconstructs its architecture through reverse engineering. The decompiled result compiles and runs; it is provided for learning and research only.
 
-## 项目目标
+## Project Goals
 
-- **分析对象**: qodercli v0.1.29 (Mach-O arm64 Go binary, ~37MB)
-- **分析方法**: 符号表分析、字符串提取、行为观察、配置分析
-- **输出物**: 完整架构文档 + 反编译代码示例
-- **反编译成果**: 成功还原核心架构，反编译代码可编译运行
+- **Analysis target**: qodercli-reverse v0.1.29 (Mach-O arm64 Go binary, ~37MB)
+- **Analysis method**: symbol table analysis, string extraction, behavior observation, configuration analysis
+- **Deliverables**: complete architecture documentation + decompiled code examples
+- **Decompilation result**: core architecture successfully reconstructed; decompiled code compiles and runs
 
-## 项目状态概览
+## Project Status Overview
 
-本项目已完成核心架构逆向分析，主要功能模块实现状态如下：
+The core architecture reverse engineering is complete. Implementation status of the main functional modules:
 
-### ✅ 已完整实现
-- **核心架构分析**: 完整架构文档已生成
-- **Agent 核心系统**: 消息循环、工具调用、权限控制
-- **TUI 交互界面**: Bubble Tea 框架 + Markdown 渲染
-- **基础工具集**: Read/Write/Edit/Grep/Bash/Glob/Delete 等 9 个工具
-- **权限安全系统**: 细粒度规则引擎，Hook 拦截机制
+### Fully Implemented
+- **Core architecture analysis**: complete architecture documentation generated
+- **Agent core system**: message loop, tool calls, permission control
+- **TUI interactive interface**: Bubble Tea framework + Markdown rendering
+- **Base tool set**: Read/Write/Edit/Grep/Bash/Glob/Delete and 9 other tools
+- **Permission security system**: fine-grained rule engine, Hook interception mechanism
 
-### 🔄 部分实现（核心功能可用）
-- **多 Provider 支持**: Qoder + OpenAI 可用，支持扩展其他 Provider
-- **MCP 协议集成**: Client 库已实现，支持 stdio/SSE 传输
-- **CLI 命令框架**: 基础 CLI 功能可用，支持交互模式
-- **配置管理系统**: 基础配置结构，支持模型选择和基础设置
-- **运行模式支持**: 交互模式完整，其他模式待完善
+### Partially Implemented (core features available)
+- **Multi-Provider support**: Qoder + OpenAI available, extensible to other Providers
+- **MCP protocol integration**: Client library implemented, supports stdio/SSE transport
+- **CLI command framework**: basic CLI functionality available, supports interactive mode
+- **Configuration management system**: basic configuration structure, supports model selection and basic settings
+- **Runtime mode support**: interactive mode complete, other modes pending
 
-### ⏳ 待实现功能
-- **会话管理**: 会话持久化、恢复功能
-- **高级工具扩展**: WebFetch/WebSearch/Task/TodoWrite/Skill 等
-- **MCP 管理功能**: CLI 子命令、服务器管理、OAuth 认证
-- **Jobs 并发系统**: worktree 任务管理
-- **SubAgent 系统**: 子代理调度和执行
-- **GitHub 集成**: PR 创建、代码审查、Actions 集成
+### Pending Implementation
+- **Session management**: session persistence and recovery
+- **Advanced tool extensions**: WebFetch/WebSearch/Task/TodoWrite/Skill, etc.
+- **MCP management features**: CLI subcommands, server management, OAuth authentication
+- **Jobs concurrency system**: worktree task management
+- **SubAgent system**: sub-agent scheduling and execution
+- **GitHub integration**: PR creation, code review, Actions integration
 
-**详细差距分析**: 参见 [反编译差距分析文档](docs/11-decompiled-gap-analysis.md)
+**Detailed gap analysis**: see [Decompiled Gap Analysis](docs/11-decompiled-gap-analysis.md)
 
-**完成时间**: 2026-03-09
+**Completion date**: 2026-03-09
 
-## 完成效果展示
+## Results Showcase
 
-以下是 qodercli 的实际运行界面截图，展示了逆向分析项目的完成效果：
+The following screenshots show the actual running interface of qodercli-reverse, demonstrating the completed reverse engineering project:
 
-### 截图 1: qodercli 交互界面 (1014×536)
-![qodercli 交互界面](qodercli.1.png)
+### Screenshot 1: qodercli-reverse Interactive Interface (1014x536)
+![qodercli-reverse Interactive Interface](qodercli-reverse.1.png)
 
-### 截图 2: qodercli 工具使用界面 (960×909)
-![qodercli 工具使用界面](qodercli.2.png)
+### Screenshot 2: qodercli-reverse Tool Usage Interface (960x909)
+![qodercli-reverse Tool Usage Interface](qodercli-reverse.2.png)
 
-## 文档目录
+## Documentation Directory
 
 ```
 docs/
-├── architecture-overview.md      # 完整架构概览
-├── official-architecture.md      # 官方 qodercli 架构分析（重构参考）
-├── 01-package-structure.md       # 包结构和依赖
-├── 02-cli-commands.md            # CLI 命令系统
-├── 03-llm-integration.md         # LLM 集成
-├── 04-mcp-protocol.md            # MCP 协议
-├── 05-tools-system.md            # 工具系统
-├── 06-session-management.md      # 会话管理
-├── 07-permission-security.md     # 权限安全
-├── 08-config-api.md              # 配置和 API
-├── 09-github-integration.md      # GitHub 集成
-├── 10-subagent-skill.md          # SubAgent 和 Skill
-├── 11-decompiled-gap-analysis.md # 反编译差异分析
-└── 12-bubbletea-analysis.md      # Bubble Tea 使用分析
+├── architecture-overview.md      # Complete architecture overview
+├── official-architecture.md      # Official qodercli-reverse architecture analysis (refactoring reference)
+├── 01-package-structure.md       # Package structure and dependencies
+├── 02-cli-commands.md            # CLI command system
+├── 03-llm-integration.md         # LLM integration
+├── 04-mcp-protocol.md            # MCP protocol
+├── 05-tools-system.md            # Tool system
+├── 06-session-management.md      # Session management
+├── 07-permission-security.md     # Permission security
+├── 08-config-api.md              # Configuration and API
+├── 09-github-integration.md      # GitHub integration
+├── 10-subagent-skill.md          # SubAgent and Skill
+├── 11-decompiled-gap-analysis.md # Decompiled gap analysis
+└── 12-bubbletea-analysis.md      # Bubble Tea usage analysis
 ```
 
-## decompiled 目录架构
+## decompiled Directory Architecture
 
 ```
 decompiled/
-├── cmd/                          # CLI 命令入口
+├── cmd/                          # CLI command entry
 │   └── root.go
-├── core/                         # 核心逻辑
-│   ├── agent/                    # Agent 系统
-│   │   ├── agent/agent.go        # 主循环
+├── core/                         # Core logic
+│   ├── agent/                    # Agent system
+│   │   ├── agent/agent.go        # Main loop
 │   │   ├── provider/             # LLM Provider
-│   │   ├── tools/                # 工具实现
-│   │   ├── permission/           # 权限控制
-│   │   └── state/                # 状态管理
-│   ├── config/                   # 配置加载
-│   ├── resource/mcp/             # MCP 客户端
-│   ├── pubsub/                   # 事件系统
-│   └── types/                    # 类型定义
-├── tui/                          # TUI 界面
-│   ├── app/                      # 应用启动
-│   └── components/               # UI 组件
-├── main.go                       # 程序入口
-└── go.mod/go.sum                 # 依赖管理
+│   │   ├── tools/                # Tool implementations
+│   │   ├── permission/           # Permission control
+│   │   └── state/                # State management
+│   ├── config/                   # Configuration loading
+│   ├── resource/mcp/             # MCP client
+│   ├── pubsub/                   # Event system
+│   └── types/                    # Type definitions
+├── tui/                          # TUI interface
+│   ├── app/                      # Application startup
+│   └── components/               # UI components
+├── main.go                       # Program entry
+└── go.mod/go.sum                 # Dependency management
 ```
 
-**代码统计**: 约 15 个文件，~3350 行代码
+**Code statistics**: about 15 files, ~3350 lines of code
 
-## 核心架构
+## Core Architecture
 
 ```
 ┌─────────────────┐
@@ -103,183 +103,181 @@ decompiled/
 └────────┬────────┘
          │
 ┌────────▼────────┐
-│   Agent Core    │  ← 主循环、Provider、Tools、Permission
+│   Agent Core    │  ← Main loop, Provider, Tools, Permission
 └────────┬────────┘
          │
 ┌────────▼────────┐
-│   Resources     │  ← MCP、Skill、SubAgent
+│   Resources     │  ← MCP, Skill, SubAgent
 └────────┬────────┘
          │
 ┌────────▼────────┐
-│   Utilities     │  ← HTTP、Token、Storage、API
+│   Utilities     │  ← HTTP, Token, Storage, API
 └────────┬────────┘
 ```
 
+## Development Workflow
 
+Before modifying or extending code, follow the reverse engineering workflow below to keep the implementation consistent with the official architecture:
 
-## 开发工作流程
-
-在修改或扩展代码前，必须遵循以下逆向分析流程，确保实现与官方架构保持一致：
-
-### 1. 定位官方二进制
+### 1. Locate the Official Binary
 
 ```bash
-# 找到官方 qodercli 二进制文件位置
-which qodercli
-# 输出示例: /Users/zhihu/.qoder/bin/qodercli/qodercli-0.1.29
+# Find the official qodercli-reverse binary location
+which qodercli-reverse
+# Example output: /Users/zhihu/.qoder/bin/qodercli-reverse/qodercli-reverse-0.1.29
 ```
 
-### 2. 逆向分析目标模块
+### 2. Reverse Engineer the Target Module
 
-使用反编译工具分析官方实现的函数、方法、调用关系：
+Use decompilation tools to analyze the functions, methods, and call relationships of the official implementation:
 
 ```bash
-# 提取符号表，查找相关包和函数
-nm -gU /path/to/qodercli | grep "包名或功能关键字"
+# Extract the symbol table and search for relevant packages and functions
+nm -gU /path/to/qodercli-reverse | grep "package or function keyword"
 
-# 提取字符串，定位功能模块
-strings /path/to/qodercli | grep "关键字"
+# Extract strings to locate functional modules
+strings /path/to/qodercli-reverse | grep "keyword"
 
-# 使用 Go 工具反汇编特定函数
-go tool objdump -s "函数名" /path/to/qodercli
+# Disassemble a specific function with Go tools
+go tool objdump -s "function name" /path/to/qodercli-reverse
 
-# 示例：分析 MCP 相关实现
-nm -gU $(which qodercli) | grep mcp
-strings $(which qodercli) | grep -i "mcp"
+# Example: analyze MCP-related implementation
+nm -gU $(which qodercli-reverse) | grep mcp
+strings $(which qodercli-reverse) | grep -i "mcp"
 ```
 
-### 3. 对照官方架构
+### 3. Compare with the Official Architecture
 
-参考 `docs/official-architecture.md` 中的官方包结构：
+Refer to the official package structure in `docs/official-architecture.md`:
 
 ```
-code.alibaba-inc.com/qoder-core/qodercli/
-├── cmd/                    # 命令行接口层
-├── core/                   # 核心业务逻辑
-│   ├── agent/             # Agent 实现
-│   ├── auth/              # 认证
-│   ├── config/            # 配置管理
-│   └── resource/mcp/      # MCP 集成
-└── tui/                    # 终端 UI
+code.alibaba-inc.com/qoder-core/qodercli-reverse/
+├── cmd/                    # Command-line interface layer
+├── core/                   # Core business logic
+│   ├── agent/             # Agent implementation
+│   ├── auth/              # Authentication
+│   ├── config/            # Configuration management
+│   └── resource/mcp/      # MCP integration
+└── tui/                    # Terminal UI
 ```
 
-确保你的修改符合官方的分层架构和职责划分。
+Ensure your changes match the official layered architecture and responsibility boundaries.
 
-### 4. 规划实现方案
+### 4. Plan the Implementation
 
-在动手编码前：
+Before coding:
 
-1. **阅读相关文档**: 查看 `docs/` 中对应模块的分析文档
-2. **查看差距分析**: 参考 `docs/11-decompiled-gap-analysis.md` 了解当前缺失的功能
-3. **制定计划**: 明确需要新建/修改哪些文件，如何组织代码结构
-4. **验证设计**: 确保方案与官方架构一致，避免偏离
+1. **Read the relevant docs**: check the corresponding module analysis in `docs/`
+2. **Review the gap analysis**: refer to `docs/11-decompiled-gap-analysis.md` for missing features
+3. **Make a plan**: decide which files to create or modify and how to organize the code
+4. **Validate the design**: ensure the plan aligns with the official architecture
 
-### 5. 实现与验证
+### 5. Implement and Verify
 
-- 按照官方架构的包结构组织代码
-- 使用官方的命名约定（如工具参数类型：`{Tool}Params`）
-- 实现后对比官方二进制的行为，确保功能一致
+- Organize code following the official package structure
+- Use the official naming conventions (e.g., tool parameter types: `{Tool}Params`)
+- After implementation, compare behavior with the official binary
 
-## 使用方法
+## Usage
 
-1. **查看架构**: 从 `docs/architecture-overview.md` 开始
-2. **官方架构参考**: 查看 `docs/official-architecture.md` 了解官方代码结构（用于重构参考）
-3. **深入模块**: 阅读对应模块文档 (01-11)
-4. **参考代码**: 查看 `decompiled/` 中的反编译示例
+1. **View the architecture**: start with `docs/architecture-overview.md`
+2. **Official architecture reference**: see `docs/official-architecture.md` for the official code structure (used as refactoring reference)
+3. **Explore modules**: read the corresponding module docs (01-11)
+4. **Reference code**: inspect the decompiled examples in `decompiled/`
 
-## 实现计划（基于差距分析）
+## Implementation Plan (Based on Gap Analysis)
 
-根据 [反编译差距分析文档](docs/11-decompiled-gap-analysis.md)，以下是建议的实现优先级：
+Based on [Decompiled Gap Analysis](docs/11-decompiled-gap-analysis.md), the following implementation priorities are recommended:
 
-### Phase 1: 核心可用性 (P0 - 最高优先级)
+### Phase 1: Core Usability (P0 - Highest Priority)
 
-1. **引入 Cobra CLI 框架**
-   - 搭建完整的 `cmd/` 目录结构
-   - 实现所有 flags 和子命令绑定
-   - 解决当前硬编码的 CLI 逻辑
+1. **Introduce the Cobra CLI framework**
+   - Build the complete `cmd/` directory structure
+   - Bind all flags and subcommands
+   - Resolve the currently hardcoded CLI logic
 
-2. **完善配置系统**
-   - 支持多层配置加载（环境变量、全局配置、项目配置）
-   - 实现完整的 Config 结构体
-   - 添加 Claude 配置兼容性
+2. **Complete the configuration system**
+   - Support multi-layer configuration loading (environment variables, global config, project config)
+   - Implement the complete Config struct
+   - Add Claude configuration compatibility
 
-3. **实现会话管理**
-   - 会话持久化存储
-   - 支持 `-c` (continue) 和 `-r` (resume) 功能
-   - 会话恢复机制
+3. **Implement session management**
+   - Session persistence storage
+   - Support `-c` (continue) and `-r` (resume)
+   - Session recovery mechanism
 
-4. **构建 System Prompt Builder**
-   - 动态生成系统提示
-   - 集成工具描述、环境信息、权限规则
+4. **Build the System Prompt Builder**
+   - Dynamically generate system prompts
+   - Integrate tool descriptions, environment info, permission rules
 
-### Phase 2: 功能完善 (P1 - 中等优先级)
+### Phase 2: Feature Completion (P1 - Medium Priority)
 
-5. **补全缺失工具**
-   - WebFetch、WebSearch、Task、TodoWrite、AskUserQuestion
-   - 将 MCP 工具动态注册到 Agent
+5. **Complete missing tools**
+   - WebFetch, WebSearch, Task, TodoWrite, AskUserQuestion
+   - Dynamically register MCP tools with the Agent
 
-6. **实现 MCP 子命令系统**
-   - `mcp add/get/list/remove/auth` 子命令
-   - MCP 服务器配置管理
-   - OAuth 认证流程
+6. **Implement the MCP subcommand system**
+   - `mcp add/get/list/remove/auth` subcommands
+   - MCP server configuration management
+   - OAuth authentication flow
 
-7. **实现非交互 Print 模式**
-   - `-p` 参数支持
-   - 多种输出格式 (text/json/stream-json)
-   - 流式输出处理
+7. **Implement non-interactive Print mode**
+   - `-p` parameter support
+   - Multiple output formats (text/json/stream-json)
+   - Streaming output handling
 
-### Phase 3: 高级功能 (P2 - 较低优先级)
+### Phase 3: Advanced Features (P2 - Lower Priority)
 
-8. **Worktree/Jobs 系统**
-   - Git worktree 并发任务管理
-   - `jobs` 和 `rm` 子命令
-   - Kubernetes 集成支持
+8. **Worktree/Jobs system**
+   - Git worktree concurrent task management
+   - `jobs` and `rm` subcommands
+   - Kubernetes integration support
 
-9. **SubAgent 和 Skill 系统**
-   - 子代理调度和执行
-   - 技能调用和管理
-   - 内置 SubAgent 类型实现
+9. **SubAgent and Skill system**
+   - Sub-agent scheduling and execution
+   - Skill invocation and management
+   - Built-in SubAgent type implementations
 
-10. **GitHub 集成**
-    - PR 创建和代码审查
-    - GitHub Actions 集成
-    - 代码搜索和仓库管理
+10. **GitHub integration**
+    - PR creation and code review
+    - GitHub Actions integration
+    - Code search and repository management
 
-11. **其他缺失功能**
-    - 自动更新 (`update` 子命令)
-    - 反馈系统 (`feedback` 子命令)
-    - 状态检查 (`status` 子命令)
-    - Shell 自动补全
+11. **Other missing features**
+    - Auto-update (`update` subcommand)
+    - Feedback system (`feedback` subcommand)
+    - Status check (`status` subcommand)
+    - Shell auto-completion
 
-**详细实现指南**: 参考 [官方架构文档](docs/official-architecture.md) 和 [差距分析](docs/11-decompiled-gap-analysis.md) 中的具体实现建议。
+**Detailed implementation guide**: see [Official Architecture](docs/official-architecture.md) and the concrete suggestions in [Gap Analysis](docs/11-decompiled-gap-analysis.md).
 
-## 注意事项
+## Notes
 
-- 反编译代码基于二进制推导，可能与原始实现有差异
-- 代码未经测试，不建议直接用于生产环境
-- 仅供学习和架构参考使用
+- Decompiled code is derived from the binary and may differ from the original implementation
+- Code is untested; not recommended for direct production use
+- For learning and architecture reference only
 
-## 常用逆向分析命令
+## Common Reverse Engineering Commands
 
 ```bash
-# 查看二进制基本信息
-file $(which qodercli)
-otool -L $(which qodercli)  # 查看依赖库
+# View basic binary information
+file $(which qodercli-reverse)
+otool -L $(which qodercli-reverse)  # View dependent libraries
 
-# 符号表分析
-nm -gU $(which qodercli) | grep "关键字"  # 查找导出符号
-nm $(which qodercli) | wc -l              # 统计符号数量
+# Symbol table analysis
+nm -gU $(which qodercli-reverse) | grep "keyword"  # Find exported symbols
+nm $(which qodercli-reverse) | wc -l              # Count symbols
 
-# 字符串提取
-strings $(which qodercli) | grep "关键字"
-strings $(which qodercli) | grep "code.alibaba-inc.com"  # 查找包路径
+# String extraction
+strings $(which qodercli-reverse) | grep "keyword"
+strings $(which qodercli-reverse) | grep "code.alibaba-inc.com"  # Find package paths
 
-# Go 特定分析
-go tool nm $(which qodercli) | grep "包名"
-go tool objdump -s "函数名" $(which qodercli)
+# Go-specific analysis
+go tool nm $(which qodercli-reverse) | grep "package name"
+go tool objdump -s "function name" $(which qodercli-reverse)
 
-# 查看帮助信息（了解 CLI 结构）
-qodercli --help
-qodercli mcp --help
-qodercli jobs --help
+# View help information (understand CLI structure)
+qodercli-reverse --help
+qodercli-reverse mcp --help
+qodercli-reverse jobs --help
 ```

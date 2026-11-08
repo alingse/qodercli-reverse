@@ -1,82 +1,82 @@
-# 增量渲染实现方案
+# Incremental Rendering Implementation
 
-## 问题分析
+## Problem Analysis
 
-qodercli 官方版本使用了阿里内部 fork 的 Bubble Tea (`code.alibaba-inc.com/qoder-core/bubbletea`)，这个 fork 版本实现了特殊的滚动行为：
-- 消息历史像普通终端输出一样向上滚动
-- 底部的编辑器和状态栏保持固定
-- 可以用终端滚动条查看所有历史
+The official qodercli-reverse version uses Alibaba's internal fork of Bubble Tea (`code.alibaba-inc.com/qoder-core/bubbletea`), and this fork version implements special scrolling behavior:
+- Message history scrolls upward like normal terminal output
+- The editor and status bar at the bottom stay fixed
+- All history can be viewed via the terminal scroll bar
 
-## 核心技术
+## Core Technical Details
 
-官方 Bubble Tea 的渲染模型是"清除-重绘"，不适合增量输出。要实现类似效果，需要：
+The official Bubble Tea's rendering model is "clear-and-redraw", which is not suitable for incremental output. To achieve a similar effect, the following is required:
 
-### 方案 A：Fork Bubble Tea（推荐）
+### Approach A: Fork Bubble Tea (Recommended)
 
 1. Fork `github.com/charmbracelet/bubbletea`
-2. 修改渲染器，添加"增量模式"：
-   - 不清除之前的输出
-   - 只追加新内容
-   - 使用 ANSI 转义码固定底部区域
+2. Modify the renderer to add an "incremental mode":
+   - Do not clear previous output
+   - Only append new content
+   - Use ANSI escape codes to fix the bottom area
 
-关键修改点：
+Key changes:
 ```go
-// 在 renderer.go 中添加增量模式
+// Add the incremental mode in renderer.go
 type IncrementalMode bool
 
 func (r *renderer) renderIncremental(view string) {
-    // 只输出新增的内容
-    // 使用 ANSI 转义码固定底部区域
+    // Output only the new content
+    // Use ANSI escape codes to fix the bottom area
 }
 ```
 
-### 方案 B：自定义渲染器（当前实现）
+### Approach B: Custom Renderer (Current Implementation)
 
-不 fork Bubble Tea，而是：
-1. 使用 `tea.WithoutRenderer()` 禁用默认渲染
-2. 实现自定义的增量渲染器（见 `incremental_renderer.go`）
-3. 在 `Update()` 中手动调用渲染
+Instead of forking Bubble Tea, do the following:
+1. Use `tea.WithoutRenderer()` to disable the default renderer
+2. Implement a custom incremental renderer (see `incremental_renderer.go`)
+3. Call the renderer manually in `Update()`
 
-优点：
-- 不需要维护 fork
-- 更灵活
+Pros:
+- No need to maintain a fork
+- More flexible
 
-缺点：
-- 失去 Bubble Tea 的一些特性（如自动窗口大小检测）
-- 需要手动处理更多细节
+Cons:
+- You lose some of Bubble Tea's features (e.g., automatic window size detection)
+- Need to handle more details manually
 
-### 方案 C：混合模式
+### Approach C: Hybrid Mode
 
-1. 消息历史直接用 `fmt.Println()` 输出
-2. 底部固定区域用 ANSI 转义码控制
-3. 不使用 Bubble Tea 的全屏模式
+1. Output message history directly via `fmt.Println()`
+2. Use ANSI escape codes to control the fixed bottom area
+3. Do not use Bubble Tea's full-screen mode
 
-## 实现步骤
+## Implementation Steps
 
-### 使用方案 B（自定义渲染器）
+### Using Approach B (Custom Renderer)
 
-1. **修改 `run.go`**：
+1. **Modify `run.go`**:
 ```go
 p := tea.NewProgram(
     model,
-    tea.WithoutRenderer(), // 禁用默认渲染
+    tea.WithoutRenderer(), // disable the default renderer
 )
 ```
 
-2. **修改 `model.go`**：
+2. **Modify `model.go`**:
 ```go
 type appModel struct {
-    // ... 现有字段
+    // ... existing fields
     renderer *IncrementalRenderer
 }
 
 func (m appModel) View() string {
-    // 不返回完整视图，而是通过 renderer 增量输出
+    // Do not return the full view; instead output incrementally via the renderer
     return ""
 }
 
 func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-    // 在需要时调用 renderer
+    // Call the renderer when needed
     switch msg := msg.(type) {
     case AgentStreamMsg:
         m.renderer.RenderIncrementalMessage(msg.Content)
@@ -84,45 +84,45 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 ```
 
-3. **修改 `MessageView`**：
+3. **Modify `MessageView`**:
 ```go
 func (mv *MessageView) AddMessage(msg Message) {
-    // 直接输出，不缓存
+    // Output directly; do not cache
     fmt.Println(msg.Render())
 }
 ```
 
-## ANSI 转义码参考
+## ANSI Escape Code Reference
 
 ```bash
-\033[s          # 保存光标位置
-\033[u          # 恢复光标位置
-\033[{row};{col}H  # 移动光标到指定位置
-\033[J          # 清除从光标到屏幕底部
-\033[K          # 清除当前行
-\033[{n}A       # 光标上移 n 行
-\033[{n}B       # 光标下移 n 行
+\033[s          # save cursor position
+\033[u          # restore cursor position
+\033[{row};{col}H  # move cursor to the specified position
+\033[J          # clear from cursor to bottom of screen
+\033[K          # clear current line
+\033[{n}A       # move cursor up n lines
+\033[{n}B       # move cursor down n lines
 ```
 
-## 参考实现
+## Reference Implementations
 
-类似的实现可以参考：
-- `npm` 的进度条
-- `docker build` 的输出
-- `cargo build` 的输出
+Similar implementations can be found here:
+- The progress bar of `npm`
+- The output of `docker build`
+- The output of `cargo build`
 
-这些工具都实现了"历史向上滚动 + 底部固定区域"的效果。
+These tools all implement the "history scrolls up + fixed bottom area" effect.
 
-## 下一步
+## Next Steps
 
-1. 决定使用哪个方案
-2. 如果选择方案 A，需要 fork Bubble Tea 并实现增量模式
-3. 如果选择方案 B，需要完善 `incremental_renderer.go` 并集成到现有代码
-4. 测试和调试
+1. Decide which approach to use
+2. If Approach A is chosen, fork Bubble Tea and implement the incremental mode
+3. If Approach B is chosen, complete `incremental_renderer.go` and integrate it into the existing code
+4. Test and debug
 
-## 注意事项
+## Considerations
 
-- ANSI 转义码在不同终端中的行为可能不同
-- Windows 终端需要特殊处理
-- 需要正确处理终端大小变化
-- 需要处理 Ctrl+C 等信号，确保终端状态正确恢复
+- ANSI escape codes may behave differently across terminals
+- Windows terminals require special handling
+- Terminal size changes must be handled correctly
+- Handle signals such as Ctrl+C and ensure the terminal state is restored correctly

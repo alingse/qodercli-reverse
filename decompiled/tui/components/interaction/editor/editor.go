@@ -1,5 +1,5 @@
-// Package editor 交互式编辑器组件
-// 1:1 还原原版 qodercli 的 EditorComponent
+// Package editor interactive editor component
+// 1:1 restore original qodercli-reverse EditorComponent
 package editor
 
 import (
@@ -14,21 +14,21 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/pubsub"
 )
 
-// Msg 编辑器消息类型
+// Msg editor message type
 type Msg interface {
 	tea.Msg
 }
 
-// SendMsg 发送消息命令
+// SendMsg send message command
 type SendMsg struct {
 	Content     string
 	Attachments []string
 }
 
-// ClearMsg 清空输入
+// ClearMsg clear input
 type ClearMsg struct{}
 
-// Mode 编辑器模式
+// Mode editor mode
 type Mode int
 
 const (
@@ -37,58 +37,58 @@ const (
 	ModeVisual
 )
 
-// EditorComponent 编辑器组件 - 1:1 还原原版
+// EditorComponent editor component - 1:1 restore original
 type EditorComponent struct {
-	// 核心 textarea
+	// core textarea
 	textarea textarea.Model
 
-	// 尺寸
+	// size
 	width  int
 	height int
 
-	// 状态
+	// state
 	mode    Mode
 	focused bool
 	enabled bool
 
-	// 功能处理器
+	// feature handlers
 	attachmentHandler *AttachmentHandler
 	historyHandler    *HistoryHandler
 	inputCache        *InputCache
 
-	// 配置
+	// config
 	placeholder string
 
-	// 事件发布
+	// event publishing
 	pubsub *pubsub.PubSub
 
-	// 缓存上次行数，用于检测行数变化
+	// cache last line count, used to detect line count changes
 	lastLineCount int
 }
 
-// NewEditorComponent 创建新的编辑器组件
+// NewEditorComponent creates a new editor component
 func NewEditorComponent(ps *pubsub.PubSub) *EditorComponent {
 	ta := textarea.New()
 	ta.Placeholder = "Ask anything..."
 	ta.ShowLineNumbers = false
 	ta.CharLimit = 100000
-	// 官方样式：使用 "> " 作为 prompt
+	// official style: use "> " as prompt
 	ta.Prompt = "> "
-	// 设置样式
+	// set styles
 	ta.FocusedStyle.Placeholder = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 	ta.BlurredStyle.Placeholder = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
-	// 文本样式：白色
+	// text style: white
 	ta.FocusedStyle.Text = lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
 	ta.BlurredStyle.Text = lipgloss.NewStyle().Foreground(lipgloss.Color("255"))
-	// Prompt 样式：灰色
+	// prompt style: gray
 	ta.FocusedStyle.Prompt = lipgloss.NewStyle().Foreground(lipgloss.Color("248"))
 	ta.BlurredStyle.Prompt = lipgloss.NewStyle().Foreground(lipgloss.Color("248"))
-	// 光标样式
+	// cursor style
 	ta.FocusedStyle.CursorLine = lipgloss.NewStyle()
 	ta.FocusedStyle.Base = lipgloss.NewStyle()
 
-	// 修复：修改 KeyMap，区分 Enter 和 Shift+Enter
-	// Enter 发送消息，Shift+Enter 插入换行
+	// fix: modify KeyMap to distinguish Enter and Shift+Enter
+	// Enter sends message, Shift+Enter inserts newline
 	ta.KeyMap.InsertNewline = key.NewBinding(
 		key.WithKeys("shift+enter"),
 		key.WithHelp("shift+enter", "insert newline"),
@@ -104,20 +104,20 @@ func NewEditorComponent(ps *pubsub.PubSub) *EditorComponent {
 		attachmentHandler: NewAttachmentHandler(),
 		historyHandler:    NewHistoryHandler(),
 		inputCache:        NewInputCache(),
-		// 设置默认尺寸
+		// set default size
 		width:         80,
 		height:        3,
-		lastLineCount: 1, // 初始为1行
+		lastLineCount: 1, // initially 1 line
 	}
 
-	// 设置 textarea 的默认尺寸
-	ec.textarea.SetWidth(76) // 80 - 4 (边框和 padding)
-	ec.textarea.SetHeight(1) // 单行输入
+	// set textarea default size
+	ec.textarea.SetWidth(76) // 80 - 4 (border and padding)
+	ec.textarea.SetHeight(1) // single-line input
 
 	return ec
 }
 
-// Init 初始化
+// Init initializes
 func (ec *EditorComponent) Init() tea.Cmd {
 	return tea.Batch(
 		textarea.Blink,
@@ -125,14 +125,14 @@ func (ec *EditorComponent) Init() tea.Cmd {
 	)
 }
 
-// Update 更新状态 - 核心消息处理
+// Update updates state - core message handling
 func (ec *EditorComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if !ec.enabled {
 		return ec, nil
 	}
 
 	var cmds []tea.Cmd
-	// 标记消息是否被 handleKeyMsg 处理（用于阻止传递给 textarea）
+	// mark whether message was handled by handleKeyMsg (to prevent passing to textarea)
 	keyHandled := false
 
 	switch msg := msg.(type) {
@@ -147,7 +147,7 @@ func (ec *EditorComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		keyHandled = handled
 
 	case tea.MouseMsg:
-		// 处理鼠标事件
+		// handle mouse events
 		if msg.Type == tea.MouseLeft {
 			ec.Focus()
 		}
@@ -157,7 +157,7 @@ func (ec *EditorComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return ec, nil
 	}
 
-	// 更新 textarea（只有键消息未被处理时才传递）
+	// update textarea (only pass when key message not handled)
 	if ec.focused && !keyHandled {
 		newTextarea, cmd := ec.textarea.Update(msg)
 		ec.textarea = newTextarea
@@ -166,26 +166,26 @@ func (ec *EditorComponent) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	// 检测行数变化，同步更新 textarea 高度
-	// 这确保当用户添加/删除换行时，编辑器高度立即响应
+	// detect line count changes, sync textarea height
+	// this ensures editor height responds immediately when user adds/removes newlines
 	ec.syncHeight()
 
 	return ec, tea.Batch(cmds...)
 }
 
-// handleKeyMsg 处理键盘消息 - 原版核心逻辑
-// 返回值: (命令, 是否已处理) - 如果已处理，消息不会传递给 textarea
+// handleKeyMsg handles keyboard messages - original core logic
+// return value: (command, handled) - if handled, message is not passed to textarea
 func (ec *EditorComponent) handleKeyMsg(msg tea.KeyMsg) (tea.Cmd, bool) {
 	switch msg.Type {
 	case tea.KeyEsc:
 		return ec.handleEscape(), true
 
 	case tea.KeyEnter:
-		// 检查 Shift+Enter - 未处理，让 textarea 插入换行
+		// check Shift+Enter - not handled, let textarea insert newline
 		if msg.String() == "shift+enter" {
 			return nil, false
 		}
-		// Enter 发送消息 - 已处理，不传递给 textarea
+		// Enter sends message - handled, not passed to textarea
 		return ec.sendMessage(), true
 
 	case tea.KeyCtrlC:
@@ -204,62 +204,62 @@ func (ec *EditorComponent) handleKeyMsg(msg tea.KeyMsg) (tea.Cmd, bool) {
 		}
 
 	case tea.KeyTab:
-		// Tab: 插入空格 - 已处理
+		// Tab: insert spaces - handled
 		ec.textarea.InsertString("    ")
 		return nil, true
 
 	case tea.KeyPgUp, tea.KeyPgDown:
-		// 页面滚动 - 未处理，传递给父组件
+		// page scroll - not handled, passed to parent component
 		return nil, false
 	}
 
 	return nil, false
 }
 
-// handleEscape 处理 Esc 键
+// handleEscape handles Esc key
 func (ec *EditorComponent) handleEscape() tea.Cmd {
 	ec.resetEscState()
 	return nil
 }
 
-// resetEscState 重置 Esc 状态
+// resetEscState resets Esc state
 func (ec *EditorComponent) resetEscState() {
 	ec.textarea.Blur()
 	ec.focused = false
 }
 
-// resetInputs 重置输入
+// resetInputs resets input
 func (ec *EditorComponent) resetInputs() {
 	ec.textarea.Reset()
 	ec.textarea.Focus()
 	ec.focused = true
 	ec.attachmentHandler.Reset()
-	// 重置 textarea 高度为单行（1行内容）
+	// reset textarea height to single line (1 line content)
 	ec.textarea.SetHeight(1)
-	// 重置行数缓存
+	// reset line count cache
 	ec.lastLineCount = 1
 }
 
-// sendMessage 发送消息 - 核心功能
+// sendMessage sends message - core functionality
 func (ec *EditorComponent) sendMessage() tea.Cmd {
 	content := strings.TrimSpace(ec.textarea.Value())
 	if content == "" && !ec.attachmentHandler.HasAttachments() {
 		return nil
 	}
 
-	// 缓存输入
+	// cache input
 	ec.inputCache.SetInput(content)
 
-	// 添加历史记录
+	// add history record
 	ec.historyHandler.AddHistory(content)
 
-	// 构建消息
+	// build message
 	msg := SendMsg{
 		Content:     content,
 		Attachments: ec.attachmentHandler.GetAttachments(),
 	}
 
-	// 发布事件
+	// publish event
 	if ec.pubsub != nil {
 		ec.pubsub.Publish(context.Background(), pubsub.Event{
 			Type:    pubsub.EventTypeUserInput,
@@ -267,7 +267,7 @@ func (ec *EditorComponent) sendMessage() tea.Cmd {
 		})
 	}
 
-	// 清空输入
+	// clear input
 	ec.resetInputs()
 
 	return func() tea.Msg {
@@ -275,48 +275,48 @@ func (ec *EditorComponent) sendMessage() tea.Cmd {
 	}
 }
 
-// handleHistoryNavigation 历史记录导航
+// handleHistoryNavigation history navigation
 func (ec *EditorComponent) handleHistoryNavigation(direction int) tea.Cmd {
 	history := ec.historyHandler.Navigate(direction)
 	if history != "" {
 		ec.textarea.SetValue(history)
-		// 将光标移到末尾
+		// move cursor to end
 		ec.textarea.CursorEnd()
 	}
 	return nil
 }
 
-// atTopOfInput 是否在输入框顶部
+// atTopOfInput whether at top of input box
 func (ec *EditorComponent) atTopOfInput() bool {
-	// 检查光标是否在第一行
+	// check if cursor is on first line
 	return ec.textarea.Line() == 0
 }
 
-// atBottomOfInput 是否在输入框底部
+// atBottomOfInput whether at bottom of input box
 func (ec *EditorComponent) atBottomOfInput() bool {
-	// 获取总行数
+	// get total line count
 	lineCount := ec.textarea.LineCount()
 	return ec.textarea.Line() >= lineCount-1
 }
 
-// GetLineCount 获取当前行数
+// GetLineCount gets current line count
 func (ec *EditorComponent) GetLineCount() int {
 	return ec.textarea.LineCount()
 }
 
-// syncHeight 同步 textarea 高度与内容行数
-// 当行数变化时立即更新，确保高度变化及时反映
+// syncHeight syncs textarea height with content line count
+// updates immediately when line count changes
 func (ec *EditorComponent) syncHeight() {
 	currentLines := ec.textarea.LineCount()
 
-	// 如果行数没有变化，跳过
+	// if line count unchanged, skip
 	if currentLines == ec.lastLineCount {
 		return
 	}
 
 	ec.lastLineCount = currentLines
 
-	// 限制内容行数在 1-5 范围内
+	// limit content lines to 1-5 range
 	contentLines := currentLines
 	if contentLines > 5 {
 		contentLines = 5
@@ -325,31 +325,31 @@ func (ec *EditorComponent) syncHeight() {
 		contentLines = 1
 	}
 
-	// 设置 textarea 内部高度
+	// set textarea internal height
 	ec.textarea.SetHeight(contentLines)
 }
 
-// GetPreferredHeight 获取首选高度（根据内容行数 + 边框 + padding）
+// GetPreferredHeight gets preferred height (content lines + border + padding)
 func (ec *EditorComponent) GetPreferredHeight() int {
-	// 内容行数（最多5行）
+	// content lines (max 5)
 	contentLines := ec.textarea.LineCount()
 	if contentLines > 5 {
 		contentLines = 5
 	}
-	// 最少1行内容
+	// at least 1 content line
 	if contentLines < 1 {
 		contentLines = 1
 	}
-	// 总高度 = 内容行数 + 边框(2行)
+	// total height = content lines + border (2 lines)
 	totalHeight := contentLines + 2
-	// 限制最大高度为7行（5行内容+2行边框）
+	// limit max height to 7 lines (5 content + 2 border)
 	if totalHeight > 7 {
 		totalHeight = 7
 	}
 	return totalHeight
 }
 
-// View 渲染视图
+// View renders view
 func (ec *EditorComponent) View() string {
 	if !ec.focused {
 		ec.textarea.Blur()
@@ -357,26 +357,26 @@ func (ec *EditorComponent) View() string {
 		ec.textarea.Focus()
 	}
 
-	// 构建编辑器视图
+	// build editor view
 	var sb strings.Builder
 
-	// 渲染附件（如果有）
+	// render attachments (if any)
 	if ec.attachmentHandler.HasAttachments() {
 		sb.WriteString(ec.attachmentHandler.Render())
 		sb.WriteString("\n")
 	}
 
-	// 渲染 textarea - 官方样式：圆角边框
-	borderColor := lipgloss.Color("240") // 灰色边框
+	// render textarea - official style: rounded border
+	borderColor := lipgloss.Color("240") // gray border
 	if ec.focused {
-		borderColor = lipgloss.Color("255") // 聚焦时白色边框
+		borderColor = lipgloss.Color("255") // white border when focused
 	}
 
-	// 使用单行样式
+	// use single-line style
 	editorStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(borderColor).
-		Padding(0, 1). // 左右内边距 1
+		Padding(0, 1). // left/right padding 1
 		Width(ec.width)
 
 	sb.WriteString(editorStyle.Render(ec.textarea.View()))
@@ -384,15 +384,15 @@ func (ec *EditorComponent) View() string {
 	return sb.String()
 }
 
-// SetSize 设置尺寸
+// SetSize sets size
 func (ec *EditorComponent) SetSize(width, height int) {
 	ec.width = width
 	ec.height = height
-	// 减去边框（2字符）和 padding（2字符）
+	// subtract border (2 chars) and padding (2 chars)
 	ec.textarea.SetWidth(width - 4)
-	// textarea 最大高度为 5 行（多行输入时自动扩展）
-	// 限制内部高度为 1-5 行
-	innerHeight := height - 2 // 减去边框
+	// textarea max height is 5 lines (auto-expands for multiline)
+	// limit internal height to 1-5 lines
+	innerHeight := height - 2 // subtract border
 	if innerHeight < 1 {
 		innerHeight = 1
 	}
@@ -402,45 +402,45 @@ func (ec *EditorComponent) SetSize(width, height int) {
 	ec.textarea.SetHeight(innerHeight)
 }
 
-// Focus 聚焦
+// Focus focuses
 func (ec *EditorComponent) Focus() {
 	ec.focused = true
 	ec.textarea.Focus()
 }
 
-// Blur 失焦
+// Blur blurs
 func (ec *EditorComponent) Blur() {
 	ec.focused = false
 	ec.textarea.Blur()
 }
 
-// GetInput 获取当前输入
+// GetInput gets current input
 func (ec *EditorComponent) GetInput() string {
 	return ec.textarea.Value()
 }
 
-// SetContent 设置内容
+// SetContent sets content
 func (ec *EditorComponent) SetContent(content string) {
 	ec.textarea.SetValue(content)
 }
 
-// IsEmpty 是否为空
+// IsEmpty whether empty
 func (ec *EditorComponent) IsEmpty() bool {
 	return strings.TrimSpace(ec.textarea.Value()) == ""
 }
 
-// HasRunningShells 是否有运行中的 shell
+// HasRunningShells whether has running shells
 func (ec *EditorComponent) HasRunningShells() bool {
-	// 简化实现
+	// simplified implementation
 	return false
 }
 
-// CancelRunningShells 取消运行中的 shell
+// CancelRunningShells cancels running shells
 func (ec *EditorComponent) CancelRunningShells() {
-	// 简化实现
+	// simplified implementation
 }
 
-// addAttachment 添加附件
+// addAttachment adds attachment
 func (ec *EditorComponent) addAttachment(path string) error {
 	return ec.attachmentHandler.AddAttachment(path)
 }

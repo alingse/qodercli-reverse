@@ -1,169 +1,169 @@
-# TodoWrite 工具逆向调研报告
+# TodoWrite Tool Reverse-Engineering Research Report
 
-> 调研目标: qodercli v0.1.29 官方二进制中的 TodoWrite 工具实现
-> 调研日期: 2026-03-10
-> 调研工具: strings, go tool nm, go tool objdump
+> Research target: TodoWrite tool implementation in the official qodercli-reverse v0.1.29 binary
+> Research date: 2026-03-10
+> Research tools: strings, go tool nm, go tool objdump
 
 ---
 
-## 一、核心发现
+## 1. Core Findings
 
-### 1.1 文件位置
+### 1.1 File Location
 ```
-code.alibaba-inc.com/qoder-core/qodercli/core/agent/tools/todowrite.go
+code.alibaba-inc.com/qoder-core/qodercli-reverse/core/agent/tools/todowrite.go
 ```
 
-### 1.2 主要类型定义
+### 1.2 Main Type Definitions
 
-#### 1.2.1 TodoWriteParams (参数类型)
+#### 1.2.1 TodoWriteParams (Parameters Type)
 ```go
-// TodoWriteParams TodoWrite 工具参数
+// TodoWriteParams TodoWrite tool parameters
 type TodoWriteParams struct {
-    Todos []state.Todo `json:"todos"`  // 任务列表
+    Todos []state.Todo `json:"todos"`  // todo list
 }
 ```
 
-#### 1.2.2 TodoWriteResponseMetadata (响应元数据)
+#### 1.2.2 TodoWriteResponseMetadata (Response Metadata)
 ```go
-// TodoWriteResponseMetadata 响应元数据
+// TodoWriteResponseMetadata response metadata
 type TodoWriteResponseMetadata struct {
-    OldTodos []state.Todo `json:"oldTodos"`  // 更新前的任务列表
-    NewTodos []state.Todo `json:"newTodos"`  // 更新后的任务列表
+    OldTodos []state.Todo `json:"oldTodos"`  // task list before the update
+    NewTodos []state.Todo `json:"newTodos"`  // task list after the update
 }
 ```
 
-#### 1.2.3 Todo 结构体 (定义在 state 包)
+#### 1.2.3 Todo Struct (Defined in the state package)
 ```go
-// code.alibaba-inc.com/qoder-core/qodercli/core/agent/state.Todo
+// code.alibaba-inc.com/qoder-core/qodercli-reverse/core/agent/state.Todo
 
 type Todo struct {
-    ID         string `json:"id"`         // 任务唯一标识
-    Content    string `json:"content"`    // 任务内容描述
-    Status     string `json:"status"`     // 任务状态
-    ActiveForm string `json:"activeForm"` // 执行时的进行态描述 (如 "Running tests")
+    ID         string `json:"id"`         // unique task ID
+    Content    string `json:"content"`    // task content description
+    Status     string `json:"status"`     // task status
+    ActiveForm string `json:"activeForm"` // in-progress description while executing (e.g., "Running tests")
 }
 ```
 
-#### 1.2.4 NotPresent (权限参数占位)
+#### 1.2.4 NotPresent (Permission Parameter Placeholder)
 ```go
-// NotPresent 表示该工具不需要权限参数
+// NotPresent means the tool does not require a permission parameter
 type NotPresent struct{}
 ```
 
-### 1.3 工具类定义
+### 1.3 Tool Class Definition
 ```go
-// todoWriteTool TodoWrite 工具实现
+// todoWriteTool TodoWrite tool implementation
 type todoWriteTool struct {
-    // 嵌入 Spec 泛型结构
+    // embed the Spec generic structure
     *Spec[TodoWriteParams, NotPresent, TodoWriteResponseMetadata]
     
-    // TodoState 接口
+    // TodoState interface
     todoState TodoState
 }
 ```
 
 ---
 
-## 二、状态枚举值
+## 2. Status Enum Values
 
-根据二进制字符串提取，Todo 的 Status 字段支持以下值:
+According to strings extracted from the binary, the Todo Status field supports the following values:
 
-| 状态值 | JSON 标签 | 含义 |
+| Status Value | JSON Label | Meaning |
 |--------|-----------|------|
-| `in_progress` | `"in_progress"` | 进行中 |
-| `completed` | `"completed"` | 已完成 |
-| `pending` | `"pending"` | 待处理 |
-| `done` | `"done"` | 完成 |
-| `cancelled` | `"cancelled"` | 已取消 |
+| `in_progress` | `"in_progress"` | In Progress |
+| `completed` | `"completed"` | Completed |
+| `pending` | `"pending"` | Pending |
+| `done` | `"done"` | Done |
+| `cancelled` | `"cancelled"` | Cancelled |
 
 ---
 
-## 三、主要方法
+## 3. Main Methods
 
-### 3.1 构造函数
+### 3.1 Constructor
 ```go
 func NewTodoWriteTool(todoState TodoState) Tool
 ```
 
-### 3.2 工具信息方法
+### 3.2 Tool Info Method
 ```go
 func (t *todoWriteTool) Info() ToolInfo
 ```
 
-### 3.3 执行方法
+### 3.3 Execution Method
 ```go
 func (t *todoWriteTool) Run(ctx context.Context, params TodoWriteParams) (*ToolResult, error)
 ```
 
-### 3.4 验证方法
+### 3.4 Validation Method
 ```go
 func (t *todoWriteTool) validateTodos(todos []Todo) error
 ```
 
-### 3.5 自动修复方法
+### 3.5 Auto-Repair Method
 ```go
 func autoFixEmptyTodos(todos []Todo) []Todo
 ```
 
 ---
 
-## 四、关键实现规则
+## 4. Key Implementation Rules
 
-### 4.1 空数组处理规则
-**重要**: 绝不允许传递空数组来清除任务列表。当所有任务完成时，应保持任务在列表中，并将状态设置为 `"completed"`。
+### 4.1 Empty Array Handling Rule
+**Important**: An empty array must not be passed to clear the task list. When all tasks are complete, keep the tasks in the list and set their status to `"completed"`.
 
-错误示例:
+Invalid Example:
 ```json
-{ "todos": [] }  // 这是不允许的！
+{ "todos": [] }  // this is not allowed!
 ```
 
-正确示例:
+Valid Example:
 ```json
 {
   "todos": [
-    { "id": "1", "content": "任务1", "status": "completed", "activeForm": "完成任务1" }
+    { "id": "1", "content": "Task 1", "status": "completed", "activeForm": "Completed task 1" }
   ]
 }
 ```
 
-### 4.2 ActiveForm 字段规则
-- **必需字段**: `activeForm` 不能为空
-- **用途**: 在执行任务时显示进行中的描述
-- **示例**: 
+### 4.2 ActiveForm Field Rules
+- **Required field**: `activeForm` must not be empty
+- **Purpose**: Displays the in-progress description while the task runs
+- **Example**: 
   - Content: "Implement user authentication"
   - ActiveForm: "Implementing user authentication"
 
-### 4.3 验证规则
-根据错误信息推断的验证规则:
+### 4.3 Validation Rules
+Validation rules inferred from error messages:
 
 ```
-todo[%d]: content cannot be empty        // content 不能为空
-todo[%d]: invalid status '%s'            // status 必须是有效值
-todo[%d]: activeForm cannot be empty     // activeForm 不能为空
+todo[%d]: content cannot be empty        // content must not be empty
+todo[%d]: invalid status '%s'            // status must be a valid value
+todo[%d]: activeForm cannot be empty     // activeForm must not be empty
 ```
 
-### 4.4 自动修复逻辑
-当检测到空数组时，`autoFixEmptyTodos` 会自动将所有任务标记为 `completed`，而不是清空列表。
+### 4.4 Auto-Repair Logic
+When an empty array is detected, `autoFixEmptyTodos` automatically marks all tasks as `completed` instead of clearing the list.
 
 ---
 
-## 五、使用场景提示 (从 System Prompt 提取)
+## 5. Usage Scenarios (Extracted from the System Prompt)
 
-### 5.1 何时使用 TodoWrite
-- **高阶段追踪**: 只追踪高级阶段（需求、设计、审查、编码、测试、交付）
-- **复杂任务**: 将大功能分解为可管理的任务
-- **进度可见**: 让用户看到任务进展
+### 5.1 When to Use TodoWrite
+- **High-level tracking**: Track only high-level stages (requirements, design, review, coding, testing, delivery)
+- **Complex tasks**: Break large features into manageable tasks
+- **Visible progress**: Show the user the task progress
 
-### 5.2 何时不使用 TodoWrite
-- **简单任务**: 单次操作就能完成的简单任务
-- **探索性工作**: 不确定步骤的探索阶段
+### 5.2 When Not to Use TodoWrite
+- **Simple tasks**: Simple tasks that can be completed in a single operation
+- **Exploratory work**: The exploration phase where the steps are uncertain
 
-### 5.3 语言对齐规则
-**所有 TodoList 条目的语言必须与用户在对话中使用的语言一致。**
+### 5.3 Language Alignment Rule
+**All TodoList entries must be in the same language the user uses in the conversation.**
 
 ---
 
-## 六、JSON Schema 推断
+## 6. JSON Schema Inference
 
 ```json
 {
@@ -203,53 +203,53 @@ todo[%d]: activeForm cannot be empty     // activeForm 不能为空
 
 ---
 
-## 七、实现建议
+## 7. Implementation Suggestions
 
-### 7.1 需要实现的接口
+### 7.1 Interfaces to Implement
 ```go
-// TodoState 接口 - 管理待办事项状态
+// TodoState interface - manages todo state
 type TodoState interface {
     LoadTodos() ([]Todo, error)
     SaveTodos(todos []Todo) error
-    todosToText(todos []Todo) string  // 将 todos 转换为文本描述
+    todosToText(todos []Todo) string  // convert todos to text description
 }
 ```
 
-### 7.2 实现步骤
-1. 在 `core/agent/state/` 中添加 `Todo` 结构体和 `TodoState` 接口
-2. 在 `core/agent/tools/` 中创建 `todowrite.go`
-3. 实现 `todoWriteTool` 结构体和所有方法
-4. 在 Agent 初始化时注册 TodoWrite 工具
-5. 在 Agent 的 State 中集成 TodoState 实现
+### 7.2 Implementation Steps
+1. Add the `Todo` struct and the `TodoState` interface in `core/agent/state/`
+2. Create `todowrite.go` in `core/agent/tools/`
+3. Implement the `todoWriteTool` struct and all methods
+4. Register the TodoWrite tool when initializing the Agent
+5. Integrate the TodoState implementation into the Agent's State
 
-### 7.3 关键验证点
-- [ ] 空数组自动修复为全部 completed
-- [ ] 所有字段验证 (content, status, activeForm)
-- [ ] 状态值必须是枚举之一
-- [ ] 响应包含 OldTodos 和 NewTodos
-
----
-
-## 八、参考符号表
-
-```
-code.alibaba-inc.com/qoder-core/qodercli/core/agent/tools.NewTodoWriteTool
-code.alibaba-inc.com/qoder-core/qodercli/core/agent/tools.(*todoWriteTool).Info
-code.alibaba-inc.com/qoder-core/qodercli/core/agent/tools.(*todoWriteTool).Run
-code.alibaba-inc.com/qoder-core/qodercli/core/agent/tools.(*todoWriteTool).validateTodos
-code.alibaba-inc.com/qoder-core/qodercli/core/agent/tools.autoFixEmptyTodos
-code.alibaba-inc.com/qoder-core/qodercli/core/agent/state.(*defaultTodoState).todosToText
-```
+### 7.3 Key Validation Points
+- [ ] Empty array auto-repaired to completed
+- [ ] Validate all fields (content, status, activeForm)
+- [ ] Status values must be one of the enum values
+- [ ] Response includes OldTodos and NewTodos
 
 ---
 
-## 九、总结
+## 8. Reference Symbols
 
-TodoWrite 工具是一个**状态管理工具**，而非外部调用工具。它的核心功能是:
+```
+code.alibaba-inc.com/qoder-core/qodercli-reverse/core/agent/tools.NewTodoWriteTool
+code.alibaba-inc.com/qoder-core/qodercli-reverse/core/agent/tools.(*todoWriteTool).Info
+code.alibaba-inc.com/qoder-core/qodercli-reverse/core/agent/tools.(*todoWriteTool).Run
+code.alibaba-inc.com/qoder-core/qodercli-reverse/core/agent/tools.(*todoWriteTool).validateTodos
+code.alibaba-inc.com/qoder-core/qodercli-reverse/core/agent/tools.autoFixEmptyTodos
+code.alibaba-inc.com/qoder-core/qodercli-reverse/core/agent/state.(*defaultTodoState).todosToText
+```
 
-1. **维护任务列表**: 在 Agent 会话中持久化任务状态
-2. **状态流转**: 支持任务状态的更新和追踪
-3. **自动修复**: 智能处理边界情况（如空数组）
-4. **用户可见**: 通过 TUI 展示当前任务进度
+---
 
-实现时需要特别注意空数组的处理逻辑和 activeForm 字段的生成规则。
+## 9. Summary
+
+The TodoWrite tool is a **state management tool**, not an external invocation tool. Its core functionality is:
+
+1. **Maintain the task list**: Persist task status in the Agent session
+2. **State transitions**: Support updates and tracking of task status
+3. **Auto repair**: Handle edge cases intelligently (e.g., empty arrays)
+4. **User visible**: Show the current task progress via the TUI
+
+Special attention should be paid during implementation to the empty-array handling logic and the rules for generating the activeForm field.

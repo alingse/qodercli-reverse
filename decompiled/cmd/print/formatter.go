@@ -6,8 +6,8 @@ import (
 	"strings"
 )
 
-// formatToolCallArgs 格式化工具调用参数
-// 根据不同工具类型，提取并格式化关键参数
+// formatToolCallArgs formats tool call arguments
+// Extracts and formats key params based on tool type
 func formatToolCallArgs(toolName, arguments string) string {
 	var args map[string]interface{}
 	if err := json.Unmarshal([]byte(arguments), &args); err != nil {
@@ -24,11 +24,11 @@ func formatToolCallArgs(toolName, arguments string) string {
 			return filePath
 		}
 	case "Bash":
-		// 显示实际命令
+		// Show actual command
 		if cmd, ok := args["command"].(string); ok {
 			return truncateString(cmd, 80)
 		}
-		// 如果命令缺失，回退到描述
+		// If command missing, fall back to description
 		if desc, ok := args["description"].(string); ok && desc != "" {
 			return desc
 		}
@@ -45,8 +45,8 @@ func formatToolCallArgs(toolName, arguments string) string {
 	return truncateString(arguments, 100)
 }
 
-// formatToolResult 格式化工具结果
-// 根据不同工具类型，提取并格式化结果摘要
+// formatToolResult formats tool result
+// Extracts and formats result summary based on tool type
 func formatToolResult(toolName, content string, isError bool) string {
 	if isError {
 		return fmt.Sprintf("✗ Error: %s", truncateString(content, 100))
@@ -64,7 +64,7 @@ func formatToolResult(toolName, content string, isError bool) string {
 		return "✓ Completed"
 
 	case "Bash":
-		// 解析 JSON 结果
+		// Parse JSON result
 		var result map[string]interface{}
 		if err := json.Unmarshal([]byte(content), &result); err == nil {
 			if exitCode, ok := result["exit_code"].(float64); ok {
@@ -77,7 +77,7 @@ func formatToolResult(toolName, content string, isError bool) string {
 		return truncateString(content, 100)
 
 	default:
-		// 其他工具：显示第一行或前100字符
+		// Other tools: show first line or first 100 chars
 		firstLine := content
 		if idx := strings.Index(content, "\n"); idx > 0 && idx < 100 {
 			firstLine = content[:idx]
@@ -86,7 +86,7 @@ func formatToolResult(toolName, content string, isError bool) string {
 	}
 }
 
-// truncateString 截断字符串（UTF-8 安全）
+// truncateString truncates string (UTF-8 safe)
 func truncateString(s string, maxLen int) string {
 	runes := []rune(s)
 	if len(runes) <= maxLen {

@@ -1,5 +1,5 @@
-// Package messages 消息显示组件
-// 1:1 还原原版 MessageView
+// Package messages message display component
+// 1:1 restore original MessageView
 package messages
 
 import (
@@ -14,7 +14,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// MessageType 消息类型
+// MessageType message type
 type MessageType int
 
 const (
@@ -30,14 +30,14 @@ const (
 	MsgTypeTodoList
 )
 
-// Message 消息接口
+// Message message interface
 type Message interface {
 	Type() MessageType
 	Render() string
 	Timestamp() time.Time
 }
 
-// MessageView 消息视图组件 - 支持无限滚动和 Markdown 渲染
+// MessageView message view component - supports infinite scroll and Markdown rendering
 type MessageView struct {
 	viewport viewport.Model
 	messages []Message
@@ -46,24 +46,24 @@ type MessageView struct {
 	width  int
 	height int
 
-	// 待处理的消息
+	// pending messages
 	pendingMessages []Message
 
-	// 自动滚动
+	// auto scroll
 	autoScroll bool
 
-	// 缓存的渲染内容
+	// cached rendered content
 	cachedContent string
 }
 
-// NewMessageView 创建新的消息视图
+// NewMessageView creates a new message view
 func NewMessageView() *MessageView {
 	vp := viewport.New(80, 20)
 	vp.SetContent("")
-	// 启用鼠标支持，确保可以滚动
+	// enable mouse support so scrolling works
 	vp.MouseWheelEnabled = true
 
-	// 创建 markdown 渲染器，自动检测终端主题
+	// create markdown renderer, auto-detect terminal theme
 	renderer, _ := markdown.NewRenderer(76, "")
 
 	return &MessageView{
@@ -75,39 +75,39 @@ func NewMessageView() *MessageView {
 	}
 }
 
-// Init 初始化
+// Init initializes
 func (mv *MessageView) Init() tea.Cmd {
 	return nil
 }
 
-// Update 更新状态
+// Update updates state
 func (mv *MessageView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		mv.SetSize(msg.Width, msg.Height)
 	}
 
-	// 更新 viewport
+	// update viewport
 	newVp, cmd := mv.viewport.Update(msg)
 	mv.viewport = newVp
 
 	return mv, cmd
 }
 
-// View 渲染视图 - 直接返回完整内容，不使用 viewport 裁剪
+// View renders view - returns full content directly, no viewport clipping
 func (mv *MessageView) View() string {
-	// 直接返回缓存的完整内容，让终端自然滚动
+	// return cached full content directly, let terminal scroll naturally
 	return mv.cachedContent
 }
 
-// AddMessage 添加消息
+// AddMessage adds a message
 func (mv *MessageView) AddMessage(msg Message) {
 	mv.messages = append(mv.messages, msg)
-	// 渲染内容到缓存
+	// render content to cache
 	mv.renderContent()
 }
 
-// AddUserMessage 添加用户消息
+// AddUserMessage adds a user message
 func (mv *MessageView) AddUserMessage(content string) {
 	msg := &UserMessage{
 		Content: content,
@@ -116,7 +116,7 @@ func (mv *MessageView) AddUserMessage(content string) {
 	mv.AddMessage(msg)
 }
 
-// AddAssistantMessage 添加助手消息
+// AddAssistantMessage adds an assistant message
 func (mv *MessageView) AddAssistantMessage(content string) {
 	msg := &AssistantMessage{
 		Content: content,
@@ -125,7 +125,7 @@ func (mv *MessageView) AddAssistantMessage(content string) {
 	mv.AddMessage(msg)
 }
 
-// AddSystemMessage 添加系统消息（用于统计信息等）
+// AddSystemMessage adds a system message (for stats, etc.)
 func (mv *MessageView) AddSystemMessage(content string) {
 	msg := &AssistantMessage{
 		Content: content,
@@ -134,7 +134,7 @@ func (mv *MessageView) AddSystemMessage(content string) {
 	mv.AddMessage(msg)
 }
 
-// AppendToLastMessage 追加到最后一条消息
+// AppendToLastMessage appends to the last message
 func (mv *MessageView) AppendToLastMessage(content string) {
 	if len(mv.messages) == 0 {
 		mv.AddAssistantMessage(content)
@@ -143,15 +143,15 @@ func (mv *MessageView) AppendToLastMessage(content string) {
 
 	lastMsg := mv.messages[len(mv.messages)-1]
 	if am, ok := lastMsg.(*AssistantMessage); ok {
-		am.AppendContent(content) // 使用 AppendContent 方法，自动标记需要重新渲染
-		// 重新渲染内容
+		am.AppendContent(content) // use AppendContent method, auto-mark needs re-render
+		// re-render content
 		mv.renderContent()
 	} else {
 		mv.AddAssistantMessage(content)
 	}
 }
 
-// AddBashInfo 添加 Bash 命令信息
+// AddBashInfo adds Bash command info
 func (mv *MessageView) AddBashInfo(command string) int {
 	msg := &BashInfo{
 		Command: command,
@@ -162,7 +162,7 @@ func (mv *MessageView) AddBashInfo(command string) int {
 	return msg.ID
 }
 
-// UpdateBashResult 更新 Bash 结果
+// UpdateBashResult updates Bash result
 func (mv *MessageView) UpdateBashResult(id int, output string, isError bool) {
 	for _, msg := range mv.messages {
 		if bashInfo, ok := msg.(*BashInfo); ok && bashInfo.ID == id {
@@ -174,21 +174,21 @@ func (mv *MessageView) UpdateBashResult(id int, output string, isError bool) {
 	}
 }
 
-// AddPendingBash 添加待执行的 Bash 命令（白色 ⏺）
-// 注意：此方法已弃用，请使用 AddPendingTool
+// AddPendingBash adds a pending Bash command (white ⏺)
+// note: deprecated, use AddPendingTool instead
 func (mv *MessageView) AddPendingBash(command string) {
 	mv.AddPendingTool(fmt.Sprintf("bash-%d", len(mv.messages)), "Bash", command)
 }
 
-// CompleteBash 完成 Bash 命令，更新状态
-// 注意：此方法已弃用，请使用 CompleteTool
+// CompleteBash completes a Bash command, updating status
+// note: deprecated, use CompleteTool instead
 func (mv *MessageView) CompleteBash(output string, isError bool) {
-	// 找到最后一个未完成的工具消息
+	// find the last unfinished tool message
 	mv.CompleteTool("", "Bash", output, isError)
 }
 
-// AddPendingTool 添加待执行的工具调用（白色 ⏺）
-// 所有工具调用统一使用此方法添加
+// AddPendingTool adds a pending tool call (white ⏺)
+// all tool calls use this method
 func (mv *MessageView) AddPendingTool(toolID, toolName, arguments string) {
 	msg := &ToolCallInfo{
 		ID:        toolID,
@@ -200,22 +200,22 @@ func (mv *MessageView) AddPendingTool(toolID, toolName, arguments string) {
 	mv.AddMessage(msg)
 }
 
-// CompleteTool 完成工具调用，更新状态
-// toolID: 工具调用唯一标识
-// toolName: 工具名称（用于显示）
-// output: 执行结果
-// isError: 是否执行出错
+// CompleteTool completes a tool call, updating status
+// toolID: unique tool call id
+// toolName: tool name (for display)
+// output: execution result
+// isError: whether execution errored
 func (mv *MessageView) CompleteTool(toolID, toolName, output string, isError bool) {
-	// 找到对应的待处理工具消息
+	// find corresponding pending tool message
 	for i := len(mv.messages) - 1; i >= 0; i-- {
 		if toolInfo, ok := mv.messages[i].(*ToolCallInfo); ok {
-			// 匹配 ID（如果提供）或匹配最后一个未完成的同名工具
+			// match ID (if provided) or last unfinished same-named tool
 			if !toolInfo.Completed {
 				if toolID == "" || toolInfo.ID == toolID {
 					toolInfo.Output = output
 					toolInfo.IsError = isError
 					toolInfo.Completed = true
-					// 重新渲染
+					// re-render
 					mv.renderContent()
 					break
 				}
@@ -224,7 +224,7 @@ func (mv *MessageView) CompleteTool(toolID, toolName, output string, isError boo
 	}
 }
 
-// AddToolCall 添加工具调用
+// AddToolCall adds a tool call
 func (mv *MessageView) AddToolCall(name, arguments string) {
 	msg := &ToolCall{
 		Name:      name,
@@ -234,7 +234,7 @@ func (mv *MessageView) AddToolCall(name, arguments string) {
 	mv.AddMessage(msg)
 }
 
-// AddToolResult 添加工具结果
+// AddToolResult adds a tool result
 func (mv *MessageView) AddToolResult(name, result string, err error) {
 	msg := &ToolResult{
 		Name:    name,
@@ -245,7 +245,7 @@ func (mv *MessageView) AddToolResult(name, result string, err error) {
 	mv.AddMessage(msg)
 }
 
-// AddError 添加错误消息
+// AddError adds an error message
 func (mv *MessageView) AddError(err string) {
 	msg := &ErrorMessage{
 		ErrStr:  err,
@@ -254,7 +254,7 @@ func (mv *MessageView) AddError(err string) {
 	mv.AddMessage(msg)
 }
 
-// AddTokenUsage 添加 Token 使用统计
+// AddTokenUsage adds token usage stats
 func (mv *MessageView) AddTokenUsage(inputTokens, outputTokens int) {
 	msg := &TokenUsageMessage{
 		InputTokens:  inputTokens,
@@ -264,96 +264,96 @@ func (mv *MessageView) AddTokenUsage(inputTokens, outputTokens int) {
 	mv.AddMessage(msg)
 }
 
-// Clear 清空消息
+// Clear clears messages
 func (mv *MessageView) Clear() {
 	mv.messages = make([]Message, 0)
 	mv.viewport.SetContent("")
 }
 
-// SetSize 设置尺寸
+// SetSize sets size
 func (mv *MessageView) SetSize(width, height int) {
 	mv.width = width
 	mv.height = height
 
-	// 保存当前滚动位置（YOffset）和检查是否在底部
+	// save current scroll position (YOffset) and check if at bottom
 	oldYOffset := mv.viewport.YOffset
 	wasAtBottom := mv.viewport.AtBottom()
 
 	mv.viewport.Width = width
 	mv.viewport.Height = height
 
-	// 恢复滚动位置，确保内容不会丢失
-	// 但需要确保不超过新的内容范围
+	// restore scroll position to avoid content loss
+	// but ensure it does not exceed new content range
 	mv.viewport.YOffset = oldYOffset
 
-	// 更新 markdown 渲染器尺寸
+	// update markdown renderer size
 	if mv.renderer != nil {
-		mv.renderer.SetSize(width - 4) // 留边距
+		mv.renderer.SetSize(width - 4) // leave margin
 	}
 
-	// 重新渲染内容以适应新的宽度
+	// re-render content to fit new width
 	mv.renderContent()
 
-	// 如果之前在底部且启用了自动滚动，保持在底部
+	// if previously at bottom and auto scroll enabled, stay at bottom
 	if wasAtBottom && mv.autoScroll {
 		mv.viewport.GotoBottom()
 	}
 }
 
-// renderContent 渲染内容到缓存
+// renderContent renders content to cache
 func (mv *MessageView) renderContent() {
 	var sb strings.Builder
 
 	for i, msg := range mv.messages {
 		if i > 0 {
 			prevMsg := mv.messages[i-1]
-			// 只在不同类型的消息之间添加空行
-			// 同类型消息（如流式输出的多次追加）之间不添加
+			// add blank line only between different message types
+			// no blank line between same type (e.g. multiple stream appends)
 			if msg.Type() != prevMsg.Type() {
 				sb.WriteString("\n\n")
 			} else {
-				// 同类型消息之间添加间隔
-				// 对于工具调用消息，添加额外空行以便区分
+				// add spacing between same type messages
+				// extra blank line for tool call messages to distinguish
 				if msg.Type() == MsgTypeTool {
 					sb.WriteString("\n\n")
 				} else {
-					// 其他同类型消息之间只添加一个换行
+					// only one newline between other same-type messages
 					sb.WriteString("\n")
 				}
 			}
 		}
 
-		// 根据消息类型选择渲染方式
+		// choose render method by message type
 		switch m := msg.(type) {
 		case *AssistantMessage:
-			// 使用 markdown 渲染器渲染助手消息
+			// use markdown renderer to render assistant message
 			rendered := m.RenderMarkdown(mv.renderer)
 			sb.WriteString(rendered)
 		case *UserMessage:
-			// 用户消息使用简单格式
+			// user message uses simple format
 			sb.WriteString(mv.renderUserMessage(m))
 		case *LogItem:
-			// 日志消息支持 Markdown 渲染（保留原有的颜色前缀）
+			// log message supports Markdown rendering (keep original color prefix)
 			sb.WriteString(mv.renderLogMessage(m))
 		case *SystemMessage, *ErrorMessage, *CompactResult:
-			// 系统消息、错误消息、压缩结果支持 Markdown 渲染
+			// system, error, compact result support Markdown rendering
 			sb.WriteString(mv.renderWithMarkdown(msg.Render()))
 		case *ToolResult:
-			// 工具结果支持 Markdown 渲染
+			// tool result supports Markdown rendering
 			sb.WriteString(mv.renderToolResultWithMarkdown(m))
 		default:
-			// 其他消息类型使用默认渲染
+			// other message types use default render
 			sb.WriteString(msg.Render())
 		}
 	}
 
-	// 保存到缓存，供 View() 方法使用
+	// save to cache for View() method
 	mv.cachedContent = sb.String()
 }
 
-// renderUserMessage 渲染用户消息
+// renderUserMessage renders user message
 func (mv *MessageView) renderUserMessage(m *UserMessage) string {
-	// 使用 lipgloss 为用户消息添加样式
+	// use lipgloss to style user message
 	prefixStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("252")).
 		Bold(true)
@@ -363,9 +363,9 @@ func (mv *MessageView) renderUserMessage(m *UserMessage) string {
 		strings.TrimSpace(m.Content))
 }
 
-// renderLogMessage 渲染日志消息，支持 Markdown
+// renderLogMessage renders log message, supports Markdown
 func (mv *MessageView) renderLogMessage(m *LogItem) string {
-	// 保留原有的颜色级别前缀
+	// keep original color level prefix
 	var color string
 	switch m.Level {
 	case "DEBUG":
@@ -383,7 +383,7 @@ func (mv *MessageView) renderLogMessage(m *LogItem) string {
 	prefixStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color(color))
 
-	// 使用 markdown 渲染器渲染消息内容
+	// use markdown renderer to render message content
 	var content string
 	if mv.renderer != nil {
 		rendered, err := mv.renderer.Render(m.Msg)
@@ -396,13 +396,13 @@ func (mv *MessageView) renderLogMessage(m *LogItem) string {
 		content = m.Msg
 	}
 
-	// 在内容前添加 ANSI 重置序列，避免样式污染
-	// \x1b[0m 重置所有样式到默认状态
+	// add ANSI reset sequence before content to avoid style pollution
+	// \x1b[0m resets all styles to default
 	return prefixStyle.Render(fmt.Sprintf("[%s]", m.Level)) + " \x1b[0m" + content
 }
 
-// renderWithMarkdown 使用 Markdown 渲染器渲染内容
-// 用于系统消息、错误消息等需要 Markdown 支持的场景
+// renderWithMarkdown renders content with Markdown renderer
+// used for system messages, error messages, etc. needing Markdown support
 func (mv *MessageView) renderWithMarkdown(content string) string {
 	if mv.renderer != nil {
 		rendered, err := mv.renderer.Render(content)
@@ -413,12 +413,12 @@ func (mv *MessageView) renderWithMarkdown(content string) string {
 	return content
 }
 
-// renderToolResultWithMarkdown 渲染工具结果，支持 Markdown
+// renderToolResultWithMarkdown renders tool result, supports Markdown
 func (mv *MessageView) renderToolResultWithMarkdown(m *ToolResult) string {
-	// 先获取基本的渲染内容（包含工具名称、状态等）
+	// first get basic rendered content (tool name, status, etc.)
 	baseContent := m.Render()
 
-	// 如果有结果内容且不是 Bash 工具，尝试 Markdown 渲染
+	// if there is result content and not a Bash tool, try Markdown rendering
 	if m.Result != "" && m.Name != "Bash" && !strings.Contains(m.Name, "bash") {
 		var renderedResult string
 		if mv.renderer != nil {
@@ -432,44 +432,44 @@ func (mv *MessageView) renderToolResultWithMarkdown(m *ToolResult) string {
 			renderedResult = m.Result
 		}
 
-		// 返回基础内容 + Markdown 渲染后的结果
+		// return base content + Markdown-rendered result
 		return baseContent + "\n" + renderedResult
 	}
 
 	return baseContent
 }
 
-// ScrollToBottom 滚动到底部（无操作，因为使用终端原生滚动）
+// ScrollToBottom scroll to bottom (no-op, using terminal native scroll)
 func (mv *MessageView) ScrollToBottom() {
-	// 不再需要，内容会自然滚动
+	// no longer needed, content scrolls naturally
 }
 
-// ScrollToTop 滚动到顶部（无操作，因为使用终端原生滚动）
+// ScrollToTop scroll to top (no-op, using terminal native scroll)
 func (mv *MessageView) ScrollToTop() {
-	// 不再需要，使用终端滚动条
+	// no longer needed, use terminal scrollbar
 }
 
-// PageUp 向上翻页（无操作，因为使用终端原生滚动）
+// PageUp page up (no-op, using terminal native scroll)
 func (mv *MessageView) PageUp() {
-	// 不再需要，使用终端滚动条
+	// no longer needed, use terminal scrollbar
 }
 
-// PageDown 向下翻页（无操作，因为使用终端原生滚动）
+// PageDown page down (no-op, using terminal native scroll)
 func (mv *MessageView) PageDown() {
-	// 不再需要，使用终端滚动条
+	// no longer needed, use terminal scrollbar
 }
 
-// HalfPageUp 向上半页（无操作，因为使用终端原生滚动）
+// HalfPageUp half page up (no-op, using terminal native scroll)
 func (mv *MessageView) HalfPageUp() {
-	// 不再需要，使用终端滚动条
+	// no longer needed, use terminal scrollbar
 }
 
-// HalfPageDown 向下半页（无操作，因为使用终端原生滚动）
+// HalfPageDown half page down (no-op, using terminal native scroll)
 func (mv *MessageView) HalfPageDown() {
-	// 不再需要，使用终端滚动条
+	// no longer needed, use terminal scrollbar
 }
 
-// GetLastMessage 获取最后一条消息
+// GetLastMessage gets the last message
 func (mv *MessageView) GetLastMessage() Message {
 	if len(mv.messages) == 0 {
 		return nil
@@ -477,7 +477,7 @@ func (mv *MessageView) GetLastMessage() Message {
 	return mv.messages[len(mv.messages)-1]
 }
 
-// AddTodoList 添加 Todo 列表消息
+// AddTodoList adds a Todo list message
 func (mv *MessageView) AddTodoList(todos []state.Todo) {
 	msg := &TodoListMessage{
 		Todos:   todos,
@@ -487,14 +487,14 @@ func (mv *MessageView) AddTodoList(todos []state.Todo) {
 	mv.AddMessage(msg)
 }
 
-// UpdateTodoList 更新 Todo 列表消息
+// UpdateTodoList updates a Todo list message
 func (mv *MessageView) UpdateTodoList(todos []state.Todo, oldTodos []state.Todo) {
-	// 查找是否有现有的 TodoListMessage
+	// check if an existing TodoListMessage exists
 	var existingMsg *TodoListMessage
 	for i := len(mv.messages) - 1; i >= 0; i-- {
 		if tlm, ok := mv.messages[i].(*TodoListMessage); ok {
 			existingMsg = tlm
-			// 从列表中移除旧的消息
+			// remove old message from list
 			mv.messages = append(mv.messages[:i], mv.messages[i+1:]...)
 			break
 		}
@@ -509,7 +509,7 @@ func (mv *MessageView) UpdateTodoList(todos []state.Todo, oldTodos []state.Todo)
 	mv.AddMessage(msg)
 }
 
-// GetTodoList 获取当前的 Todo 列表（如果存在）
+// GetTodoList gets current Todo list (if exists)
 func (mv *MessageView) GetTodoList() []state.Todo {
 	for i := len(mv.messages) - 1; i >= 0; i-- {
 		if tlm, ok := mv.messages[i].(*TodoListMessage); ok {
@@ -519,7 +519,7 @@ func (mv *MessageView) GetTodoList() []state.Todo {
 	return nil
 }
 
-// GetAllMessagesText 获取所有消息的纯文本格式（用于退出时输出到终端）
+// GetAllMessagesText gets all messages as plain text (for terminal output on exit)
 func (mv *MessageView) GetAllMessagesText() string {
 	var sb strings.Builder
 	for i, msg := range mv.messages {
@@ -555,12 +555,12 @@ func (mv *MessageView) GetAllMessagesText() string {
 	return sb.String()
 }
 
-// AtTop 检查是否在顶部
+// AtTop checks if at top
 func (mv *MessageView) AtTop() bool {
 	return mv.viewport.AtTop()
 }
 
-// AtBottom 检查是否在底部
+// AtBottom checks if at bottom
 func (mv *MessageView) AtBottom() bool {
 	return mv.viewport.AtBottom()
 }

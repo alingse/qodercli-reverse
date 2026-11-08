@@ -1,13 +1,13 @@
-// Package prompts System Prompt Builder 完整实现
+// Package prompts System Prompt Builder full implementation
 //
-// 参考官方架构: code.alibaba-inc.com/qoder-core/qodercli/acp.(*QoderAcpAgent).buildPrompt
-// 功能包括:
-// - 基础角色定义
-// - 工具使用指南
-// - 权限规则说明
-// - 环境信息（OS, Git 状态）
-// - 项目特定指令（AGENTS.md, .claude/）
-// - 编码规范和最佳实践
+// Reference official architecture: code.alibaba-inc.com/qoder-core/qodercli-reverse/acp.(*QoderAcpAgent).buildPrompt
+// Features include:
+// - Basic role definition
+// - Tool usage guide
+// - Permission rules description
+// - Environment info (OS, Git status)
+// - Project-specific instructions (AGENTS.md, .claude/)
+// - Coding standards and best practices
 package prompts
 
 import (
@@ -18,12 +18,12 @@ import (
 	"time"
 )
 
-// SystemPromptBuilderV2 增强版系统提示词构建器
+// SystemPromptBuilderV2 Enhanced system prompt builder
 type SystemPromptBuilderV2 struct {
-	// 基础配置
+	// Basic config
 	vars *TemplateVars
 
-	// 组件开关
+	// Component toggles
 	enableRoleDefinition  bool
 	enableToolGuide       bool
 	enablePermissionRules bool
@@ -33,17 +33,17 @@ type SystemPromptBuilderV2 struct {
 	enableSystemReminder  bool
 	enableSessionContext  bool
 
-	// 收集器
+	// Collectors
 	envCollector   *EnvironmentCollector
 	projectLoader  *ProjectContextLoader
 	sessionContext *SessionContext
 
-	// 自定义内容
+	// Custom content
 	customSections []Section
 	prebuiltParts  map[string]string
 }
 
-// Section 提示词章节
+// Section Prompt section
 type Section struct {
 	Title     string
 	Content   string
@@ -51,9 +51,9 @@ type Section struct {
 	Condition func() bool
 }
 
-// EnvironmentInfo 环境信息
+// EnvironmentInfo Environment info
 type EnvironmentInfo struct {
-	// 系统信息
+	// System info
 	OS           string
 	Architecture string
 	Shell        string
@@ -61,58 +61,58 @@ type EnvironmentInfo struct {
 	WorkingDir   string
 	TempDir      string
 
-	// Git 信息
+	// Git info
 	GitRepo   bool
 	GitBranch string
 	GitCommit string
 	GitRemote string
 	GitStatus string
 
-	// 开发环境
+	// Dev environment
 	GoVersion     string
 	NodeVersion   string
 	PythonVersion string
 	JavaVersion   string
 	RustVersion   string
 
-	// 编辑器/IDE
+	// Editor/IDE
 	Editor        string
 	EditorVersion string
 
-	// 时间
+	// Time
 	Timezone    string
 	CurrentTime string
 }
 
-// ProjectContext 项目上下文
+// ProjectContext Project context
 type ProjectContext struct {
-	// 项目基本信息
+	// Basic project info
 	Name     string
 	RootPath string
 	Type     string // go, node, python, rust, etc.
 	Language string
 
-	// 配置文件
+	// Config files
 	HasGoMod       bool
 	HasPackageJSON bool
 	HasPyProject   bool
 	HasCargoToml   bool
 	HasPomXML      bool
 
-	// 项目特定指令
+	// Project-specific instructions
 	AgentsMDContent  string
 	ClaudeDirContent string
 	ReadmeContent    string
 
-	// 编码规范
+	// Coding standards
 	CodingStandards string
 	StyleGuide      string
 
-	// 忽略规则
+	// Ignore rules
 	GitignorePatterns []string
 }
 
-// SessionContext 会话上下文
+// SessionContext Session context
 type SessionContext struct {
 	SessionID       string
 	StartTime       time.Time
@@ -122,7 +122,7 @@ type SessionContext struct {
 	ContextDirs     []string
 }
 
-// NewSystemPromptBuilderV2 创建新的构建器
+// NewSystemPromptBuilderV2 Creates a new builder
 func NewSystemPromptBuilderV2(vars *TemplateVars) *SystemPromptBuilderV2 {
 	if vars == nil {
 		vars = DefaultTemplateVars()
@@ -143,12 +143,12 @@ func NewSystemPromptBuilderV2(vars *TemplateVars) *SystemPromptBuilderV2 {
 	}
 }
 
-// ==================== 配置方法 ====================
+// ==================== Config methods ====================
 
-// BuilderOption 构建器选项函数
+// BuilderOption Builder option function
 type BuilderOption func(*SystemPromptBuilderV2)
 
-// WithOptions 批量应用构建器选项
+// WithOptions Applies builder options in batch
 func (b *SystemPromptBuilderV2) WithOptions(opts ...BuilderOption) *SystemPromptBuilderV2 {
 	for _, opt := range opts {
 		opt(b)
@@ -156,21 +156,21 @@ func (b *SystemPromptBuilderV2) WithOptions(opts ...BuilderOption) *SystemPrompt
 	return b
 }
 
-// 特性选项常量
+// Feature toggle constants
 const (
-	FeatureRoleDefinition  = 1 << iota // 角色定义
-	FeatureToolGuide                    // 工具指南
-	FeaturePermissionRules              // 权限规则
-	FeatureEnvironmentInfo              // 环境信息
-	FeatureProjectContext               // 项目上下文
-	FeatureCodingStandards              // 编码规范
-	FeatureSessionContext               // 会话上下文
+	FeatureRoleDefinition  = 1 << iota // Role definition
+	FeatureToolGuide                   // Tool guide
+	FeaturePermissionRules             // Permission rules
+	FeatureEnvironmentInfo             // Environment info
+	FeatureProjectContext              // Project context
+	FeatureCodingStandards             // Coding standards
+	FeatureSessionContext              // Session context
 )
 
-// WithFeatures 按位掩码批量启用/禁用特性
+// WithFeatures Enables/disables features via bitmask
 //
-//	启用特性: WithFeatures(FeatureRoleDefinition | FeatureToolGuide)
-//	禁用特性: WithFeatures(0) - 禁用所有
+//	Enable features: WithFeatures(FeatureRoleDefinition | FeatureToolGuide)
+//	Disable features: WithFeatures(0) - disable all
 func WithFeatures(mask int) BuilderOption {
 	return func(b *SystemPromptBuilderV2) {
 		b.enableRoleDefinition = (mask & FeatureRoleDefinition) != 0
@@ -183,71 +183,71 @@ func WithFeatures(mask int) BuilderOption {
 	}
 }
 
-// WithAllFeatures 启用所有特性
+// WithAllFeatures Enables all features
 func WithAllFeatures() BuilderOption {
 	return WithFeatures(0xFF)
 }
 
-// WithMinimalFeatures 仅启用核心特性（角色、工具、权限）
+// WithMinimalFeatures Enables only core features (role, tools, permissions)
 func WithMinimalFeatures() BuilderOption {
 	return WithFeatures(FeatureRoleDefinition | FeatureToolGuide | FeaturePermissionRules)
 }
 
-// WithRoleDefinition 启用/禁用角色定义
+// WithRoleDefinition Enables/disables role definition
 func (b *SystemPromptBuilderV2) WithRoleDefinition(enable bool) *SystemPromptBuilderV2 {
 	b.enableRoleDefinition = enable
 	return b
 }
 
-// WithToolGuide 启用/禁用工具指南
+// WithToolGuide Enables/disables tool guide
 func (b *SystemPromptBuilderV2) WithToolGuide(enable bool) *SystemPromptBuilderV2 {
 	b.enableToolGuide = enable
 	return b
 }
 
-// WithPermissionRules 启用/禁用权限规则
+// WithPermissionRules Enables/disables permission rules
 func (b *SystemPromptBuilderV2) WithPermissionRules(enable bool) *SystemPromptBuilderV2 {
 	b.enablePermissionRules = enable
 	return b
 }
 
-// WithEnvironmentInfo 启用/禁用环境信息
+// WithEnvironmentInfo Enables/disables environment info
 func (b *SystemPromptBuilderV2) WithEnvironmentInfo(enable bool) *SystemPromptBuilderV2 {
 	b.enableEnvironmentInfo = enable
 	return b
 }
 
-// WithProjectContext 启用/禁用项目上下文
+// WithProjectContext Enables/disables project context
 func (b *SystemPromptBuilderV2) WithProjectContext(enable bool) *SystemPromptBuilderV2 {
 	b.enableProjectContext = enable
 	return b
 }
 
-// WithCodingStandards 启用/禁用编码规范
+// WithCodingStandards Enables/disables coding standards
 func (b *SystemPromptBuilderV2) WithCodingStandards(enable bool) *SystemPromptBuilderV2 {
 	b.enableCodingStandards = enable
 	return b
 }
 
-// WithSessionContext 启用/禁用会话上下文
+// WithSessionContext Enables/disables session context
 func (b *SystemPromptBuilderV2) WithSessionContext(enable bool) *SystemPromptBuilderV2 {
 	b.enableSessionContext = enable
 	return b
 }
 
-// WithCustomRole 设置自定义角色定义
+// WithCustomRole Sets a custom role definition
 func (b *SystemPromptBuilderV2) WithCustomRole(role string) *SystemPromptBuilderV2 {
 	b.prebuiltParts["role"] = role
 	return b
 }
 
-// WithCustomToolGuide 设置自定义工具指南
+// WithCustomToolGuide Sets a custom tool guide
 func (b *SystemPromptBuilderV2) WithCustomToolGuide(guide string) *SystemPromptBuilderV2 {
 	b.prebuiltParts["tool_guide"] = guide
 	return b
 }
 
-// AddCustomSection 添加自定义章节
+// AddCustomSection Adds a custom section
 func (b *SystemPromptBuilderV2) AddCustomSection(title, content string, priority int) *SystemPromptBuilderV2 {
 	b.customSections = append(b.customSections, Section{
 		Title:    title,
@@ -257,7 +257,7 @@ func (b *SystemPromptBuilderV2) AddCustomSection(title, content string, priority
 	return b
 }
 
-// AddConditionalSection 添加条件章节
+// AddConditionalSection Adds a conditional section
 func (b *SystemPromptBuilderV2) AddConditionalSection(title, content string, priority int, condition func() bool) *SystemPromptBuilderV2 {
 	b.customSections = append(b.customSections, Section{
 		Title:     title,
@@ -268,9 +268,9 @@ func (b *SystemPromptBuilderV2) AddConditionalSection(title, content string, pri
 	return b
 }
 
-// ==================== 数据收集 ====================
+// ==================== Data collection ====================
 
-// CollectEnvironment 收集环境信息
+// CollectEnvironment Collects environment info
 func (b *SystemPromptBuilderV2) CollectEnvironment() (*EnvironmentInfo, error) {
 	if b.envCollector == nil {
 		b.envCollector = NewEnvironmentCollector()
@@ -284,7 +284,7 @@ func (b *SystemPromptBuilderV2) CollectEnvironment() (*EnvironmentInfo, error) {
 	return info, nil
 }
 
-// CollectProjectContext 收集项目上下文
+// CollectProjectContext Collects project context
 func (b *SystemPromptBuilderV2) CollectProjectContext(workDir string) (*ProjectContext, error) {
 	if b.projectLoader == nil {
 		b.projectLoader = NewProjectContextLoader(workDir)
@@ -298,19 +298,19 @@ func (b *SystemPromptBuilderV2) CollectProjectContext(workDir string) (*ProjectC
 	return ctx, nil
 }
 
-// SetSessionContext 设置会话上下文
+// SetSessionContext Sets the session context
 func (b *SystemPromptBuilderV2) SetSessionContext(ctx *SessionContext) *SystemPromptBuilderV2 {
 	b.sessionContext = ctx
 	return b
 }
 
-// ==================== 构建方法 ====================
+// ==================== Build methods ====================
 
-// Build 构建完整的系统提示词
+// Build Builds the complete system prompt
 func (b *SystemPromptBuilderV2) Build() (string, error) {
 	var sections []Section
 
-	// 1. 角色定义 (P0)
+	// 1. Role definition (P0)
 	if b.enableRoleDefinition {
 		section := b.buildRoleSection()
 		if section != nil {
@@ -318,13 +318,13 @@ func (b *SystemPromptBuilderV2) Build() (string, error) {
 		}
 	}
 
-	// 2. 核心指令 (P0)
+	// 2. Core instructions (P0)
 	section := b.buildCoreInstructionsSection()
 	if section != nil {
 		sections = append(sections, *section)
 	}
 
-	// 3. 工具使用指南 (P0)
+	// 3. Tool usage guide (P0)
 	if b.enableToolGuide {
 		section := b.buildToolGuideSection()
 		if section != nil {
@@ -332,7 +332,7 @@ func (b *SystemPromptBuilderV2) Build() (string, error) {
 		}
 	}
 
-	// 4. 权限规则 (P0)
+	// 4. Permission rules (P0)
 	if b.enablePermissionRules {
 		section := b.buildPermissionSection()
 		if section != nil {
@@ -340,13 +340,13 @@ func (b *SystemPromptBuilderV2) Build() (string, error) {
 		}
 	}
 
-	// 4.5 文件操作规则 (P0)
+	// 4.5 File operation rules (P0)
 	section = b.buildFileOperationSection()
 	if section != nil {
 		sections = append(sections, *section)
 	}
 
-	// 5. 环境信息 (P1)
+	// 5. Environment info (P1)
 	if b.enableEnvironmentInfo {
 		section := b.buildEnvironmentSection()
 		if section != nil {
@@ -354,7 +354,7 @@ func (b *SystemPromptBuilderV2) Build() (string, error) {
 		}
 	}
 
-	// 6. 项目上下文 (P1)
+	// 6. Project context (P1)
 	if b.enableProjectContext {
 		section := b.buildProjectSection()
 		if section != nil {
@@ -362,7 +362,7 @@ func (b *SystemPromptBuilderV2) Build() (string, error) {
 		}
 	}
 
-	// 7. 编码规范 (P1)
+	// 7. Coding standards (P1)
 	if b.enableCodingStandards {
 		section := b.buildCodingStandardsSection()
 		if section != nil {
@@ -370,7 +370,7 @@ func (b *SystemPromptBuilderV2) Build() (string, error) {
 		}
 	}
 
-	// 8. 会话上下文 (P2)
+	// 8. Session context (P2)
 	if b.enableSessionContext && b.sessionContext != nil {
 		section := b.buildSessionSection()
 		if section != nil {
@@ -378,37 +378,37 @@ func (b *SystemPromptBuilderV2) Build() (string, error) {
 		}
 	}
 
-	// 9. 自定义章节
+	// 9. Custom sections
 	for _, section := range b.customSections {
 		if section.Condition == nil || section.Condition() {
 			sections = append(sections, section)
 		}
 	}
 
-	// 按优先级排序
+	// Sort by priority
 	sections = sortSectionsByPriority(sections)
 
-	// 渲染所有章节
+	// Render all sections
 	return b.renderSections(sections)
 }
 
-// BuildMinimal 构建最小化提示词（仅核心组件）
+// BuildMinimal Builds a minimal prompt (core components only)
 func (b *SystemPromptBuilderV2) BuildMinimal() (string, error) {
 	return b.WithOptions(WithMinimalFeatures()).Build()
 }
 
-// BuildForSubagent 为子 Agent 构建提示词
+// BuildForSubagent Builds a prompt for a sub-agent
 func (b *SystemPromptBuilderV2) BuildForSubagent(subagentType string, parentContext string) (string, error) {
-	// 子 Agent 使用简化版本
+	// Sub-agents use a simplified version
 	b.enableEnvironmentInfo = false
 	b.enableSessionContext = false
 
-	// 添加父 Agent 上下文
+	// Add parent Agent context
 	if parentContext != "" {
 		b.AddCustomSection("Parent Context", parentContext, 50)
 	}
 
-	// 添加子 Agent 特定指令
+	// Add sub-agent specific instructions
 	subagentPrompt, err := GetSubagentPrompt(subagentType, b.vars)
 	if err == nil {
 		b.WithCustomRole(subagentPrompt)
@@ -417,7 +417,7 @@ func (b *SystemPromptBuilderV2) BuildForSubagent(subagentType string, parentCont
 	return b.Build()
 }
 
-// ==================== 章节构建方法 ====================
+// ==================== Section build methods ====================
 
 func (b *SystemPromptBuilderV2) buildRoleSection() *Section {
 	role := b.prebuiltParts["role"]
@@ -541,19 +541,19 @@ func (b *SystemPromptBuilderV2) buildProjectSection() *Section {
 
 	var parts []string
 
-	// 项目类型
+	// Project type
 	if ctx.Type != "" {
 		parts = append(parts, fmt.Sprintf("Project Type: %s", ctx.Type))
 	}
 
-	// AGENTS.md 内容
+	// AGENTS.md content
 	if ctx.AgentsMDContent != "" {
 		parts = append(parts, "")
 		parts = append(parts, "Project Guidelines (from AGENTS.md):")
 		parts = append(parts, ctx.AgentsMDContent)
 	}
 
-	// .claude/ 内容
+	// .claude/ content
 	if ctx.ClaudeDirContent != "" {
 		parts = append(parts, "")
 		parts = append(parts, "Project Configuration (from .claude/):")
@@ -583,11 +583,11 @@ func (b *SystemPromptBuilderV2) buildCodingStandardsSection() *Section {
 
 	var parts []string
 
-	// 项目特定的编码规范
+	// Project-specific coding standards
 	if ctx.CodingStandards != "" {
 		parts = append(parts, ctx.CodingStandards)
 	} else {
-		// 默认编码规范
+		// Default coding standards
 		parts = append(parts, `General Coding Standards:
 - Follow the existing code style in the project
 - Use meaningful variable and function names
@@ -651,7 +651,7 @@ func (b *SystemPromptBuilderV2) buildSessionSection() *Section {
 	}
 }
 
-// ==================== 辅助方法 ====================
+// ==================== Helper methods ====================
 
 func (b *SystemPromptBuilderV2) renderSections(sections []Section) (string, error) {
 	var parts []string
@@ -662,7 +662,7 @@ func (b *SystemPromptBuilderV2) renderSections(sections []Section) (string, erro
 			continue
 		}
 
-		// 渲染模板变量
+		// Render template variables
 		rendered, err := b.renderTemplate(content)
 		if err != nil {
 			return "", fmt.Errorf("render section %s: %w", section.Title, err)
@@ -699,7 +699,7 @@ func (b *SystemPromptBuilderV2) renderTemplate(content string) (string, error) {
 }
 
 func sortSectionsByPriority(sections []Section) []Section {
-	// 简单的冒泡排序
+	// Simple bubble sort
 	result := make([]Section, len(sections))
 	copy(result, sections)
 

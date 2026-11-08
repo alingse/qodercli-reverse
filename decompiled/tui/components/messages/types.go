@@ -11,7 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// getStringValue 安全地从 map 中获取字符串值，支持多种类型
+// getStringValue safely gets a string value from a map, supporting multiple types
 func getStringValue(m map[string]interface{}, key string) string {
 	if val, ok := m[key]; ok {
 		switch v := val.(type) {
@@ -20,14 +20,14 @@ func getStringValue(m map[string]interface{}, key string) string {
 		case []byte:
 			return string(v)
 		default:
-			// 尝试转换为字符串
+			// try to convert to string
 			return fmt.Sprintf("%v", v)
 		}
 	}
 	return ""
 }
 
-// UserMessage 用户消息
+// UserMessage user message
 type UserMessage struct {
 	Content string
 	MsgTime time.Time
@@ -36,56 +36,56 @@ type UserMessage struct {
 func (m *UserMessage) Type() MessageType    { return MsgTypeUser }
 func (m *UserMessage) Timestamp() time.Time { return m.MsgTime }
 func (m *UserMessage) Render() string {
-	// 样式：> 用户输入内容（前缀白色）
-	// 使用纯文本前缀，避免 lipgloss 宽度计算导致换行问题
+	// style: > user input content (white prefix)
+	// use plain text prefix to avoid lipgloss width calculation line-wrap issues
 	return fmt.Sprintf("> %s", strings.TrimSpace(m.Content))
 }
 
-// String 实现 fmt.Stringer 接口
+// String implements fmt.Stringer
 func (m *UserMessage) String() string {
 	return strings.TrimSpace(m.Content)
 }
 
-// AssistantMessage 助手消息 - 支持 Markdown 渲染
+// AssistantMessage assistant message - supports Markdown rendering
 type AssistantMessage struct {
 	Content     string
-	Rendered    string // 缓存渲染后的内容
-	NeedsRender bool   // 是否需要重新渲染
+	Rendered    string // cached rendered content
+	NeedsRender bool   // whether re-render is needed
 	MsgTime     time.Time
 }
 
 func (m *AssistantMessage) Type() MessageType    { return MsgTypeAssistant }
 func (m *AssistantMessage) Timestamp() time.Time { return m.MsgTime }
 
-// Render 返回原始内容（供 MessageView 统一处理）
+// Render returns raw content (for MessageView unified handling)
 func (m *AssistantMessage) Render() string {
 	return m.Content
 }
 
-// RenderMarkdown 渲染 markdown 内容
-// 由 MessageView 调用，传入 markdown 渲染器
+// RenderMarkdown renders markdown content
+// called by MessageView, passing the markdown renderer
 func (m *AssistantMessage) RenderMarkdown(renderer *markdown.Renderer) string {
-	// 如果内容为空，直接返回
+	// if content is empty, return directly
 	if strings.TrimSpace(m.Content) == "" {
 		return ""
 	}
 
-	// 如果已经渲染过且不需要重新渲染，返回缓存
+	// if already rendered and no re-render needed, return cache
 	if !m.NeedsRender && m.Rendered != "" {
 		return m.Rendered
 	}
 
-	// 如果没有渲染器，返回原始内容
+	// if no renderer, return raw content
 	if renderer == nil {
 		m.Rendered = m.Content
 		m.NeedsRender = false
 		return m.Rendered
 	}
 
-	// 渲染 markdown
+	// render markdown
 	rendered, err := renderer.Render(m.Content)
 	if err != nil {
-		// 渲染失败时回退到原始内容
+		// fall back to raw content on render failure
 		m.Rendered = m.Content
 	} else {
 		m.Rendered = rendered
@@ -94,18 +94,18 @@ func (m *AssistantMessage) RenderMarkdown(renderer *markdown.Renderer) string {
 	return m.Rendered
 }
 
-// AppendContent 追加内容并标记需要重新渲染
+// AppendContent appends content and marks as needing re-render
 func (m *AssistantMessage) AppendContent(content string) {
 	m.Content += content
 	m.NeedsRender = true
 }
 
-// String 实现 fmt.Stringer 接口
+// String implements fmt.Stringer
 func (m *AssistantMessage) String() string {
 	return strings.TrimSpace(m.Content)
 }
 
-// TokenUsageMessage Token 使用统计 - 原版在消息末尾显示
+// TokenUsageMessage token usage stats - shown at end of message in original
 type TokenUsageMessage struct {
 	InputTokens  int
 	OutputTokens int
@@ -115,7 +115,7 @@ type TokenUsageMessage struct {
 func (m *TokenUsageMessage) Type() MessageType    { return MsgTypeSystem }
 func (m *TokenUsageMessage) Timestamp() time.Time { return m.MsgTime }
 func (m *TokenUsageMessage) Render() string {
-	// 不设置颜色，使用终端默认颜色，只保留斜体样式
+	// no color set, use terminal default color, only italic style
 	style := lipgloss.NewStyle().
 		Italic(true)
 
@@ -124,12 +124,12 @@ func (m *TokenUsageMessage) Render() string {
 		m.InputTokens, m.OutputTokens))
 }
 
-// String 实现 fmt.Stringer 接口
+// String implements fmt.Stringer
 func (m *TokenUsageMessage) String() string {
 	return m.Render()
 }
 
-// SystemMessage 系统消息
+// SystemMessage system message
 type SystemMessage struct {
 	Content string
 	MsgTime time.Time
@@ -138,13 +138,13 @@ type SystemMessage struct {
 func (m *SystemMessage) Type() MessageType    { return MsgTypeSystem }
 func (m *SystemMessage) Timestamp() time.Time { return m.MsgTime }
 func (m *SystemMessage) Render() string {
-	// 不设置颜色，使用终端默认颜色，只保留斜体样式
+	// no color set, use terminal default color, only italic style
 	style := lipgloss.NewStyle().
 		Italic(true)
 	return style.Render(fmt.Sprintf("*System: %s*", m.Content))
 }
 
-// ToolCall 工具调用消息 - 原版以折叠框显示
+// ToolCall tool call message - shown as collapsed box in original
 type ToolCall struct {
 	Name      string
 	Arguments string
@@ -154,11 +154,11 @@ type ToolCall struct {
 func (m *ToolCall) Type() MessageType    { return MsgTypeTool }
 func (m *ToolCall) Timestamp() time.Time { return m.MsgTime }
 func (m *ToolCall) Render() string {
-	// Bash 工具使用特殊图标和颜色
+	// Bash tool uses special icon and color
 	if m.Name == "Bash" {
-		// Bash 默认显示为白色（执行中），结果会根据成功/失败改变
+		// Bash shows white by default (executing), result changes by success/failure
 		headerStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("255")) // 白色
+			Foreground(lipgloss.Color("255")) // white
 		contentStyle := lipgloss.NewStyle().
 			Foreground(lipgloss.Color("248"))
 
@@ -167,7 +167,7 @@ func (m *ToolCall) Render() string {
 			contentStyle.Render(m.Arguments))
 	}
 
-	// 其他工具：▶ Tool: name (蓝色)
+	// other tools: ▶ Tool: name (blue)
 	headerStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("75")).
 		Bold(true)
@@ -181,7 +181,7 @@ func (m *ToolCall) Render() string {
 		contentStyle.Render(m.Arguments))
 }
 
-// ToolResult 工具结果消息
+// ToolResult tool result message
 type ToolResult struct {
 	Name    string
 	Result  string
@@ -192,25 +192,25 @@ type ToolResult struct {
 func (m *ToolResult) Type() MessageType    { return MsgTypeTool }
 func (m *ToolResult) Timestamp() time.Time { return m.MsgTime }
 func (m *ToolResult) Render() string {
-	// Bash 工具结果使用 ⏺ 图标
+	// Bash tool result uses ⏺ icon
 	if m.Name == "Bash" || strings.Contains(m.Name, "bash") {
 		var iconStyle lipgloss.Style
 		var icon string
 
 		if m.Error != nil {
 			iconStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("203")) // 红色
+				Foreground(lipgloss.Color("203")) // red
 			icon = "⏺"
 		} else {
 			iconStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("82")) // 绿色
+				Foreground(lipgloss.Color("82")) // green
 			icon = "⏺"
 		}
 
 		contentStyle := lipgloss.NewStyle().
 			Foreground(lipgloss.Color("248"))
 
-		// 截断过长的结果
+		// truncate overly long result
 		result := m.Result
 		if result == "" && m.Error != nil {
 			result = m.Error.Error()
@@ -225,7 +225,7 @@ func (m *ToolResult) Render() string {
 			contentStyle.Render(result))
 	}
 
-	// 其他工具结果
+	// other tool results
 	var headerStyle lipgloss.Style
 	var icon string
 
@@ -248,7 +248,7 @@ func (m *ToolResult) Render() string {
 			m.Name,
 			m.Error.Error())
 	} else {
-		// 截断过长的结果
+		// truncate overly long result
 		result := m.Result
 		lines := strings.Split(result, "\n")
 		if len(lines) > 20 {
@@ -263,7 +263,7 @@ func (m *ToolResult) Render() string {
 	return content
 }
 
-// ErrorMessage 错误消息
+// ErrorMessage error message
 type ErrorMessage struct {
 	ErrStr  string
 	MsgTime time.Time
@@ -279,7 +279,7 @@ func (m *ErrorMessage) Render() string {
 	return style.Render(fmt.Sprintf("Error: %s", m.ErrStr))
 }
 
-// BashInfo Bash 命令信息 - 原版以折叠框显示
+// BashInfo Bash command info - shown as collapsed box in original
 type BashInfo struct {
 	ID        int
 	Command   string
@@ -298,14 +298,14 @@ func (m *BashInfo) Render() string {
 	if m.Completed {
 		if m.IsError {
 			statusIcon = "⏺"
-			statusColor = "203" // 红色
+			statusColor = "203" // red
 		} else {
 			statusIcon = "⏺"
-			statusColor = "82" // 绿色
+			statusColor = "82" // green
 		}
 	} else {
 		statusIcon = "⏺"
-		statusColor = "255" // 白色（执行中）
+		statusColor = "255" // white (executing)
 	}
 
 	statusStyle := lipgloss.NewStyle().
@@ -314,12 +314,12 @@ func (m *BashInfo) Render() string {
 	commandStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("248"))
 
-	// 格式：⏺ bash 命令内容
+	// format: ⏺ bash command content
 	content := fmt.Sprintf("%s %s",
 		statusStyle.Render(statusIcon),
 		commandStyle.Render(m.Command))
 
-	// 如果有输出，显示在下一行
+	// if there is output, show on next line
 	if m.Completed && m.Output != "" {
 		output := m.Output
 		if len(output) > 500 {
@@ -331,7 +331,7 @@ func (m *BashInfo) Render() string {
 	return content
 }
 
-// CommandInfo 命令信息（非 Bash）
+// CommandInfo command info (non-Bash)
 type CommandInfo struct {
 	Name    string
 	Args    []string
@@ -344,7 +344,7 @@ func (m *CommandInfo) Render() string {
 	return fmt.Sprintf("**Command:** %s %s", m.Name, strings.Join(m.Args, " "))
 }
 
-// CompactResult 压缩结果
+// CompactResult compaction result
 type CompactResult struct {
 	Content string
 	IsError bool
@@ -354,13 +354,13 @@ type CompactResult struct {
 func (m *CompactResult) Type() MessageType    { return MsgTypeCompact }
 func (m *CompactResult) Timestamp() time.Time { return m.MsgTime }
 func (m *CompactResult) Render() string {
-	// 不设置颜色，使用终端默认颜色，只保留斜体样式
+	// no color set, use terminal default color, only italic style
 	style := lipgloss.NewStyle().
 		Italic(true)
 	return style.Render(fmt.Sprintf("[Compacted: %s]", m.Content))
 }
 
-// LogItem 日志项
+// LogItem log item
 type LogItem struct {
 	Level   string
 	Msg     string
@@ -389,8 +389,8 @@ func (m *LogItem) Render() string {
 	return style.Render(fmt.Sprintf("[%s] %s", m.Level, m.Msg))
 }
 
-// WelcomeMessage 欢迎消息 - 在 TUI 启动时显示
-// 遵循官方架构的消息类型系统
+// WelcomeMessage welcome message - shown on TUI startup
+// follows official architecture message type system
 type WelcomeMessage struct {
 	Version string
 	Cwd     string
@@ -400,21 +400,21 @@ type WelcomeMessage struct {
 func (m *WelcomeMessage) Type() MessageType    { return MsgTypeSystem }
 func (m *WelcomeMessage) Timestamp() time.Time { return m.MsgTime }
 func (m *WelcomeMessage) Render() string {
-	// 使用 lipgloss 绘制带边框的欢迎信息
-	// 参考官方 TUI 实现文档中的样式系统
+	// use lipgloss to draw bordered welcome info
+	// reference official TUI implementation docs style system
 	borderStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		Padding(0, 1).
-		BorderForeground(lipgloss.Color("135")). // 紫色边框（官方主题色）
-		Width(56)                                // 固定宽度，与官方一致
+		BorderForeground(lipgloss.Color("135")). // purple border (official theme color)
+		Width(56)                                // fixed width, consistent with official
 
-	// 欢迎框内容
+	// welcome box content
 	welcomeContent := fmt.Sprintf("✦ Welcome to Qoder CLI! %s\n\ncwd: %s",
 		m.Version, m.Cwd)
 
-	// 提示信息（不带边框）
+	// tips info (no border)
 	tipsStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("248")). // 灰色
+		Foreground(lipgloss.Color("248")). // gray
 		MarginTop(1)
 
 	tips := "Tips for getting started:\n\n" +
@@ -425,16 +425,16 @@ func (m *WelcomeMessage) Render() string {
 	return borderStyle.Render(welcomeContent) + "\n" + tipsStyle.Render(tips)
 }
 
-// ToolCallInfo 统一的工具调用信息显示
-// 所有工具（Bash、Read、Write、Update 等）都使用此类型显示
+// ToolCallInfo unified tool call info display
+// all tools (Bash, Read, Write, Update, etc.) use this type for display
 type ToolCallInfo struct {
-	ID        string    // 工具调用唯一 ID
-	Name      string    // 工具名称
-	Arguments string    // 工具参数（JSON 格式）
-	Output    string    // 执行输出
-	Completed bool      // 是否已完成
-	IsError   bool      // 是否执行出错
-	MsgTime   time.Time // 消息时间
+	ID        string    // tool call unique ID
+	Name      string    // tool name
+	Arguments string    // tool arguments (JSON format)
+	Output    string    // execution output
+	Completed bool      // whether completed
+	IsError   bool      // whether execution errored
+	MsgTime   time.Time // message time
 }
 
 func (m *ToolCallInfo) Type() MessageType    { return MsgTypeTool }
@@ -446,40 +446,40 @@ func (m *ToolCallInfo) Render() string {
 	if m.Completed {
 		if m.IsError {
 			statusIcon = "⏺"
-			statusColor = "203" // 红色 - 执行失败
+			statusColor = "203" // red - execution failed
 		} else {
 			statusIcon = "⏺"
-			statusColor = "82" // 绿色 - 执行成功
+			statusColor = "82" // green - execution succeeded
 		}
 	} else {
 		statusIcon = "⏺"
-		statusColor = "255" // 白色 - 执行中
+		statusColor = "255" // white - executing
 	}
 
 	statusStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color(statusColor))
 
-	// 工具名称样式
+	// tool name style
 	nameStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("252")). // 亮白色
+		Foreground(lipgloss.Color("252")). // bright white
 		Bold(true)
 
-	// 参数样式
+	// arguments style
 	argsStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("248")) // 灰色
+		Foreground(lipgloss.Color("248")) // gray
 
-	// 输出样式
+	// output style
 	outputStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color("252")) // 亮白色
+		Foreground(lipgloss.Color("252")) // bright white
 
-	// 解析参数，提取关键信息用于显示
+	// parse arguments, extract key info for display
 	displayContent := ""
 	var argsMap map[string]interface{}
 	isTodoWrite := m.Name == "TodoWrite"
 	todoLines := []string{}
 
 	if err := json.Unmarshal([]byte(m.Arguments), &argsMap); err == nil && len(argsMap) > 0 {
-		// TodoWrite 特殊处理：显示任务列表
+		// TodoWrite special handling: show task list
 		if isTodoWrite {
 			if todos, ok := argsMap["todos"].([]interface{}); ok && len(todos) > 0 {
 				for _, todo := range todos {
@@ -487,7 +487,7 @@ func (m *ToolCallInfo) Render() string {
 						content, _ := todoMap["content"].(string)
 						status, _ := todoMap["status"].(string)
 						if content != "" {
-							// 使用 [x] 表示完成，[ ] 表示进行中/待办
+							// use [x] for completed, [ ] for in-progress/pending
 							checkmark := "[ ]"
 							if status == "completed" || status == "done" {
 								checkmark = "[x]"
@@ -499,7 +499,7 @@ func (m *ToolCallInfo) Render() string {
 			}
 		}
 
-		// 首先尝试根据工具类型提取特定字段
+		// first try to extract specific fields by tool type
 		switch m.Name {
 		case "Bash":
 			if cmd := getStringValue(argsMap, "command"); cmd != "" {
@@ -527,8 +527,8 @@ func (m *ToolCallInfo) Render() string {
 			}
 		}
 
-		// 如果特定字段提取为空，尝试提取任何非空字符串值
-		// 但跳过可能包含大量文本的字段（如 content, output 等）
+		// if specific field extraction is empty, try extracting any non-empty string value
+		// but skip fields that may contain large text (content, output, etc.)
 		if displayContent == "" && !isTodoWrite {
 			skipFields := map[string]bool{
 				"content": true, "output": true, "result": true,
@@ -537,7 +537,7 @@ func (m *ToolCallInfo) Render() string {
 			for k, v := range argsMap {
 				if !skipFields[k] {
 					if s, ok := v.(string); ok && s != "" && len(s) < 100 {
-						// 只使用短字符串作为显示内容
+						// only use short strings as display content
 						displayContent = fmt.Sprintf("%s: %s", k, s)
 						break
 					}
@@ -545,52 +545,52 @@ func (m *ToolCallInfo) Render() string {
 			}
 		}
 
-		// 如果还是为空且不是 TodoWrite，显示 JSON 的精简版本
+		// if still empty and not TodoWrite, show compact JSON version
 		if displayContent == "" && !isTodoWrite {
 			if compactJSON, err := json.Marshal(argsMap); err == nil {
 				displayContent = string(compactJSON)
 			}
 		}
 	} else if m.Arguments != "" && m.Arguments != "{}" {
-		// JSON 解析失败或为空，直接显示原始参数（去掉花括号）
+		// JSON parse failed or empty, display raw arguments directly (remove braces)
 		displayContent = strings.TrimSpace(m.Arguments)
 		displayContent = strings.TrimPrefix(displayContent, "{")
 		displayContent = strings.TrimSuffix(displayContent, "}")
 		displayContent = strings.TrimSpace(displayContent)
 	}
 
-	// 如果 displayContent 为空且不是 TodoWrite，显示省略号
+	// if displayContent is empty and not TodoWrite, show ellipsis
 	if displayContent == "" && !isTodoWrite {
 		displayContent = "..."
 	} else if !isTodoWrite && len([]rune(displayContent)) > 256 {
-		// 如果内容超过256个字符，截断并显示 ...
+		// if content exceeds 256 chars, truncate and show ...
 		runes := []rune(displayContent)
 		displayContent = string(runes[:253]) + "..."
 	}
 
-	// 构建内容
+	// build content
 	var content string
 	if isTodoWrite && len(todoLines) > 0 {
-		// TodoWrite：显示任务列表，每行一个任务
+		// TodoWrite: show task list, one task per line
 		content = fmt.Sprintf("%s %s", statusStyle.Render(statusIcon), nameStyle.Render(m.Name))
 		content += "\n" + argsStyle.Render(strings.Join(todoLines, "\n"))
 	} else {
-		// 其他工具：格式 ⏺ ToolName (arguments)
+		// other tools: format ⏺ ToolName (arguments)
 		content = fmt.Sprintf("%s %s (%s)",
 			statusStyle.Render(statusIcon),
 			nameStyle.Render(m.Name),
 			argsStyle.Render(displayContent))
 	}
 
-	// 只有在出错时才显示输出（stderr），成功时不显示 stdout
+	// only show output (stderr) on error; do not show stdout on success
 	if m.Completed && m.IsError && m.Output != "" {
 		output := m.Output
-		// 限制输出行数
+		// limit output lines
 		lines := strings.Split(output, "\n")
 		if len(lines) > 10 {
 			output = strings.Join(lines[:10], "\n") + "\n... (truncated)"
 		}
-		// 限制总长度
+		// limit total length
 		if len(output) > 500 {
 			output = output[:500] + "\n... (truncated)"
 		}
@@ -600,18 +600,18 @@ func (m *ToolCallInfo) Render() string {
 	return content
 }
 
-// TodoListMessage Todo 列表消息 - 显示任务进度
+// TodoListMessage todo list message - shows task progress
 type TodoListMessage struct {
-	Todos    []state.Todo // 任务列表
-	OldTodos []state.Todo // 更新前的任务列表（可选）
-	Updated  bool         // 是否是更新操作
+	Todos    []state.Todo // task list
+	OldTodos []state.Todo // task list before update (optional)
+	Updated  bool         // whether this is an update operation
 	MsgTime  time.Time
 }
 
 func (m *TodoListMessage) Type() MessageType    { return MsgTypeTodoList }
 func (m *TodoListMessage) Timestamp() time.Time { return m.MsgTime }
 
-// Render 渲染 Todo 列表
+// Render renders the Todo list
 func (m *TodoListMessage) Render() string {
 	if len(m.Todos) == 0 {
 		return ""
@@ -619,12 +619,12 @@ func (m *TodoListMessage) Render() string {
 
 	var sb strings.Builder
 
-	// 标题样式
+	// title style
 	titleStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("135")).
 		Bold(true)
 
-	// 统计信息
+	// stats
 	completedCount := 0
 	inProgressCount := 0
 	pendingCount := 0
@@ -645,7 +645,7 @@ func (m *TodoListMessage) Render() string {
 
 	totalCount := len(m.Todos)
 
-	// 标题
+	// title
 	if m.Updated {
 		sb.WriteString(titleStyle.Render("📝 Todo List Updated"))
 	} else {
@@ -653,7 +653,7 @@ func (m *TodoListMessage) Render() string {
 	}
 	sb.WriteString("\n")
 
-	// 进度条
+	// progress bar
 	progressStyle := lipgloss.NewStyle().
 		Foreground(lipgloss.Color("248"))
 
@@ -662,7 +662,7 @@ func (m *TodoListMessage) Render() string {
 		completedPercent = (completedCount * 100) / totalCount
 	}
 
-	// 简单的进度条
+	// simple progress bar
 	barWidth := 20
 	filled := (completedPercent * barWidth) / 100
 	empty := barWidth - filled
@@ -671,7 +671,7 @@ func (m *TodoListMessage) Render() string {
 	sb.WriteString(progressStyle.Render(fmt.Sprintf("Progress: [%s] %d%% (%d/%d)\n", bar, completedPercent, completedCount, totalCount)))
 	sb.WriteString("\n")
 
-	// 任务列表
+	// task list
 	for _, todo := range m.Todos {
 		var icon string
 		var iconColor string
@@ -680,19 +680,19 @@ func (m *TodoListMessage) Render() string {
 		switch state.TodoStatus(todo.Status) {
 		case state.TodoStatusCompleted, state.TodoStatusDone:
 			icon = "✅"
-			iconColor = "82" // 绿色
+			iconColor = "82" // green
 			statusText = "completed"
 		case state.TodoStatusInProgress:
 			icon = "🔄"
-			iconColor = "75" // 蓝色
+			iconColor = "75" // blue
 			statusText = "in_progress"
 		case state.TodoStatusPending:
 			icon = "⬜"
-			iconColor = "248" // 灰色
+			iconColor = "248" // gray
 			statusText = "pending"
 		case state.TodoStatusCancelled:
 			icon = "❌"
-			iconColor = "203" // 红色
+			iconColor = "203" // red
 			statusText = "cancelled"
 		default:
 			icon = "⬜"
@@ -710,12 +710,12 @@ func (m *TodoListMessage) Render() string {
 			Foreground(lipgloss.Color(iconColor)).
 			Italic(true)
 
-		// 任务项
+		// task item
 		sb.WriteString(fmt.Sprintf("%s %s ",
 			iconStyle.Render(icon),
 			contentStyle.Render(todo.Content)))
 
-		// 如果是 in_progress，显示 activeForm
+		// if in_progress, show activeForm
 		if state.TodoStatus(todo.Status) == state.TodoStatusInProgress && todo.ActiveForm != "" {
 			activeStyle := lipgloss.NewStyle().
 				Foreground(lipgloss.Color("75")).
@@ -731,7 +731,7 @@ func (m *TodoListMessage) Render() string {
 	return sb.String()
 }
 
-// String 实现 fmt.Stringer 接口
+// String implements fmt.Stringer
 func (m *TodoListMessage) String() string {
 	return m.Render()
 }

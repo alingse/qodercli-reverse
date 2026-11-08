@@ -1,4 +1,4 @@
-// Package markdown markdown 终端渲染器封装
+// Package markdown terminal markdown renderer wrapper
 package markdown
 
 import (
@@ -11,7 +11,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Renderer markdown 终端渲染器
+// Renderer terminal markdown renderer
 type Renderer struct {
 	renderer *glamour.TermRenderer
 	mu       sync.RWMutex
@@ -19,45 +19,45 @@ type Renderer struct {
 	style    string
 }
 
-// NewRenderer 创建新的 markdown 渲染器
+// NewRenderer creates a new markdown renderer
 func NewRenderer(width int, style string) (*Renderer, error) {
 	if style == "" {
 		style = DetectStyle()
 	}
 
-	// 输出详细的调试信息
+	// Print detailed debug info
 	log.Debugf("markdown.NewRenderer: width=%d, requested style=%s", width, style)
 
-	// 检测终端背景
+	// Detect terminal background
 	hasDarkBg := lipgloss.HasDarkBackground()
 	log.Debugf("markdown lipgloss.HasDarkBackground() = %v", hasDarkBg)
 
-	// 输出终端配置信息（可能影响背景检测）
+	// Print terminal config info (may affect background detection)
 	log.Debugf("markdown COLORFGBG env = %q", getEnv("COLORFGBG"))
 	log.Debugf("markdown TERM_PROGRAM env = %q", getEnv("TERM_PROGRAM"))
 	log.Debugf("markdown TERM env = %q", getEnv("TERM"))
 	log.Debugf("markdown ITERM_PROFILE env = %q", getEnv("ITERM_PROFILE"))
 
-	// 确保宽度合理
+	// Ensure reasonable width
 	if width <= 0 {
 		width = 80
 	}
 
-	// 使用高级配色方案
-	// 参考 GitHub 的暗色主题配色，更加舒适和专业
+	// Use advanced color scheme
+	// Reference GitHub dark theme palette, more comfortable and professional
 	trueVal := true
 	falseVal := false
 
-	// 高级配色方案
-	// 文本：柔和的白色 (252) 而不是刺眼的纯白
-	// 标题：带点青色 (86) 让标题更突出
-	// 强调：紫色 (141) 让关键词醒目
-	// 链接：蓝色 (75) 符合习惯
-	textColor := "252"      // 柔和白 - 正文
-	headingColor := "86"    // 青色 - 标题
-	emphColor := "141"      // 淡紫 - 强调
-	linkColor := "75"       // 蓝色 - 链接
-	codeColor := "228"      // 暖黄 - 代码
+	// Advanced color scheme
+	// Text: soft white (252) instead of harsh pure white
+	// Headings: slight cyan (86) to make headings stand out
+	// Emphasis: purple (141) to highlight keywords
+	// Links: blue (75) per convention
+	textColor := "252"   // soft white - body text
+	headingColor := "86" // cyan - headings
+	emphColor := "141"   // light purple - emphasis
+	linkColor := "75"    // blue - links
+	codeColor := "228"   // warm yellow - code
 
 	boldStyle := ansi.StylePrimitive{Bold: &trueVal, Color: &headingColor}
 	textStyle := ansi.StylePrimitive{Color: &textColor}
@@ -75,22 +75,22 @@ func NewRenderer(width int, style string) (*Renderer, error) {
 			Paragraph:  ansi.StyleBlock{StylePrimitive: textStyle},
 			BlockQuote: ansi.StyleBlock{StylePrimitive: emphStyle},
 
-			Heading:    ansi.StyleBlock{StylePrimitive: boldStyle},
-			H1:         ansi.StyleBlock{StylePrimitive: boldStyle},
-			H2:         ansi.StyleBlock{StylePrimitive: boldStyle},
-			H3:         ansi.StyleBlock{StylePrimitive: boldStyle},
-			H4:         ansi.StyleBlock{StylePrimitive: boldStyle},
-			H5:         ansi.StyleBlock{StylePrimitive: boldStyle},
-			H6:         ansi.StyleBlock{StylePrimitive: boldStyle},
+			Heading: ansi.StyleBlock{StylePrimitive: boldStyle},
+			H1:      ansi.StyleBlock{StylePrimitive: boldStyle},
+			H2:      ansi.StyleBlock{StylePrimitive: boldStyle},
+			H3:      ansi.StyleBlock{StylePrimitive: boldStyle},
+			H4:      ansi.StyleBlock{StylePrimitive: boldStyle},
+			H5:      ansi.StyleBlock{StylePrimitive: boldStyle},
+			H6:      ansi.StyleBlock{StylePrimitive: boldStyle},
 
-			Emph:       emphStyle,
-			Strong:     strongStyle,
+			Emph:   emphStyle,
+			Strong: strongStyle,
 
-			Link:       linkStyle,
-			LinkText:   linkStyle,
+			Link:     linkStyle,
+			LinkText: linkStyle,
 
-			List:       ansi.StyleList{},
-			CodeBlock:  ansi.StyleCodeBlock{StyleBlock: ansi.StyleBlock{StylePrimitive: codeStyle}},
+			List:      ansi.StyleList{},
+			CodeBlock: ansi.StyleCodeBlock{StyleBlock: ansi.StyleBlock{StylePrimitive: codeStyle}},
 		}),
 	)
 
@@ -108,12 +108,12 @@ func NewRenderer(width int, style string) (*Renderer, error) {
 	}, nil
 }
 
-// getEnv 获取环境变量的辅助函数
+// getEnv helper to get an environment variable
 func getEnv(key string) string {
 	return os.Getenv(key)
 }
 
-// Render 渲染 markdown 为终端可显示的格式
+// Render renders markdown into a terminal-displayable format
 func (r *Renderer) Render(content string) (string, error) {
 	if r == nil {
 		return content, nil
@@ -129,12 +129,12 @@ func (r *Renderer) Render(content string) (string, error) {
 	return r.renderer.Render(content)
 }
 
-// RenderBytes 渲染 markdown 字节数组
+// RenderBytes renders markdown byte slice
 func (r *Renderer) RenderBytes(content []byte) (string, error) {
 	return r.Render(string(content))
 }
 
-// SetSize 更新渲染器尺寸
+// SetSize updates renderer dimensions
 func (r *Renderer) SetSize(width int) error {
 	if r == nil {
 		return nil
@@ -153,8 +153,8 @@ func (r *Renderer) SetSize(width int) error {
 
 	r.width = width
 
-	// 禁用 WithWordWrap 以避免中文换行问题
-	// 使用与 NewRenderer 相同的高级配色方案
+	// Disable WithWordWrap to avoid Chinese line-wrap issues
+	// Use the same advanced color scheme as NewRenderer
 	trueVal := true
 	falseVal := false
 
@@ -177,22 +177,22 @@ func (r *Renderer) SetSize(width int) error {
 			Paragraph:  ansi.StyleBlock{StylePrimitive: textStyle},
 			BlockQuote: ansi.StyleBlock{StylePrimitive: emphStyle},
 
-			Heading:    ansi.StyleBlock{StylePrimitive: boldStyle},
-			H1:         ansi.StyleBlock{StylePrimitive: boldStyle},
-			H2:         ansi.StyleBlock{StylePrimitive: boldStyle},
-			H3:         ansi.StyleBlock{StylePrimitive: boldStyle},
-			H4:         ansi.StyleBlock{StylePrimitive: boldStyle},
-			H5:         ansi.StyleBlock{StylePrimitive: boldStyle},
-			H6:         ansi.StyleBlock{StylePrimitive: boldStyle},
+			Heading: ansi.StyleBlock{StylePrimitive: boldStyle},
+			H1:      ansi.StyleBlock{StylePrimitive: boldStyle},
+			H2:      ansi.StyleBlock{StylePrimitive: boldStyle},
+			H3:      ansi.StyleBlock{StylePrimitive: boldStyle},
+			H4:      ansi.StyleBlock{StylePrimitive: boldStyle},
+			H5:      ansi.StyleBlock{StylePrimitive: boldStyle},
+			H6:      ansi.StyleBlock{StylePrimitive: boldStyle},
 
-			Emph:       emphStyle,
-			Strong:     strongStyle,
+			Emph:   emphStyle,
+			Strong: strongStyle,
 
-			Link:       linkStyle,
-			LinkText:   linkStyle,
+			Link:     linkStyle,
+			LinkText: linkStyle,
 
-			List:       ansi.StyleList{},
-			CodeBlock:  ansi.StyleCodeBlock{StyleBlock: ansi.StyleBlock{StylePrimitive: codeStyle}},
+			List:      ansi.StyleList{},
+			CodeBlock: ansi.StyleCodeBlock{StyleBlock: ansi.StyleBlock{StylePrimitive: codeStyle}},
 		}),
 	)
 	if err != nil {
@@ -203,7 +203,7 @@ func (r *Renderer) SetSize(width int) error {
 	return nil
 }
 
-// SetStyle 切换主题
+// SetStyle switches theme
 func (r *Renderer) SetStyle(style string) error {
 	if r == nil {
 		return nil
@@ -217,10 +217,10 @@ func (r *Renderer) SetStyle(style string) error {
 	}
 
 	r.style = style
-	// 禁用 WithWordWrap 以避免中文换行问题
+	// Disable WithWordWrap to avoid Chinese line-wrap issues
 	newRenderer, err := glamour.NewTermRenderer(
 		glamour.WithStandardStyle(style),
-		// glamour.WithWordWrap(r.width), // 禁用：会导致中文换行时字符破坏
+		// glamour.WithWordWrap(r.width), // disabled: breaks Chinese text when wrapping
 	)
 	if err != nil {
 		return err
@@ -230,7 +230,7 @@ func (r *Renderer) SetStyle(style string) error {
 	return nil
 }
 
-// GetStyle 返回当前主题
+// GetStyle returns the current theme
 func (r *Renderer) GetStyle() string {
 	if r == nil {
 		return "dark"
@@ -242,7 +242,7 @@ func (r *Renderer) GetStyle() string {
 	return r.style
 }
 
-// GetWidth 返回当前宽度
+// GetWidth returns the current width
 func (r *Renderer) GetWidth() int {
 	if r == nil {
 		return 80
@@ -254,7 +254,7 @@ func (r *Renderer) GetWidth() int {
 	return r.width
 }
 
-// DetectStyle 检测终端主题并返回合适的 glamour 样式
+// DetectStyle detects the terminal theme and returns an appropriate glamour style
 func DetectStyle() string {
 	if lipgloss.HasDarkBackground() {
 		return "dark"
@@ -262,9 +262,9 @@ func DetectStyle() string {
 	return "light"
 }
 
-// GetAvailableStyles 返回所有可用的主题列表
-// glamour 内置主题: dark, light, dracula, ascii, notty
-// 官方二进制中还包含许多自定义主题，可通过配置文件加载
+// GetAvailableStyles returns the list of all available themes
+// glamour built-in themes: dark, light, dracula, ascii, notty
+// The official binary also contains many custom themes loadable via config file
 func GetAvailableStyles() []string {
 	return []string{
 		"dark",
@@ -275,7 +275,7 @@ func GetAvailableStyles() []string {
 	}
 }
 
-// IsValidStyle 检查主题是否有效
+// IsValidStyle checks whether a theme is valid
 func IsValidStyle(style string) bool {
 	for _, s := range GetAvailableStyles() {
 		if s == style {

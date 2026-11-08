@@ -13,9 +13,9 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/types"
 )
 
-// Run 运行非交互打印模式
+// Run runs non-interactive print mode
 func Run(input string, flags *utils.Flags, quiet bool, systemPrompt string) error {
-	log.Info("Starting qodercli in print mode")
+	log.Info("Starting qodercli-reverse in print mode")
 	log.Debug("Input: %s", input)
 
 	cfg := utils.LoadConfig(flags)
@@ -25,12 +25,12 @@ func Run(input string, flags *utils.Flags, quiet bool, systemPrompt string) erro
 		return fmt.Errorf("failed to create provider: %w", err)
 	}
 
-	// 如果环境变量指定了模型，使用它
+	// If model specified via env var, use it
 	if modelOverride != "" {
 		cfg.Model = modelOverride
 	}
 
-	// 如果没有提供系统提示词，自动构建（官方行为）
+	// If no system prompt provided, auto-build (official behavior)
 	if systemPrompt == "" {
 		var buildErr error
 		workDir := flags.Workspace
@@ -40,7 +40,7 @@ func Run(input string, flags *utils.Flags, quiet bool, systemPrompt string) erro
 		systemPrompt, buildErr = utils.BuildSystemPromptAuto(workDir, flags.WithClaudeConfig)
 		if buildErr != nil {
 			log.Error("Failed to build system prompt: %v", buildErr)
-			// 使用默认提示词
+			// Use default prompt
 			systemPrompt = utils.GetDefaultSystemPrompt()
 		}
 	}
@@ -60,15 +60,15 @@ func Run(input string, flags *utils.Flags, quiet bool, systemPrompt string) erro
 		return fmt.Errorf("failed to create agent: %w", err)
 	}
 
-	// 简单的输出处理 - 流式增量打印
+	// Simple output handling - streaming incremental print
 	var lastPrintedRuneCount int
 	var fullText strings.Builder
-	toolCallNames := make(map[string]string) // ToolCallID -> ToolName 映射
+	toolCallNames := make(map[string]string) // ToolCallID -> ToolName mapping
 
 	ag.SetCallbacks(
 		func(msg *types.Message) {
 			if !quiet {
-				// 构建完整的文本内容
+				// Build full text content
 				fullText.Reset()
 				for _, part := range msg.Content {
 					if part.Type == "text" && part.Text != "" {
@@ -76,7 +76,7 @@ func Run(input string, flags *utils.Flags, quiet bool, systemPrompt string) erro
 					}
 				}
 
-				// 只打印新增的文本部分
+				// Print only newly added text part
 				fullStr := fullText.String()
 				runes := []rune(fullStr)
 				if len(runes) > lastPrintedRuneCount {
@@ -114,10 +114,10 @@ func Run(input string, flags *utils.Flags, quiet bool, systemPrompt string) erro
 		},
 	)
 
-	// 设置新一轮 LLM 生成开始回调：重置已打印字符计数，并在不同 generation 之间添加换行
+	// Set callback for new LLM generation start: reset printed char count and add newline between generations
 	ag.SetGenerationStartCallback(func() {
 		log.Debug("[PrintMode] New generation started, lastPrintedRuneCount=%d", lastPrintedRuneCount)
-		// 如果之前有输出，添加换行来分隔不同的 generation
+		// If previous output exists, add newline to separate generations
 		if lastPrintedRuneCount > 0 && !quiet {
 			fmt.Println()
 		}

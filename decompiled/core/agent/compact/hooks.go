@@ -1,4 +1,4 @@
-// Package compact 提供上下文压缩功能 - Hook 系统
+// Package compact provides context compaction - Hook system
 package compact
 
 import (
@@ -9,52 +9,52 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/types"
 )
 
-// HookType Hook 类型
+// HookType hook type
 type HookType string
 
 const (
-	// HookTypePreCompact 压缩前 Hook
+	// HookTypePreCompact pre-compaction hook
 	HookTypePreCompact HookType = "pre_compact"
-	// HookTypePostCompact 压缩后 Hook
+	// HookTypePostCompact post-compaction hook
 	HookTypePostCompact HookType = "post_compact"
-	// HookTypeOnTokenThreshold Token 阈值 Hook
+	// HookTypeOnTokenThreshold token threshold hook
 	HookTypeOnTokenThreshold HookType = "on_token_threshold"
 )
 
 // Note: PreCompactHook, PostCompactHook, ThresholdHook interfaces are defined in compact.go
 
-// HookFunc 函数式 Hook
+// HookFunc functional hook
 type HookFunc func(ctx context.Context, messages []types.Message, options *CompactOptions) error
 
-// Execute 执行 Hook
+// Execute executes the hook
 func (f HookFunc) Execute(ctx context.Context, messages []types.Message, options *CompactOptions) error {
 	return f(ctx, messages, options)
 }
 
-// PostHookFunc 函数式压缩后 Hook
+// PostHookFunc functional post-compaction hook
 type PostHookFunc func(ctx context.Context, result *CompactResult) error
 
-// Execute 执行压缩后 Hook
+// Execute executes the post-compaction hook
 func (f PostHookFunc) Execute(ctx context.Context, result *CompactResult) error {
 	return f(ctx, result)
 }
 
-// ThresholdHookFunc 函数式阈值 Hook
+// ThresholdHookFunc functional threshold hook
 type ThresholdHookFunc func(ctx context.Context, currentTokens int, maxTokens int, threshold float64) bool
 
-// Execute 执行阈值 Hook
+// Execute executes the threshold hook
 func (f ThresholdHookFunc) Execute(ctx context.Context, currentTokens int, maxTokens int, threshold float64) bool {
 	return f(ctx, currentTokens, maxTokens, threshold)
 }
 
-// BuiltinHooks 内置 Hook 集合
+// BuiltinHooks built-in hook collection
 type BuiltinHooks struct {
 	preHooks       []PreCompactHook
 	postHooks      []PostCompactHook
 	thresholdHooks []ThresholdHook
 }
 
-// NewBuiltinHooks 创建内置 Hook 集合
+// NewBuiltinHooks creates a built-in hook collection
 func NewBuiltinHooks() *BuiltinHooks {
 	return &BuiltinHooks{
 		preHooks:       make([]PreCompactHook, 0),
@@ -63,22 +63,22 @@ func NewBuiltinHooks() *BuiltinHooks {
 	}
 }
 
-// AddPreHook 添加压缩前 Hook
+// AddPreHook adds a pre-compaction hook
 func (h *BuiltinHooks) AddPreHook(hook PreCompactHook) {
 	h.preHooks = append(h.preHooks, hook)
 }
 
-// AddPostHook 添加压缩后 Hook
+// AddPostHook adds a post-compaction hook
 func (h *BuiltinHooks) AddPostHook(hook PostCompactHook) {
 	h.postHooks = append(h.postHooks, hook)
 }
 
-// AddThresholdHook 添加阈值 Hook
+// AddThresholdHook adds a threshold hook
 func (h *BuiltinHooks) AddThresholdHook(hook ThresholdHook) {
 	h.thresholdHooks = append(h.thresholdHooks, hook)
 }
 
-// ExecutePreHooks 执行所有压缩前 Hook
+// ExecutePreHooks executes all pre-compaction hooks
 func (h *BuiltinHooks) ExecutePreHooks(ctx context.Context, messages []types.Message, options *CompactOptions) error {
 	for _, hook := range h.preHooks {
 		if err := hook.Execute(ctx, messages, options); err != nil {
@@ -89,7 +89,7 @@ func (h *BuiltinHooks) ExecutePreHooks(ctx context.Context, messages []types.Mes
 	return nil
 }
 
-// ExecutePostHooks 执行所有压缩后 Hook
+// ExecutePostHooks executes all post-compaction hooks
 func (h *BuiltinHooks) ExecutePostHooks(ctx context.Context, result *CompactResult) error {
 	for _, hook := range h.postHooks {
 		if err := hook.Execute(ctx, result); err != nil {
@@ -100,7 +100,7 @@ func (h *BuiltinHooks) ExecutePostHooks(ctx context.Context, result *CompactResu
 	return nil
 }
 
-// ExecuteThresholdHooks 执行所有阈值 Hook
+// ExecuteThresholdHooks executes all threshold hooks
 func (h *BuiltinHooks) ExecuteThresholdHooks(ctx context.Context, currentTokens int, maxTokens int, threshold float64) bool {
 	shouldTrigger := false
 	for _, hook := range h.thresholdHooks {
@@ -111,22 +111,22 @@ func (h *BuiltinHooks) ExecuteThresholdHooks(ctx context.Context, currentTokens 
 	return shouldTrigger
 }
 
-// ========== 内置 Hook 实现 ==========
+// ========== built-in hook implementations ==========
 
-// LoggingHook 日志记录 Hook
+// LoggingHook logging hook
 type LoggingHook struct{}
 
-// Execute 执行日志记录
+// Execute performs logging
 func (h *LoggingHook) Execute(ctx context.Context, messages []types.Message, options *CompactOptions) error {
 	log.Debug("Compact started: trigger=%s, strategy=%s, messages=%d",
 		options.Trigger, strategyToString(options.Strategy), len(messages))
 	return nil
 }
 
-// ValidationHook 验证 Hook
+// ValidationHook validation hook
 type ValidationHook struct{}
 
-// Execute 执行验证
+// Execute performs validation
 func (h *ValidationHook) Execute(ctx context.Context, messages []types.Message, options *CompactOptions) error {
 	if len(messages) == 0 {
 		return fmt.Errorf("empty messages")
@@ -139,20 +139,20 @@ func (h *ValidationHook) Execute(ctx context.Context, messages []types.Message, 
 	return nil
 }
 
-// MetricsHook 指标收集 Hook
+// MetricsHook metrics collection hook
 type MetricsHook struct {
 	compactCount     int
 	totalSavedTokens int
 	lastError        error
 }
 
-// Execute 执行指标收集
+// Execute performs metrics collection
 func (h *MetricsHook) Execute(ctx context.Context, messages []types.Message, options *CompactOptions) error {
-	// 记录压缩前的状态
+	// record pre-compaction state
 	return nil
 }
 
-// GetMetrics 获取指标
+// GetMetrics gets metrics
 func (h *MetricsHook) GetMetrics() map[string]interface{} {
 	return map[string]interface{}{
 		"compact_count":      h.compactCount,
@@ -161,48 +161,48 @@ func (h *MetricsHook) GetMetrics() map[string]interface{} {
 	}
 }
 
-// CacheHook 缓存 Hook - 用于缓存压缩结果
+// CacheHook cache hook - used to cache compaction results
 type CacheHook struct {
 	cache map[string]*CompactResult
 }
 
-// NewCacheHook 创建缓存 Hook
+// NewCacheHook creates a cache hook
 func NewCacheHook() *CacheHook {
 	return &CacheHook{
 		cache: make(map[string]*CompactResult),
 	}
 }
 
-// Execute 执行缓存检查
+// Execute performs cache check
 func (h *CacheHook) Execute(ctx context.Context, messages []types.Message, options *CompactOptions) error {
-	// 生成消息的哈希作为缓存键
+	// generate a hash of messages as cache key
 	key := hashMessages(messages)
 
-	// 检查缓存
+	// check cache
 	if result, ok := h.cache[key]; ok {
 		log.Debug("Cache hit for compact result")
-		// 这里可以返回特殊错误来表示使用缓存结果
-		// 实际使用中需要更复杂的机制
+		// can return a special error to indicate using cached result
+		// more complex mechanism needed in actual usage
 		_ = result
 	}
 
 	return nil
 }
 
-// Store 存储压缩结果
+// Store stores compaction result
 func (h *CacheHook) Store(messages []types.Message, result *CompactResult) {
 	key := hashMessages(messages)
 	h.cache[key] = result
 }
 
-// Clear 清空缓存
+// Clear clears cache
 func (h *CacheHook) Clear() {
 	h.cache = make(map[string]*CompactResult)
 }
 
-// hashMessages 生成消息哈希
+// hashMessages generates a message hash
 func hashMessages(messages []types.Message) string {
-	// 简化实现，实际应该使用真正的哈希函数
+	// simplified implementation; should use a real hash function in practice
 	var hash string
 	for _, msg := range messages {
 		for _, part := range msg.Content {
@@ -212,7 +212,7 @@ func hashMessages(messages []types.Message) string {
 	return fmt.Sprintf("%d", len(hash))
 }
 
-// strategyToString 策略转字符串
+// strategyToString converts strategy to string
 func strategyToString(strategy CompactStrategy) string {
 	switch strategy {
 	case StrategySummary:
