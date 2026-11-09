@@ -1,33 +1,33 @@
-# qodercli 权限和安全机制分析
+# qodercli-reverse Permission and Security Mechanism Analysis
 
-## 1. 权限系统架构
+## 1. Permission System Architecture
 
-### 1.1 包结构
+### 1.1 Package Structure
 
 ```
 core/agent/permission/
-├── bash_permission_gitignore/  # Bash gitignore 权限
-├── bash_rule_matcher/          # Bash 规则匹配
-├── file_rule_matcher/          # 文件规则匹配
-├── mcp_rule_matcher/           # MCP 规则匹配
-├── path_checker/               # 路径检查
-├── permission_checker/         # 权限检查器
-├── permission_coordinator/     # 权限协调器
-├── permission_mode/            # 权限模式
-└── webfetch_rule_matcher/      # WebFetch 规则匹配
+├── bash_permission_gitignore/  # Bash gitignore permission
+├── bash_rule_matcher/          # Bash rule matcher
+├── file_rule_matcher/          # File rule matcher
+├── mcp_rule_matcher/           # MCP rule matcher
+├── path_checker/               # Path checker
+├── permission_checker/         # Permission checker
+├── permission_coordinator/     # Permission coordinator
+├── permission_mode/            # Permission mode
+└── webfetch_rule_matcher/      # WebFetch rule matcher
 ```
 
-## 2. 权限模式
+## 2. Permission Modes
 
-| 模式 | 说明 |
-|------|------|
-| `ask` | 每次操作都询问用户 |
-| `auto-approve` | 自动批准所有操作 |
-| `auto-deny` | 自动拒绝所有操作 |
+| Mode | Description |
+|------|-------------|
+| `ask` | Prompt user for every operation |
+| `auto-approve` | Auto-approve all operations |
+| `auto-deny` | Auto-deny all operations |
 
-## 3. 权限规则类型
+## 3. Permission Rule Types
 
-### 3.1 文件规则
+### 3.1 File Rules
 
 ```yaml
 # .qoder/permission.yaml
@@ -40,99 +40,99 @@ rules:
     action: allow
 ```
 
-### 3.2 Bash 命令规则
+### 3.2 Bash Command Rules
 
 ```
-bash_deny_list          # 禁止命令列表
-default_danger_list     # 默认危险命令
+bash_deny_list          # Denied command list
+default_danger_list     # Default dangerous commands
 ```
 
-危险命令示例:
+Dangerous command examples:
 - `rm -rf /`
 - `sudo`
 - `chmod 777`
-- `curl | bash` (部分场景)
+- `curl | bash` (some scenarios)
 
-### 3.3 MCP 工具规则
-
-```
-config_rule             # 配置规则
-mcp_rule_matcher        # MCP 规则匹配
-```
-
-### 3.4 WebFetch 规则
+### 3.3 MCP Tool Rules
 
 ```
-not_in_allow_list       # 不在允许列表
-not_in_deny_list        # 不在拒绝列表
-default_allow           # 默认允许
+config_rule             # Config rule
+mcp_rule_matcher        # MCP rule matcher
 ```
 
-## 4. 权限检查流程
+### 3.4 WebFetch Rules
 
 ```
-1. 工具调用请求
-2. PermissionCoordinator 协调检查
-   ├── 检查 allowed_tools / disallowed_tools
-   ├── 检查路径/命令规则
-   └── 检查特殊保护
-3. 如需用户确认，显示权限对话框
-4. 记录权限决策
-5. 执行或拒绝操作
+not_in_allow_list       # Not in allow list
+not_in_deny_list        # Not in deny list
+default_allow           # Default allow
 ```
 
-## 5. 特殊保护
-
-### 5.1 特殊文件保护
+## 4. Permission Check Flow
 
 ```
-special_file_protection     # 特殊文件保护
-qoder_config_protection     # Qoder 配置保护
+1. Tool call request
+2. PermissionCoordinator coordinates the check
+   ├── Check allowed_tools / disallowed_tools
+   ├── Check path/command rules
+   └── Check special protections
+3. If user confirmation is needed, show permission dialog
+4. Record permission decision
+5. Execute or reject the operation
 ```
 
-保护的文件/目录:
+## 5. Special Protections
+
+### 5.1 Special File Protection
+
+```
+special_file_protection     # Special file protection
+qoder_config_protection     # Qoder config protection
+```
+
+Protected files/directories:
 - `.qoder/`
 - `.mcp.json`
 - `settings.json`
 - `settings.local.json`
 
-### 5.2 特殊路径策略
+### 5.2 Special Path Policy
 
 ```
-special_path_policy         # 特殊路径策略
+special_path_policy         # Special path policy
 ```
 
-## 6. 权限决策记录
+## 6. Permission Decision Records
 
 ```
-Permission decision         # 权限决策
-decision_reason             # 决策原因
-reason_type                 # 原因类型
-reason_detail               # 原因详情
-user_reject                 # 用户拒绝
+Permission decision         # Permission decision
+decision_reason             # Decision reason
+reason_type                 # Reason type
+reason_detail               # Reason detail
+user_reject                 # User rejection
 ```
 
-## 7. 权限建议
+## 7. Permission Suggestions
 
 ```
-permission_suggestions      # 权限建议
+permission_suggestions      # Permission suggestions
 ```
 
-系统会根据上下文提供权限建议。
+The system provides permission suggestions based on context.
 
-## 8. Hook 系统
+## 8. Hook System
 
-### 8.1 Hook 类型
+### 8.1 Hook Types
 
-| Hook | 触发时机 |
-|------|----------|
-| `PreToolUse` | 工具执行前 |
-| `PostToolUse` | 工具执行后 |
-| `AgentStop` | Agent 停止时 |
-| `SessionStart` | 会话开始时 |
-| `UserPromptSubmit` | 用户提交时 |
+| Hook | Trigger |
+|------|---------|
+| `PreToolUse` | Before tool execution |
+| `PostToolUse` | After tool execution |
+| `AgentStop` | When Agent stops |
+| `SessionStart` | When session starts |
+| `UserPromptSubmit` | When user submits |
 
-### 8.2 Hook 配置
+### 8.2 Hook Configuration
 
 ```json
 // .qoder/hooks.json
@@ -154,29 +154,29 @@ permission_suggestions      # 权限建议
 }
 ```
 
-### 8.3 Hook 执行器
+### 8.3 Hook Executor
 
 ```
 core/resource/hook/
-├── executor/        # Hook 执行器
-├── hook/            # Hook 核心
-├── hooks/           # Hook 列表
-└── log/             # Hook 日志
+├── executor/        # Hook executor
+├── hook/            # Hook core
+├── hooks/           # Hook list
+└── log/             # Hook log
 ```
 
-## 9. 跳过权限检查
+## 9. Skipping Permission Checks
 
 ```bash
 --dangerously-skip-permissions
---yolo  # 别名
+--yolo  # alias
 ```
 
-**警告**: 仅在受信任环境使用。
+**Warning**: Use only in trusted environments.
 
-## 10. 安全最佳实践
+## 10. Security Best Practices
 
-1. 不要在生产环境使用 `--yolo`
-2. 定期检查 `.qoder/permission.yaml`
-3. 使用 `--disallowed-tools` 限制危险工具
-4. 配置适当的 Hook 进行审计
-5. 保护敏感文件 (`.env`, credentials)
+1. Do not use `--yolo` in production
+2. Regularly check `.qoder/permission.yaml`
+3. Use `--disallowed-tools` to restrict dangerous tools
+4. Configure appropriate Hooks for auditing
+5. Protect sensitive files (`.env`, credentials)

@@ -1,5 +1,5 @@
-// Package log 日志系统
-// 支持将 debug log 和 API 错误写入文件和控制台输出
+// Package log logging system
+// Supports writing debug logs and API errors to files and console output.
 package log
 
 import (
@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// Level 日志级别
+// Level log level.
 type Level int
 
 const (
@@ -22,7 +22,7 @@ const (
 	LevelFatal
 )
 
-// String 返回日志级别的字符串表示
+// String returns the string representation of the log level.
 func (l Level) String() string {
 	switch l {
 	case LevelDebug:
@@ -40,28 +40,28 @@ func (l Level) String() string {
 	}
 }
 
-// Logger 日志记录器
+// Logger log recorder.
 type Logger struct {
-	level          Level // 写入文件的最低日志级别
-	stderrMinLevel Level // 输出到 stderr 的最低日志级别
+	level          Level // minimum log level written to file
+	stderrMinLevel Level // minimum log level output to stderr
 	file           *os.File
 	filePath       string
 	prefix         string
 	logToStderr    bool
 }
 
-// defaultLogger 默认日志记录器
+// defaultLogger default log recorder.
 var defaultLogger *Logger
 
-// Init 初始化日志系统
-// logFile: 日志文件路径，如果为空则只输出到 stderr
-// level: 日志级别（控制写入文件的级别）
+// Init initializes the logging system.
+// logFile: path to the log file; if empty, output only to stderr.
+// level: log level (controls the level written to file).
 func Init(logFile string, level Level) error {
 	var file *os.File
 	var filePath string
 
 	if logFile != "" {
-		// 确保目录存在
+		// ensure directory exists
 		dir := filepath.Dir(logFile)
 		if err := os.MkdirAll(dir, 0755); err != nil {
 			return fmt.Errorf("create log directory: %w", err)
@@ -75,7 +75,7 @@ func Init(logFile string, level Level) error {
 		filePath = logFile
 	}
 
-	// stderr 只输出 ERROR 及以上级别，debug 消息只写入文件
+	// stderr only outputs ERROR and above; debug messages are written to file only.
 	stderrMinLevel := LevelError
 
 	defaultLogger = &Logger{
@@ -89,14 +89,14 @@ func Init(logFile string, level Level) error {
 	return nil
 }
 
-// SetLevel 设置日志级别
+// SetLevel sets the log level.
 func SetLevel(level Level) {
 	if defaultLogger != nil {
 		defaultLogger.level = level
 	}
 }
 
-// GetLevel 获取当前日志级别
+// GetLevel returns the current log level.
 func GetLevel() Level {
 	if defaultLogger == nil {
 		return LevelInfo
@@ -104,7 +104,7 @@ func GetLevel() Level {
 	return defaultLogger.level
 }
 
-// Close 关闭日志文件
+// Close closes the log file.
 func Close() error {
 	if defaultLogger != nil && defaultLogger.file != nil {
 		return defaultLogger.file.Close()
@@ -112,10 +112,10 @@ func Close() error {
 	return nil
 }
 
-// log 内部日志记录函数
+// log internal logging function.
 func log(level Level, format string, args ...interface{}) {
 	if defaultLogger == nil {
-		// 如果未初始化，默认输出到 stderr
+		// if not initialized, default output to stderr
 		if level >= LevelInfo {
 			msg := formatLog(level, "", format, args...)
 			fmt.Fprintln(os.Stderr, msg)
@@ -123,7 +123,7 @@ func log(level Level, format string, args ...interface{}) {
 		return
 	}
 
-	// 检查日志级别（文件和 stderr 使用各自的级别控制）
+	// check log level (file and stderr use their own level control)
 	needFile := defaultLogger.file != nil && level >= defaultLogger.level
 	needStderr := defaultLogger.logToStderr && level >= defaultLogger.stderrMinLevel
 
@@ -131,11 +131,11 @@ func log(level Level, format string, args ...interface{}) {
 		return
 	}
 
-	// 获取调用者信息
+	// get caller info
 	_, file, line, ok := runtime.Caller(2)
 	callerInfo := ""
 	if ok {
-		// 简化文件路径
+		// simplify file path
 		if idx := strings.LastIndex(file, "/"); idx != -1 {
 			file = file[idx+1:]
 		}
@@ -144,18 +144,18 @@ func log(level Level, format string, args ...interface{}) {
 
 	msg := formatLog(level, callerInfo, format, args...)
 
-	// 输出到 stderr（根据 stderrMinLevel 判断，默认只输出 ERROR 及以上，debug 模式输出所有）
+	// output to stderr (judged by stderrMinLevel; by default only ERROR and above, debug mode outputs all)
 	if needStderr {
 		fmt.Fprintln(os.Stderr, msg)
 	}
 
-	// 输出到文件
+	// output to file
 	if needFile {
 		defaultLogger.file.WriteString(msg + "\n")
 	}
 }
 
-// formatLog 格式化日志消息
+// formatLog formats the log message.
 func formatLog(level Level, callerInfo, format string, args ...interface{}) string {
 	timestamp := time.Now().Format("2006-01-02 15:04:05.000")
 	msg := fmt.Sprintf(format, args...)
@@ -166,65 +166,65 @@ func formatLog(level Level, callerInfo, format string, args ...interface{}) stri
 	return fmt.Sprintf("[%s] [%s] %s", timestamp, level.String(), msg)
 }
 
-// Debug 记录调试日志
+// Debug records a debug log.
 func Debug(format string, args ...interface{}) {
 	log(LevelDebug, format, args...)
 }
 
-// Info 记录信息日志
+// Info records an info log.
 func Info(format string, args ...interface{}) {
 	log(LevelInfo, format, args...)
 }
 
-// Warn 记录警告日志
+// Warn records a warning log.
 func Warn(format string, args ...interface{}) {
 	log(LevelWarn, format, args...)
 }
 
-// Error 记录错误日志
+// Error records an error log.
 func Error(format string, args ...interface{}) {
 	log(LevelError, format, args...)
 }
 
-// Fatal 记录致命错误并退出
+// Fatal records a fatal error and exits.
 func Fatal(format string, args ...interface{}) {
 	log(LevelFatal, format, args...)
 	os.Exit(1)
 }
 
-// Debugf 记录调试日志（带格式）
+// Debugf records a debug log (with format).
 func Debugf(format string, args ...interface{}) {
 	Debug(format, args...)
 }
 
-// Infof 记录信息日志（带格式）
+// Infof records an info log (with format).
 func Infof(format string, args ...interface{}) {
 	Info(format, args...)
 }
 
-// Warnf 记录警告日志（带格式）
+// Warnf records a warning log (with format).
 func Warnf(format string, args ...interface{}) {
 	Warn(format, args...)
 }
 
-// Errorf 记录错误日志（带格式）
+// Errorf records an error log (with format).
 func Errorf(format string, args ...interface{}) {
 	Error(format, args...)
 }
 
-// Fatalf 记录致命错误并退出（带格式）
+// Fatalf records a fatal error and exits (with format).
 func Fatalf(format string, args ...interface{}) {
 	Fatal(format, args...)
 }
 
-// WithPrefix 创建带前缀的日志函数
+// WithPrefix creates a logging function with a prefix.
 func WithPrefix(prefix string) func(string, ...interface{}) {
 	return func(format string, args ...interface{}) {
 		Info("["+prefix+"] "+format, args...)
 	}
 }
 
-// GetLogFile 获取日志文件路径
+// GetLogFile returns the log file path.
 func GetLogFile() string {
 	if defaultLogger != nil {
 		return defaultLogger.filePath

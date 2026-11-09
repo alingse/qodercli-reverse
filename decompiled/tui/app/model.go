@@ -1,5 +1,5 @@
-// Package app TUI 应用主入口
-// 遵循 Bubble Tea 架构：所有状态变更必须通过 Update 循环
+// Package app TUI application entry point
+// Follows Bubble Tea architecture: all state changes must go through the Update loop
 package app
 
 import (
@@ -23,113 +23,113 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/version"
 )
 
-// 通道缓冲区大小常量
+// channel buffer size constants
 const (
-	DefaultEventChanSize    = 100  // 事件通道缓冲区大小
-	DefaultCallbackChanSize = 1000 // 回调通道缓冲区大小
+	DefaultEventChanSize    = 100  // event channel buffer size
+	DefaultCallbackChanSize = 1000 // callback channel buffer size
 )
 
-// 状态文本常量
+// status text constants
 const (
-	StatusReady      = "Ready"
-	StatusThinking   = "Thinking..."
-	StatusUsingTool  = "Using tool..."
-	StatusError      = "Error"
+	StatusReady     = "Ready"
+	StatusThinking  = "Thinking..."
+	StatusUsingTool = "Using tool..."
+	StatusError     = "Error"
 )
 
-// 颜色代码常量（Lipgloss ANSI 颜色）
+// color code constants (Lipgloss ANSI colors)
 const (
-	ColorGreen       = "82"  // 绿色 - 就绪/完成状态
-	ColorPurple      = "135" // 紫色 - 处理中状态
-	ColorRed         = "203" // 红色 - 错误状态
-	ColorGray        = "248" // 灰色 - 待处理/默认文本
-	ColorGrayLight   = "246" // 浅灰色 - 预览文本
-	ColorWhite       = "255" // 白色 - 高亮文本/默认
-	ColorDarkBg      = "237" // 深色背景
+	ColorGreen     = "82"  // green - ready/completed status
+	ColorPurple    = "135" // purple - processing status
+	ColorRed       = "203" // red - error status
+	ColorGray      = "248" // gray - pending/default text
+	ColorGrayLight = "246" // light gray - preview text
+	ColorWhite     = "255" // white - highlighted text/default
+	ColorDarkBg    = "237" // dark background
 )
 
-// UI 尺寸常量
+// UI size constants
 const (
-	StatusBarHeight = 1
-	MinHelpWidth    = 20
-	HelpBorderWidth = 4
+	StatusBarHeight      = 1
+	MinHelpWidth         = 20
+	HelpBorderWidth      = 4
 	StatusBarLeftWidth   = 20
 	StatusBarRightMargin = 40
 )
 
-// appModel TUI 应用模型 - 遵循 Bubble Tea 响应式架构
+// appModel TUI application model - follows Bubble Tea reactive architecture
 type appModel struct {
-	// 核心组件
+	// core components
 	editor  *editor.EditorComponent
-	msgView *messages.MessageView // 保留用于格式化消息
+	msgView *messages.MessageView // kept for formatting messages
 
-	// Markdown 渲染器
+	// Markdown renderer
 	markdownRenderer *markdown.Renderer
 
-	// 配置
+	// config
 	config *config.Config
 
 	// Agent
 	agent *agent.Agent
 
-	// 事件系统
+	// event system
 	pubsub *pubsub.PubSub
 
-	// 尺寸
+	// size
 	width  int
 	height int
 
-	// 状态
+	// status
 	quitting      bool
 	processing    bool
 	showHelp      bool
 	errorMsg      string
 	sessionActive bool
 
-	// 状态栏
+	// status bar
 	status string
 	model  string
 
-	// === 回合管理 ===
-	// 当前回合内容（在 View 中临时渲染）
+	// === turn management ===
+	// current turn content (temporarily rendered in View)
 	currentTurn *TurnContent
 
-	// 是否有活跃的回合
+	// whether there is an active turn
 	hasTurn bool
 
-	// 事件通道
+	// event channel
 	eventChan chan tea.Msg
 
-	// 回调序列化 channel - 确保 Agent 回调按顺序处理
+	// callback serialization channel - ensures Agent callbacks are processed in order
 	callbackChan chan func()
 
-	// 流式输出追踪器（调试用）
+	// streaming output tracker (debug)
 	streamingTracker *StreamingTracker
 }
 
-// === 回合管理数据结构 ===
+// === turn management data structures ===
 
-// TurnStatus 回合状态
+// TurnStatus turn status
 type TurnStatus int
 
 const (
-	TurnStatusStreaming TurnStatus = iota // 正在流式输出文本
-	TurnStatusTooling                     // 正在执行工具
-	TurnStatusCompleted                   // 回合完成
-	TurnStatusError                       // 回合出错
+	TurnStatusStreaming TurnStatus = iota // streaming text output
+	TurnStatusTooling                     // executing tool
+	TurnStatusCompleted                   // turn completed
+	TurnStatusError                       // turn errored
 )
 
-// ToolCallStatus 工具调用状态
+// ToolCallStatus tool call status
 type ToolCallStatus int
 
 const (
-	ToolCallStatusPending   ToolCallStatus = iota // 等待执行
-	ToolCallStatusRunning                         // 执行中
-	ToolCallStatusCompleted                       // 执行成功
-	ToolCallStatusError                           // 执行失败
+	ToolCallStatusPending   ToolCallStatus = iota // waiting to execute
+	ToolCallStatusRunning                         // executing
+	ToolCallStatusCompleted                       // succeeded
+	ToolCallStatusError                           // failed
 )
 
-// TurnToolCall 表示回合中的一个工具调用
+// TurnToolCall represents a tool call within a turn
 type TurnToolCall struct {
 	ID        string
 	Name      string
@@ -141,31 +141,31 @@ type TurnToolCall struct {
 	EndTime   time.Time
 }
 
-// TurnContent 表示一个完整的 Agent 回合内容
+// TurnContent represents a complete Agent turn
 type TurnContent struct {
-	// 流式文本内容（Assistant 消息）
+	// streaming text content (Assistant message)
 	StreamingText strings.Builder
 
-	// 工具调用列表（按顺序）
+	// tool call list (in order)
 	ToolCalls []TurnToolCall
 
-	// 回合状态
+	// turn status
 	Status TurnStatus
 
-	// 开始时间
+	// start time
 	StartTime time.Time
 
-	// 已持久化的文本长度
+	// persisted text length
 	PersistedTextLength int
 }
 
-// New 创建新的 TUI 应用模型
+// New creates a new TUI application model
 func New(cfg *config.Config, ag *agent.Agent, ps *pubsub.PubSub, debug bool) *appModel {
-	// 创建流式输出追踪器（如果启用调试）
+	// create streaming tracker (if debug enabled)
 	tracker, err := NewStreamingTracker(debug)
 	if err != nil {
 		log.Warnf("Failed to create streaming tracker: %v", err)
-		tracker, _ = NewStreamingTracker(false) // 创建禁用的 tracker
+		tracker, _ = NewStreamingTracker(false) // create disabled tracker
 	}
 
 	m := &appModel{
@@ -176,43 +176,43 @@ func New(cfg *config.Config, ag *agent.Agent, ps *pubsub.PubSub, debug bool) *ap
 		status:           StatusReady,
 		model:            cfg.Model,
 		eventChan:        make(chan tea.Msg, DefaultEventChanSize),
-		callbackChan:     make(chan func(), DefaultCallbackChanSize), // 增大缓冲区避免阻塞
+		callbackChan:     make(chan func(), DefaultCallbackChanSize), // larger buffer to avoid blocking
 		hasTurn:          false,
 		currentTurn:      nil,
 		streamingTracker: tracker,
 	}
 
-	// 初始化子组件
+	// init sub-components
 	m.editor = editor.NewEditorComponent(ps)
 	m.msgView = messages.NewMessageView()
 
-	// 初始化 Markdown 渲染器
+	// init Markdown renderer
 	renderer, err := markdown.NewRenderer(76, cfg.Markdown.Style)
 	if err != nil {
 		log.Warnf("Failed to create markdown renderer: %v", err)
-		// 使用默认渲染器
+		// use default renderer
 		renderer, _ = markdown.NewRenderer(76, "dark")
 	}
 	m.markdownRenderer = renderer
 
-	// 启动回调序列化 goroutine - 确保 Agent 回调按顺序处理
+	// start callback serialization goroutine - ensures Agent callbacks processed in order
 	go m.serializeCallbacks()
 
-	// 设置 Agent 回调
+	// set Agent callbacks
 	m.setupAgentCallbacks()
 
 	return m
 }
 
-// serializeCallbacks 序列化回调处理 goroutine
-// 所有 Agent 回调先发送到这里，然后按顺序发送到 eventChan
+// serializeCallbacks callback serialization goroutine
+// all Agent callbacks are sent here first, then dispatched to eventChan in order
 func (m *appModel) serializeCallbacks() {
 	for fn := range m.callbackChan {
 		fn()
 	}
 }
 
-// Init 初始化 Bubble Tea 程序
+// Init initializes the Bubble Tea program
 func (m appModel) Init() tea.Cmd {
 	log.Debug("Initializing TUI components")
 	m.setDefaultSize()
@@ -226,13 +226,13 @@ func (m appModel) Init() tea.Cmd {
 	)
 }
 
-// setDefaultSize 设置默认尺寸
+// setDefaultSize sets default size
 func (m *appModel) setDefaultSize() {
 	m.width = 80
 	m.height = 24
 }
 
-// Update 处理消息更新
+// Update handles message updates
 func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
@@ -247,39 +247,39 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 
 	case InitMsg:
-		// 获取当前目录
+		// get current directory
 		cwd, _ := os.Getwd()
 		welcome := &messages.WelcomeMessage{
 			Version: version.GetVersion(),
 			Cwd:     cwd,
 			MsgTime: time.Now(),
 		}
-		cmds = append(cmds, tea.Printf(welcome.Render()))
+		cmds = append(cmds, tea.Printf("%s", welcome.Render()))
 		cmds = append(cmds, m.waitForEvents())
 
 	case editor.SendMsg:
 		m.processing = true
 		m.status = StatusThinking
 
-		// 1. 将用户消息持久化到终端
+		// 1. persist user message to terminal
 		userMsg := &messages.UserMessage{
 			Content: msg.Content,
 			MsgTime: time.Now(),
 		}
-		cmds = append(cmds, tea.Printf(userMsg.Render()))
+		cmds = append(cmds, tea.Printf("%s", userMsg.Render()))
 
-		// 2. 初始化新回合
+		// 2. init new turn
 		m.hasTurn = true
 		m.currentTurn = &TurnContent{
 			Status:    TurnStatusStreaming,
 			StartTime: time.Now(),
 		}
 
-		// 3. 启动 Agent
+		// 3. start Agent
 		cmds = append(cmds, m.handleUserInput(msg.Content))
 
 	case AgentGenerationStartMsg:
-		// 新一轮 LLM 生成开始：重置持久化计数器
+		// new LLM generation started: reset persisted counter
 		if m.hasTurn && m.currentTurn != nil {
 			log.Debug("[GenerationStart] New generation started, resetting PersistedTextLength")
 			m.currentTurn.PersistedTextLength = 0
@@ -287,17 +287,17 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, m.waitForEvents())
 
 	case AgentStreamMsg:
-		// 更新当前回合的流式文本（完整内容，不是增量）
+		// update current turn streaming text (full content, not delta)
 		if m.hasTurn && m.currentTurn != nil {
-			// 使用 rune 切片来正确处理 UTF-8 多字节字符
+			// use rune slice to correctly handle UTF-8 multibyte chars
 			contentRunes := []rune(msg.Content)
 			contentRuneCount := len(contentRunes)
 
-			// 调试日志：输出完整内容和关键长度
+			// debug log: output full content and key lengths
 			log.Debugf("[StreamMsg] BEGIN - FullContent runes=%d, PersistedRuneLen=%d",
 				contentRuneCount, m.currentTurn.PersistedTextLength)
 
-			// 显示原始内容的前 50 个字符（用于调试）
+			// show first 50 chars of raw content (debug)
 			if len(contentRunes) > 0 {
 				prefixLen := 50
 				if len(contentRunes) < prefixLen {
@@ -306,16 +306,16 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				log.Debugf("[StreamMsg] FullContent prefix=%q", string(contentRunes[:prefixLen]))
 			}
 
-			// 跳过已持久化的部分，只显示新增的文本
-			// 使用 rune 索引而不是字节索引来正确处理 UTF-8
+			// skip persisted part, show only new text
+			// use rune index instead of byte index for UTF-8
 			if contentRuneCount > m.currentTurn.PersistedTextLength {
-				// 使用 rune 切片获取新内容
+				// use rune slice to get new content
 				newRunes := contentRunes[m.currentTurn.PersistedTextLength:]
 				newContent := string(newRunes)
 				log.Debugf("[StreamMsg] newContent runes=%d, bytes=%d",
 					len(newRunes), len(newContent))
 
-				// 显示新内容的前 50 个字符（用于调试）
+				// show first 50 chars of new content (debug)
 				if len(newRunes) > 0 {
 					prefixLen := 50
 					if len(newRunes) < prefixLen {
@@ -324,7 +324,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					log.Debugf("[StreamMsg] newContent prefix=%q", string(newRunes[:prefixLen]))
 				}
 
-				// 记录到追踪器
+				// log to tracker
 				m.streamingTracker.LogStreamMsg(
 					msg.Content,
 					m.currentTurn.PersistedTextLength,
@@ -335,7 +335,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.currentTurn.StreamingText.Reset()
 				m.currentTurn.StreamingText.WriteString(newContent)
 			} else {
-				// 如果没有新内容，清空 StreamingText
+				// if no new content, clear StreamingText
 				log.Debugf("[StreamMsg] No new content, clearing StreamingText")
 				m.currentTurn.StreamingText.Reset()
 			}
@@ -348,7 +348,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.status = StatusUsingTool
 
 		if m.hasTurn && m.currentTurn != nil {
-			// 1. 先持久化之前的流式文本（如果有）
+			// 1. persist previous streaming text first (if any)
 			if m.currentTurn.StreamingText.Len() > 0 {
 				content := m.currentTurn.StreamingText.String()
 				contentRuneCount := len([]rune(content))
@@ -357,7 +357,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				log.Debugf("[ToolStart] BEGIN - Persisting streaming text")
 				log.Debugf("[ToolStart] content runes=%d, bytes=%d", contentRuneCount, contentByteLen)
 
-				// 显示持久化内容的前 50 个字符（用于调试）
+				// show first 50 chars of persisted content (debug)
 				contentRunes := []rune(content)
 				if len(contentRunes) > 0 {
 					prefixLen := 50
@@ -369,21 +369,21 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				log.Debugf("[ToolStart] PersistedRuneLen before=%d", m.currentTurn.PersistedTextLength)
 
-				// 记录到追踪器（持久化前）
+				// log to tracker (before persist)
 				m.streamingTracker.LogToolStart(
 					content,
 					m.currentTurn.PersistedTextLength,
 					m.currentTurn.PersistedTextLength+contentRuneCount,
 				)
 
-				cmds = append(cmds, tea.Printf(m.renderAssistantMessage(content)))
+				cmds = append(cmds, tea.Printf("%s", m.renderAssistantMessage(content)))
 
-				// 记录已持久化的文本长度（使用 rune 计数）
+				// record persisted text length (using rune count)
 				m.currentTurn.PersistedTextLength += contentRuneCount
 				log.Debugf("[ToolStart] PersistedRuneLen after=%d (added %d runes)",
 					m.currentTurn.PersistedTextLength, contentRuneCount)
 
-				// 清空流式文本缓冲区
+				// clear streaming text buffer
 				m.currentTurn.StreamingText.Reset()
 				log.Debugf("[ToolStart] END - StreamingText cleared")
 			} else {
@@ -391,7 +391,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.currentTurn.StreamingText.Len())
 			}
 
-			// 2. 添加工具调用到当前回合
+			// 2. add tool call to current turn
 			m.currentTurn.Status = TurnStatusTooling
 			m.currentTurn.ToolCalls = append(m.currentTurn.ToolCalls, TurnToolCall{
 				ID:        msg.ID,
@@ -405,10 +405,10 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case AgentToolResultMsg:
 		if m.hasTurn && m.currentTurn != nil {
-			// 查找对应的工具调用
+			// find corresponding tool call
 			for i := range m.currentTurn.ToolCalls {
 				if m.currentTurn.ToolCalls[i].ID == msg.ToolCallID {
-					// 更新工具调用信息
+					// update tool call info
 					m.currentTurn.ToolCalls[i].Output = msg.Content
 					m.currentTurn.ToolCalls[i].IsError = msg.IsError
 					if msg.IsError {
@@ -418,7 +418,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 					m.currentTurn.ToolCalls[i].EndTime = time.Now()
 
-					// 立即持久化这个工具调用
+					// persist this tool call immediately
 					toolMsg := &messages.ToolCallInfo{
 						ID:        m.currentTurn.ToolCalls[i].ID,
 						Name:      m.currentTurn.ToolCalls[i].Name,
@@ -428,9 +428,9 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						Completed: true,
 						MsgTime:   m.currentTurn.ToolCalls[i].EndTime,
 					}
-					cmds = append(cmds, tea.Printf(toolMsg.Render()))
+					cmds = append(cmds, tea.Printf("%s", toolMsg.Render()))
 
-					// 从 ToolCalls 中移除（因为已经持久化了）
+					// remove from ToolCalls (already persisted)
 					m.currentTurn.ToolCalls = append(
 						m.currentTurn.ToolCalls[:i],
 						m.currentTurn.ToolCalls[i+1:]...,
@@ -448,17 +448,17 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.processing = false
 		m.status = StatusError
 
-		// 错误时持久化当前回合的部分内容
+		// on error, persist partial turn content
 		if m.hasTurn && m.currentTurn != nil {
-			// 持久化已有的流式文本
+			// persist existing streaming text
 			if m.currentTurn.StreamingText.Len() > 0 {
 				content := m.currentTurn.StreamingText.String()
-				cmds = append(cmds, tea.Printf(m.renderAssistantMessage(content)))
+				cmds = append(cmds, tea.Printf("%s", m.renderAssistantMessage(content)))
 			}
 
-			// 持久化正在运行的工具调用（如果有）
-			// 注意：已完成的工具调用应该已经在 ToolResult 时持久化了
-			// 这里只需要持久化还在运行中的工具调用
+			// persist running tool calls (if any)
+			// note: completed tool calls should have been persisted at ToolResult
+			// here we only need to persist still-running tool calls
 			for _, toolCall := range m.currentTurn.ToolCalls {
 				if toolCall.Status == ToolCallStatusRunning {
 					toolMsg := &messages.ToolCallInfo{
@@ -470,36 +470,36 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						Completed: true,
 						MsgTime:   time.Now(),
 					}
-					cmds = append(cmds, tea.Printf(toolMsg.Render()))
+					cmds = append(cmds, tea.Printf("%s", toolMsg.Render()))
 				}
 			}
 		}
 
-		// 持久化错误消息
+		// persist error message
 		errMsg := &messages.ErrorMessage{
 			ErrStr:  m.errorMsg,
 			MsgTime: time.Now(),
 		}
-		cmds = append(cmds, tea.Printf(errMsg.Render()))
+		cmds = append(cmds, tea.Printf("%s", errMsg.Render()))
 
-		// 清理回合
+		// cleanup turn
 		m.hasTurn = false
 		m.currentTurn = nil
 		cmds = append(cmds, m.waitForEvents())
 
 	case AgentFinishMsg:
-		// 回合完成：持久化剩余内容
+		// turn completed: persist remaining content
 		if m.hasTurn && m.currentTurn != nil {
 			m.currentTurn.Status = TurnStatusCompleted
 
-			// 只需要持久化剩余的流式文本（如果有）
-			// 工具调用已经在 ToolResult 时持久化了
+			// only need to persist remaining streaming text (if any)
+			// tool calls were already persisted at ToolResult
 			if m.currentTurn.StreamingText.Len() > 0 {
 				content := m.currentTurn.StreamingText.String()
-				cmds = append(cmds, tea.Printf(m.renderAssistantMessage(content)))
+				cmds = append(cmds, tea.Printf("%s", m.renderAssistantMessage(content)))
 			}
 
-			// 清理当前回合
+			// cleanup current turn
 			m.hasTurn = false
 			m.currentTurn = nil
 		}
@@ -510,14 +510,14 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case QuitMsg:
 		m.quitting = true
-		// 清理追踪器
+		// cleanup tracker
 		if trackerFile, err := m.streamingTracker.Close(); err == nil && trackerFile != "" {
 			log.Infof("Streaming trace saved to: %s", trackerFile)
 		}
 		return m, tea.Quit
 	}
 
-	// 更新子组件
+	// update sub-components
 	editorModel, editorCmd := m.editor.Update(msg)
 	m.editor = editorModel.(*editor.EditorComponent)
 	if editorCmd != nil {
@@ -527,7 +527,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-// handleUserInput 处理用户输入
+// handleUserInput handles user input
 func (m *appModel) handleUserInput(input string) tea.Cmd {
 	return func() tea.Msg {
 		if strings.HasPrefix(input, "/") {
@@ -542,7 +542,7 @@ func (m *appModel) handleUserInput(input string) tea.Cmd {
 	}
 }
 
-// handleCommand 处理斜杠命令
+// handleCommand handles slash commands
 func (m *appModel) handleCommand(input string) tea.Msg {
 	parts := strings.Fields(input)
 	if len(parts) == 0 {
@@ -562,17 +562,17 @@ func (m *appModel) handleCommand(input string) tea.Msg {
 	}
 }
 
-// waitForEvents 监听 Agent 事件通道
+// waitForEvents listens to Agent event channel
 func (m *appModel) waitForEvents() tea.Cmd {
 	return func() tea.Msg {
 		return <-m.eventChan
 	}
 }
 
-// setupAgentCallbacks 设置 Agent 回调
+// setupAgentCallbacks sets Agent callbacks
 func (m *appModel) setupAgentCallbacks() {
 	m.agent.SetCallbacks(
-		// onMessage: 处理流式文本（完整内容）
+		// onMessage: handle streaming text (full content)
 		func(msg *types.Message) {
 			var fullContent strings.Builder
 			for _, part := range msg.Content {
@@ -582,12 +582,12 @@ func (m *appModel) setupAgentCallbacks() {
 			}
 			fullStr := fullContent.String()
 
-			// 通过序列化 channel 发送
+			// send via serialization channel
 			m.callbackChan <- func() {
 				m.eventChan <- AgentStreamMsg{Content: fullStr}
 			}
 		},
-		// onToolCall: 工具调用开始
+		// onToolCall: tool call started
 		func(call *types.ToolCall) {
 			c := *call
 			m.callbackChan <- func() {
@@ -598,7 +598,7 @@ func (m *appModel) setupAgentCallbacks() {
 				}
 			}
 		},
-		// onToolResult: 工具调用结果
+		// onToolResult: tool call result
 		func(result *types.ToolResult) {
 			r := *result
 			m.callbackChan <- func() {
@@ -609,14 +609,14 @@ func (m *appModel) setupAgentCallbacks() {
 				}
 			}
 		},
-		// onError: 错误处理
+		// onError: error handling
 		func(err error) {
 			e := err
 			m.callbackChan <- func() {
 				m.eventChan <- AgentErrorMsg{Err: e}
 			}
 		},
-		// onFinish: 回合完成
+		// onFinish: turn completed
 		func(reason types.FinishReason) {
 			r := reason
 			m.callbackChan <- func() {
@@ -625,7 +625,7 @@ func (m *appModel) setupAgentCallbacks() {
 		},
 	)
 
-	// onGenerationStart: 新一轮 LLM 生成开始
+	// onGenerationStart: new LLM generation started
 	m.agent.SetGenerationStartCallback(func() {
 		m.callbackChan <- func() {
 			m.eventChan <- AgentGenerationStartMsg{}
@@ -633,7 +633,7 @@ func (m *appModel) setupAgentCallbacks() {
 	})
 }
 
-// handleGlobalKeys 处理全局快捷键
+// handleGlobalKeys handles global shortcuts
 func (m *appModel) handleGlobalKeys(msg tea.KeyMsg) tea.Cmd {
 	switch msg.Type {
 	case tea.KeyF1:
@@ -648,7 +648,7 @@ func (m *appModel) handleGlobalKeys(msg tea.KeyMsg) tea.Cmd {
 	return nil
 }
 
-// View 渲染视图
+// View renders the view
 func (m appModel) View() string {
 	if m.showHelp {
 		return m.renderHelp()
@@ -671,24 +671,24 @@ func (m appModel) View() string {
 
 	var sections []string
 
-	// 1. 当前回合预览区（如果有活跃回合）
+	// 1. current turn preview area (if active turn)
 	if m.hasTurn && m.currentTurn != nil {
 		sections = append(sections, m.renderCurrentTurn())
 	}
 
-	// 2. 空行分隔
+	// 2. blank line separator
 	sections = append(sections, "")
 
-	// 3. 编辑器
+	// 3. editor
 	sections = append(sections, m.editor.View())
 
-	// 4. 状态栏
+	// 4. status bar
 	sections = append(sections, m.renderStatusBar())
 
 	return lipgloss.JoinVertical(lipgloss.Left, sections...)
 }
 
-// renderCurrentTurn 渲染当前回合的完整内容（临时预览）
+// renderCurrentTurn renders full current turn content (temporary preview)
 func (m appModel) renderCurrentTurn() string {
 	if m.currentTurn == nil {
 		return ""
@@ -696,14 +696,14 @@ func (m appModel) renderCurrentTurn() string {
 
 	var sections []string
 
-	// 1. 渲染流式文本（如果有）
+	// 1. render streaming text (if any)
 	if m.currentTurn.StreamingText.Len() > 0 {
 		content := m.currentTurn.StreamingText.String()
 		contentRunes := len([]rune(content))
 		log.Debugf("[RenderCurrentTurn] StreamingText runes=%d, bytes=%d",
 			contentRunes, len(content))
 
-		// 显示前 50 个字符
+		// show first 50 chars
 		if contentRunes > 0 {
 			runes := []rune(content)
 			prefixLen := 50
@@ -713,8 +713,8 @@ func (m appModel) renderCurrentTurn() string {
 			log.Debugf("[RenderCurrentTurn] StreamingText prefix=%q", string(runes[:prefixLen]))
 		}
 
-		// 限制预览区的高度，避免占用太多屏幕空间
-		// 最多显示 10 行，超出部分用 "..." 表示
+		// limit preview area height to avoid taking too much screen space
+		// at most 10 lines, excess shown as "..."
 		lines := strings.Split(content, "\n")
 		maxLines := 10
 		if len(lines) > maxLines {
@@ -722,16 +722,16 @@ func (m appModel) renderCurrentTurn() string {
 			content = "...\n" + strings.Join(lines, "\n")
 		}
 
-		// 使用灰色斜体样式表示正在生成的内容
+		// use gray italic style for content being generated
 		previewStyle := lipgloss.NewStyle().
 			Foreground(lipgloss.Color(ColorGrayLight)).
 			Italic(true)
 
-		// 直接渲染内容，添加 ⏺ 前缀
+		// render content directly, add ⏺ prefix
 		sections = append(sections, previewStyle.Render(fmt.Sprintf("⏺ %s", strings.TrimSpace(content))))
 	}
 
-	// 2. 渲染工具调用（如果有）
+	// 2. render tool calls (if any)
 	for _, toolCall := range m.currentTurn.ToolCalls {
 		toolMsg := &messages.ToolCallInfo{
 			ID:        toolCall.ID,
@@ -743,19 +743,19 @@ func (m appModel) renderCurrentTurn() string {
 			MsgTime:   time.Now(),
 		}
 
-		// 使用不同的颜色表示不同状态
+		// use different colors for different statuses
 		var color string
 		switch toolCall.Status {
 		case ToolCallStatusPending:
-			color = ColorGray // 灰色
+			color = ColorGray // gray
 		case ToolCallStatusRunning:
-			color = ColorWhite // 白色
+			color = ColorWhite // white
 		case ToolCallStatusCompleted:
-			color = ColorGreen // 绿色
+			color = ColorGreen // green
 		case ToolCallStatusError:
-			color = ColorRed // 红色
+			color = ColorRed // red
 		default:
-			color = ColorWhite // 默认白色
+			color = ColorWhite // default white
 		}
 
 		style := lipgloss.NewStyle().Foreground(lipgloss.Color(color))
@@ -793,32 +793,32 @@ func (m appModel) renderStatusBar() string {
 	return barStyle.Render(content)
 }
 
-// renderAssistantMessage 渲染助手消息，支持 Markdown
+// renderAssistantMessage renders assistant message with Markdown support
 func (m appModel) renderAssistantMessage(content string) string {
-	// 调试日志：记录渲染前的内容
+	// debug log: record content before render
 	log.Debugf("[Render] Input content runes=%d, bytes=%d", len([]rune(content)), len(content))
 
-	// 如果没有渲染器或 Markdown 被禁用，返回原始内容
+	// if no renderer or Markdown disabled, return raw content
 	if m.markdownRenderer == nil || !m.config.Markdown.Enabled {
-		// 记录到追踪器（未渲染）
+		// log to tracker (unrendered)
 		m.streamingTracker.LogRender(content, content, "none")
 		return content
 	}
 
-	// 创建 AssistantMessage 并使用渲染器渲染
+	// create AssistantMessage and render with renderer
 	assistantMsg := &messages.AssistantMessage{
 		Content: content,
 		MsgTime: time.Now(),
 	}
 
-	// 使用 markdown 渲染器进行 Markdown 渲染
-	// RenderMarkdown 只返回一个值（string），不会返回错误
+	// use markdown renderer for Markdown rendering
+	// RenderMarkdown returns only a string value, no error
 	rendered := assistantMsg.RenderMarkdown(m.markdownRenderer)
 
-	// 调试日志：记录渲染后的内容
+	// debug log: record content after render
 	log.Debugf("[Render] Output content runes=%d, bytes=%d", len([]rune(rendered)), len(rendered))
 	if len([]rune(rendered)) > 0 {
-		// 检查前 10 个字符
+		// check first 10 chars
 		renderedRunes := []rune(rendered)
 		prefix := ""
 		if len(renderedRunes) > 10 {
@@ -829,7 +829,7 @@ func (m appModel) renderAssistantMessage(content string) string {
 		log.Debugf("[Render] Output prefix=%q", prefix)
 	}
 
-	// 记录到追踪器
+	// log to tracker
 	style := m.markdownRenderer.GetStyle()
 	m.streamingTracker.LogRender(content, rendered, style)
 
@@ -846,12 +846,12 @@ func (m appModel) renderHelp() string {
 	return style.Render(help)
 }
 
-// === 消息类型定义 ===
+// === message type definitions ===
 
 type InitMsg struct{}
 type StartedMsg struct{}
 type AgentStreamMsg struct{ Content string }
-type AgentGenerationStartMsg struct{} // 新增：新一轮 LLM 生成开始
+type AgentGenerationStartMsg struct{} // new: new LLM generation started
 type AgentToolStartMsg struct{ ID, Name, Arguments string }
 type AgentToolResultMsg struct {
 	ToolCallID, Content string

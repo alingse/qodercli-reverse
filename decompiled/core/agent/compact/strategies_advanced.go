@@ -1,4 +1,4 @@
-// Package compact 提供上下文压缩功能 - 高级压缩策略
+// Package compact provides context compaction - advanced compaction strategies
 package compact
 
 import (
@@ -8,20 +8,20 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/types"
 )
 
-// messageTokenInfo 消息 Token 信息（用于 TokenAwareCompactor）
+// messageTokenInfo message token info (used by TokenAwareCompactor)
 type messageTokenInfo struct {
 	message types.Message
 	tokens  int
 	index   int
 }
 
-// HybridCompactor 混合压缩器 - 结合多种策略
+// HybridCompactor hybrid compactor - combines multiple strategies
 type HybridCompactor struct {
 	provider  provider.Client
 	tokenizer Tokenizer
 }
 
-// Compact 执行混合压缩
+// Compact performs hybrid compaction
 func (c *HybridCompactor) Compact(ctx context.Context, messages []types.Message, options *CompactOptions) (*CompactResult, error) {
 	if len(messages) <= 2 {
 		return &CompactResult{
@@ -42,7 +42,7 @@ func (c *HybridCompactor) Compact(ctx context.Context, messages []types.Message,
 		targetTokens = currentTokens / 2
 	}
 
-	// 第一阶段：使用截断策略快速减少消息
+	// Stage 1: use truncation strategy to quickly reduce messages
 	truncateCompactor := &TruncateCompactor{tokenizer: c.tokenizer}
 	truncateOpts := &CompactOptions{
 		KeepRecentTurns:    options.KeepRecentTurns,
@@ -54,13 +54,13 @@ func (c *HybridCompactor) Compact(ctx context.Context, messages []types.Message,
 		return nil, err
 	}
 
-	// 如果截断后已经达到目标，返回结果
+	// if truncation already reaches target, return result
 	if truncateResult.CompressedTokens <= targetTokens {
 		truncateResult.Strategy = StrategyHybrid
 		return truncateResult, nil
 	}
 
-	// 第二阶段：对截断后的消息使用摘要策略
+	// Stage 2: use summary strategy on truncated messages
 	summaryCompactor := &SummaryCompactor{provider: c.provider, tokenizer: c.tokenizer}
 	summaryOpts := &CompactOptions{
 		KeepRecentTurns:    options.KeepRecentTurns,
@@ -71,7 +71,7 @@ func (c *HybridCompactor) Compact(ctx context.Context, messages []types.Message,
 	return summaryCompactor.Compact(ctx, messages, summaryOpts)
 }
 
-// EstimateTokens 估算 Token 数
+// EstimateTokens estimates token count
 func (c *HybridCompactor) EstimateTokens(messages []types.Message) int {
 	if c.tokenizer != nil {
 		total := 0
@@ -86,13 +86,13 @@ func (c *HybridCompactor) EstimateTokens(messages []types.Message) int {
 	return estimateTokensSimple(messages)
 }
 
-// TokenAwareCompactor Token 感知压缩器 - 基于 Token 使用量优化
+// TokenAwareCompactor token-aware compactor - optimizes based on token usage
 type TokenAwareCompactor struct {
 	provider  provider.Client
 	tokenizer Tokenizer
 }
 
-// Compact 执行 Token 感知压缩
+// Compact performs token-aware compaction
 func (c *TokenAwareCompactor) Compact(ctx context.Context, messages []types.Message, options *CompactOptions) (*CompactResult, error) {
 	if len(messages) <= 2 {
 		return &CompactResult{
@@ -111,11 +111,11 @@ func (c *TokenAwareCompactor) Compact(ctx context.Context, messages []types.Mess
 	targetTokens := options.TargetTokens
 
 	if targetTokens <= 0 {
-		// 默认目标是最大 Token 数的 50%
+		// default target is 50% of max tokens
 		targetTokens = maxTokens / 2
 	}
 
-	// 如果当前 Token 数已经小于目标，无需压缩
+	// if current token count is already below target, no compaction needed
 	if currentTokens <= targetTokens {
 		return &CompactResult{
 			OriginalMessageCount:   len(messages),
@@ -128,7 +128,7 @@ func (c *TokenAwareCompactor) Compact(ctx context.Context, messages []types.Mess
 		}, nil
 	}
 
-	// 分析每条消息的 Token 使用
+	// analyze token usage of each message
 	var tokenInfo []messageTokenInfo
 	for i, msg := range messages {
 		tokens := c.EstimateTokens([]types.Message{msg})
@@ -139,7 +139,7 @@ func (c *TokenAwareCompactor) Compact(ctx context.Context, messages []types.Mess
 		})
 	}
 
-	// 分离系统消息
+	// separate system messages
 	var systemMessages []messageTokenInfo
 	var conversationMessages []messageTokenInfo
 
@@ -151,13 +151,13 @@ func (c *TokenAwareCompactor) Compact(ctx context.Context, messages []types.Mess
 		}
 	}
 
-	// 按 Token 数降序排序（Token 多的优先压缩）
+	// sort by token count descending (high-token messages prioritized for compaction)
 	sortByTokens(conversationMessages)
 
-	// 计算需要移除的 Token 数
+	// calculate tokens to remove
 	tokensToRemove := currentTokens - targetTokens
 
-	// 标记需要移除的消息
+	// mark messages to remove
 	var toRemove []int
 	removedTokens := 0
 
@@ -169,17 +169,17 @@ func (c *TokenAwareCompactor) Compact(ctx context.Context, messages []types.Mess
 		removedTokens += info.tokens
 	}
 
-	// 构建压缩后的消息
+	// build compressed messages
 	var compressed []types.Message
 
-	// 添加系统消息
+	// add system messages
 	if options.KeepSystemMessages {
 		for _, info := range systemMessages {
 			compressed = append(compressed, info.message)
 		}
 	}
 
-	// 添加未标记移除的消息
+	// add messages not marked for removal
 	removeSet := make(map[int]bool)
 	for _, idx := range toRemove {
 		removeSet[idx] = true
@@ -191,7 +191,7 @@ func (c *TokenAwareCompactor) Compact(ctx context.Context, messages []types.Mess
 		}
 	}
 
-	// 按原始顺序排序
+	// sort by original order
 	sortByMessageIndex(compressed, messages)
 
 	originalTokens := currentTokens
@@ -214,7 +214,7 @@ func (c *TokenAwareCompactor) Compact(ctx context.Context, messages []types.Mess
 	}, nil
 }
 
-// sortByTokens 按 Token 数降序排序
+// sortByTokens sorts by token count descending
 func sortByTokens(infos []messageTokenInfo) {
 	for i := 0; i < len(infos)-1; i++ {
 		for j := i + 1; j < len(infos); j++ {
@@ -225,7 +225,7 @@ func sortByTokens(infos []messageTokenInfo) {
 	}
 }
 
-// sortByMessageIndex 按原始消息索引排序
+// sortByMessageIndex sorts by original message index
 func sortByMessageIndex(compressed []types.Message, original []types.Message) {
 	indexMap := make(map[string]int)
 	for i, msg := range original {
@@ -244,7 +244,7 @@ func sortByMessageIndex(compressed []types.Message, original []types.Message) {
 	}
 }
 
-// messageKey 生成消息的唯一键
+// messageKey generates a unique key for a message
 func messageKey(msg types.Message) string {
 	var key string
 	for _, part := range msg.Content {
@@ -253,7 +253,7 @@ func messageKey(msg types.Message) string {
 	return key
 }
 
-// EstimateTokens 估算 Token 数
+// EstimateTokens estimates token count
 func (c *TokenAwareCompactor) EstimateTokens(messages []types.Message) int {
 	if c.tokenizer != nil {
 		total := 0

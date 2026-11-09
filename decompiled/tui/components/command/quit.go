@@ -1,4 +1,4 @@
-// Package command TUI 命令处理
+// Package command TUI command handling
 package command
 
 import (
@@ -8,24 +8,24 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// QuitCommand /quit 命令
+// QuitCommand /quit command
 type QuitCommand struct {
 	agent *agent.Agent
 }
 
-// NewQuitCommand 创建 quit 命令
+// NewQuitCommand creates quit command
 func NewQuitCommand(agent *agent.Agent) *QuitCommand {
 	return &QuitCommand{
 		agent: agent,
 	}
 }
 
-// Execute 执行命令
+// Execute executes the command
 func (c *QuitCommand) Execute() tea.Cmd {
-	// 获取统计信息
+	// get stats
 	stats := c.agent.GetState().GetStats()
 
-	// 构建统计信息消息
+	// build stats message
 	statsMsg := fmt.Sprintf("\n=== Session Statistics ===\n"+
 		"Total Tokens: %d (Input: %d, Output: %d)\n"+
 		"Tool Calls: %d\n"+
@@ -34,9 +34,9 @@ func (c *QuitCommand) Execute() tea.Cmd {
 		stats.TotalTokens, stats.TotalInputTokens, stats.TotalOutputTokens,
 		stats.ToolCallCount, stats.AssistantReplies)
 
-	// 打印统计信息
+	// print stats
 	fmt.Print(statsMsg)
 
-	// 返回退出命令
+	// return quit command
 	return tea.Quit
 }

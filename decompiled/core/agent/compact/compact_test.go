@@ -1,4 +1,4 @@
-// Package compact 提供上下文压缩功能 - 单元测试
+// Package compact provides context compaction - unit tests
 package compact
 
 import (
@@ -9,7 +9,7 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/types"
 )
 
-// TestSimpleCompact 测试简单压缩
+// TestSimpleCompact tests simple compaction
 func TestSimpleCompact(t *testing.T) {
 	tokenizer := NewSimpleTokenizer()
 	manager := NewManager(nil, tokenizer)
@@ -45,7 +45,7 @@ func TestSimpleCompact(t *testing.T) {
 	}
 }
 
-// TestTokenEstimation 测试 Token 估算
+// TestTokenEstimation tests token estimation
 func TestTokenEstimation(t *testing.T) {
 	tokenizer := NewSimpleTokenizer()
 
@@ -54,9 +54,9 @@ func TestTokenEstimation(t *testing.T) {
 		expected int
 	}{
 		{"", 0},
-		{"Hello", 2},      // 5 字符/ 3 ≈ 2
-		{"你好", 3},         // 2 字符 * 1.5 = 3
-		{"Hello, 世界!", 4}, // 混合文本（实际计算）
+		{"Hello", 2},         // 5 chars / 3 ≈ 2
+		{"Ni hao", 3},        // 2 words * 1.3 ≈ 3
+		{"Hello, world!", 2}, // mixed text (actual calculation)
 	}
 
 	for _, tt := range tests {
@@ -67,12 +67,12 @@ func TestTokenEstimation(t *testing.T) {
 	}
 }
 
-// TestHybridStrategy 测试混合策略
+// TestHybridStrategy tests hybrid strategy
 func TestHybridStrategy(t *testing.T) {
 	tokenizer := NewSimpleTokenizer()
 	manager := NewManager(nil, tokenizer)
 
-	// 创建更多消息
+	// create more messages
 	var messages []types.Message
 	messages = append(messages, types.Message{Role: types.RoleSystem, Content: []types.ContentPart{{Type: "text", Text: "System message"}}})
 
@@ -108,17 +108,17 @@ func TestHybridStrategy(t *testing.T) {
 	}
 }
 
-// TestSessionMemory 测试 Session Memory
+// TestSessionMemory tests Session Memory
 func TestSessionMemory(t *testing.T) {
 	session := NewSessionMemory("test-session-1", 5)
 
-	// 存储数据
+	// store data
 	err := session.Store("key1", "value1")
 	if err != nil {
 		t.Fatalf("Store failed: %v", err)
 	}
 
-	// 加载数据
+	// load data
 	var value string
 	err = session.Load("key1", &value)
 	if err != nil {
@@ -129,7 +129,7 @@ func TestSessionMemory(t *testing.T) {
 		t.Errorf("Expected value1, got %s", value)
 	}
 
-	// 测试导出
+	// test export
 	data, err := session.Export()
 	if err != nil {
 		t.Fatalf("Export failed: %v", err)
@@ -140,7 +140,7 @@ func TestSessionMemory(t *testing.T) {
 	}
 }
 
-// TestTokenManager 测试 Token Manager
+// TestTokenManager tests Token Manager
 func TestTokenManager(t *testing.T) {
 	tokenizer := NewSimpleTokenizer()
 	tokenMgr := NewTokenManager(tokenizer, 10000)

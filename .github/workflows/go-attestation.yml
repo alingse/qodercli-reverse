@@ -1,0 +1,13 @@
+name: Go Attestation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  info:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Attestation is performed in go-release.yml using actions/attest-build-provenance with subject-path."

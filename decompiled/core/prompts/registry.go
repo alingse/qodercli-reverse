@@ -1,5 +1,5 @@
-// Package prompts 提示词注册表
-// 提供动态提示词管理和组合功能
+// Package prompts Prompt registry
+// Provides dynamic prompt management and composition
 package prompts
 
 import (
@@ -8,17 +8,17 @@ import (
 	"sync"
 )
 
-// Registry 提示词注册表
+// Registry Prompt registry
 type Registry struct {
 	mu       sync.RWMutex
 	prompts  map[PromptType]*Prompt
 	builders map[PromptType]PromptBuilderFunc
 }
 
-// PromptBuilderFunc 提示词构建函数
+// PromptBuilderFunc Prompt builder function
 type PromptBuilderFunc func(vars *TemplateVars) (string, error)
 
-// NewRegistry 创建新的注册表
+// NewRegistry Creates a new registry
 func NewRegistry() *Registry {
 	return &Registry{
 		prompts:  make(map[PromptType]*Prompt),
@@ -26,7 +26,7 @@ func NewRegistry() *Registry {
 	}
 }
 
-// Register 注册提示词
+// Register Registers a prompt
 func (r *Registry) Register(prompt *Prompt) error {
 	if prompt == nil {
 		return fmt.Errorf("prompt cannot be nil")
@@ -42,7 +42,7 @@ func (r *Registry) Register(prompt *Prompt) error {
 	return nil
 }
 
-// RegisterBuilder 注册构建函数
+// RegisterBuilder Registers a builder function
 func (r *Registry) RegisterBuilder(promptType PromptType, builder PromptBuilderFunc) error {
 	if builder == nil {
 		return fmt.Errorf("builder cannot be nil")
@@ -55,7 +55,7 @@ func (r *Registry) RegisterBuilder(promptType PromptType, builder PromptBuilderF
 	return nil
 }
 
-// Get 获取提示词
+// Get Retrieves a prompt
 func (r *Registry) Get(promptType PromptType) (*Prompt, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -68,17 +68,17 @@ func (r *Registry) Get(promptType PromptType) (*Prompt, error) {
 	return nil, fmt.Errorf("prompt not found: %s", promptType)
 }
 
-// Build 构建提示词
+// Build Builds a prompt
 func (r *Registry) Build(promptType PromptType, vars *TemplateVars) (string, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	// 优先使用构建函数
+	// Prefer builder functions
 	if builder, ok := r.builders[promptType]; ok {
 		return builder(vars)
 	}
 
-	// 然后使用静态提示词
+	// Then static prompts
 	if prompt, ok := r.prompts[promptType]; ok {
 		return prompt.Render(vars)
 	}
@@ -86,7 +86,7 @@ func (r *Registry) Build(promptType PromptType, vars *TemplateVars) (string, err
 	return "", fmt.Errorf("prompt not found: %s", promptType)
 }
 
-// List 列出所有提示词类型
+// List Lists all prompt types
 func (r *Registry) List() []PromptType {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -96,7 +96,7 @@ func (r *Registry) List() []PromptType {
 		types = append(types, t)
 	}
 	for t := range r.builders {
-		// 去重
+		// Deduplicate
 		found := false
 		for _, existing := range types {
 			if existing == t {
@@ -111,7 +111,7 @@ func (r *Registry) List() []PromptType {
 	return types
 }
 
-// Unregister 注销提示词
+// Unregister Unregisters a prompt
 func (r *Registry) Unregister(promptType PromptType) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -120,27 +120,27 @@ func (r *Registry) Unregister(promptType PromptType) {
 	delete(r.builders, promptType)
 }
 
-// CompositePrompt 组合提示词
-// 用于将多个提示词片段组合成完整提示词
+// CompositePrompt Composite prompt
+// Used to combine multiple prompt fragments into a complete prompt
 type CompositePrompt struct {
 	parts []CompositePart
 }
 
-// CompositePart 组合部件
+// CompositePart Composite part
 type CompositePart struct {
 	PromptType PromptType
 	Condition  func(vars *TemplateVars) bool
 	Required   bool
 }
 
-// NewCompositePrompt 创建组合提示词
+// NewCompositePrompt Creates a composite prompt
 func NewCompositePrompt() *CompositePrompt {
 	return &CompositePrompt{
 		parts: make([]CompositePart, 0),
 	}
 }
 
-// Add 添加部件
+// Add Adds a part
 func (c *CompositePrompt) Add(promptType PromptType, required bool) *CompositePrompt {
 	c.parts = append(c.parts, CompositePart{
 		PromptType: promptType,
@@ -149,7 +149,7 @@ func (c *CompositePrompt) Add(promptType PromptType, required bool) *CompositePr
 	return c
 }
 
-// AddConditional 添加条件部件
+// AddConditional Adds a conditional part
 func (c *CompositePrompt) AddConditional(
 	promptType PromptType,
 	condition func(vars *TemplateVars) bool,
@@ -161,17 +161,17 @@ func (c *CompositePrompt) AddConditional(
 	return c
 }
 
-// Build 构建组合提示词
+// Build Builds the composite prompt
 func (c *CompositePrompt) Build(registry *Registry, vars *TemplateVars) (string, error) {
 	var parts []string
 
 	for _, part := range c.parts {
-		// 检查条件
+		// Check condition
 		if part.Condition != nil && !part.Condition(vars) {
 			continue
 		}
 
-		// 构建提示词
+		// Build prompt
 		content, err := registry.Build(part.PromptType, vars)
 		if err != nil {
 			if part.Required {
@@ -188,22 +188,22 @@ func (c *CompositePrompt) Build(registry *Registry, vars *TemplateVars) (string,
 	return strings.Join(parts, "\n\n"), nil
 }
 
-// PromptComposer 提示词组合器
-// 提供更灵活的组合方式
+// PromptComposer Prompt composer
+// Provides a more flexible composition approach
 type PromptComposer struct {
 	registry *Registry
 	vars     *TemplateVars
 	sections []composedSection
 }
 
-// composedSection 组合章节
+// composedSection Composed section
 type composedSection struct {
 	Title    string
 	Content  string
 	Priority int
 }
 
-// NewPromptComposer 创建提示词组合器
+// NewPromptComposer Creates a prompt composer
 func NewPromptComposer(registry *Registry, vars *TemplateVars) *PromptComposer {
 	if vars == nil {
 		vars = DefaultTemplateVars()
@@ -215,7 +215,7 @@ func NewPromptComposer(registry *Registry, vars *TemplateVars) *PromptComposer {
 	}
 }
 
-// AddFromRegistry 从注册表添加
+// AddFromRegistry Adds from the registry
 func (pc *PromptComposer) AddFromRegistry(
 	promptType PromptType,
 	title string,
@@ -235,7 +235,7 @@ func (pc *PromptComposer) AddFromRegistry(
 	return pc, nil
 }
 
-// AddSection 添加自定义章节
+// AddSection Adds a custom section
 func (pc *PromptComposer) AddSection(title, content string, priority int) *PromptComposer {
 	pc.sections = append(pc.sections, composedSection{
 		Title:    title,
@@ -245,7 +245,7 @@ func (pc *PromptComposer) AddSection(title, content string, priority int) *Promp
 	return pc
 }
 
-// AddRaw 添加原始内容
+// AddRaw Adds raw content
 func (pc *PromptComposer) AddRaw(content string, priority int) *PromptComposer {
 	pc.sections = append(pc.sections, composedSection{
 		Content:  content,
@@ -254,9 +254,9 @@ func (pc *PromptComposer) AddRaw(content string, priority int) *PromptComposer {
 	return pc
 }
 
-// Compose 组合最终提示词
+// Compose Composes the final prompt
 func (pc *PromptComposer) Compose() string {
-	// 按优先级排序
+	// Sort by priority
 	for i := 0; i < len(pc.sections); i++ {
 		for j := i + 1; j < len(pc.sections); j++ {
 			if pc.sections[i].Priority > pc.sections[j].Priority {
@@ -277,27 +277,27 @@ func (pc *PromptComposer) Compose() string {
 	return strings.Join(parts, "\n\n")
 }
 
-// Clear 清空所有章节
+// Clear Clears all sections
 func (pc *PromptComposer) Clear() {
 	pc.sections = pc.sections[:0]
 }
 
-// SetVars 设置变量
+// SetVars Sets variables
 func (pc *PromptComposer) SetVars(vars *TemplateVars) {
 	pc.vars = vars
 }
 
-// GetVars 获取变量
+// GetVars Gets variables
 func (pc *PromptComposer) GetVars() *TemplateVars {
 	return pc.vars
 }
 
-// ========== 预定义组合配置 ==========
+// ========== Predefined composition configs ==========
 
-// ComposeMainAgent 组合主 Agent 提示词
+// ComposeMainAgent Composes the main Agent prompt
 func ComposeMainAgent(manager *defaultManager, vars *TemplateVars, options MainAgentOptions) (string, error) {
 	registry := NewRegistry()
-	// 复制管理器中的提示词到注册表
+	// Copy prompts from the manager into the registry
 	for _, t := range manager.List() {
 		if p, err := manager.Get(t); err == nil {
 			registry.Register(p)
@@ -305,34 +305,34 @@ func ComposeMainAgent(manager *defaultManager, vars *TemplateVars, options MainA
 	}
 	composer := NewPromptComposer(registry, vars)
 
-	// 角色定义（最高优先级）
+	// Role definition (highest priority)
 	if options.RoleDefinition != "" {
 		composer.AddRaw(options.RoleDefinition, 0)
 	} else {
 		composer.AddFromRegistry(PromptTypeMainAgent, "", 0)
 	}
 
-	// 核心指令
+	// Core instructions
 	if options.IncludeCoreInstructions {
 		composer.AddFromRegistry(PromptType("core_instructions"), "Core Instructions", 10)
 	}
 
-	// 工具规则
+	// Tool rules
 	if options.IncludeToolRules {
 		composer.AddFromRegistry(PromptType("tool_rules"), "Tool Rules", 20)
 	}
 
-	// 文件操作规则
+	// File operation rules
 	if options.IncludeFileRules {
 		composer.AddFromRegistry(PromptType("file_rules"), "File Operation Rules", 30)
 	}
 
-	// 教育内容（可选）
+	// Educational content (optional)
 	if options.IncludeEducational {
 		composer.AddFromRegistry(PromptType("educational_rules"), "Educational Guidelines", 40)
 	}
 
-	// 自定义章节
+	// Custom sections
 	for _, section := range options.CustomSections {
 		composer.AddSection(section.Title, section.Content, section.Priority)
 	}
@@ -340,7 +340,7 @@ func ComposeMainAgent(manager *defaultManager, vars *TemplateVars, options MainA
 	return composer.Compose(), nil
 }
 
-// MainAgentOptions 主 Agent 选项
+// MainAgentOptions Main Agent options
 type MainAgentOptions struct {
 	RoleDefinition          string
 	IncludeCoreInstructions bool
@@ -350,14 +350,14 @@ type MainAgentOptions struct {
 	CustomSections          []CustomSection
 }
 
-// CustomSection 自定义章节
+// CustomSection Custom section
 type CustomSection struct {
 	Title    string
 	Content  string
 	Priority int
 }
 
-// ComposeSubagent 组合子 Agent 提示词
+// ComposeSubagent Composes a sub-agent prompt
 func ComposeSubagent(
 	registry *Registry,
 	vars *TemplateVars,
@@ -366,12 +366,12 @@ func ComposeSubagent(
 ) (string, error) {
 	composer := NewPromptComposer(registry, vars)
 
-	// 基础提示词
+	// Base prompt
 	if _, err := composer.AddFromRegistry(baseType, "", 0); err != nil {
 		return "", err
 	}
 
-	// 自定义规则
+	// Custom rules
 	for i, rule := range customRules {
 		composer.AddSection("", rule, 100+i)
 	}

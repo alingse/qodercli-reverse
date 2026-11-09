@@ -1,5 +1,5 @@
-// Package utils 系统提示词构建工具
-// 严格对齐官方 qodercli 架构
+// Package utils system prompt building tools
+// Strictly aligned with official qodercli-reverse architecture
 package utils
 
 import (
@@ -7,48 +7,48 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/prompts"
 )
 
-// BuildSystemPromptAuto 自动构建系统提示词（官方行为）
-// 当用户没有提供 --system-prompt 时，内部自动构建
+// BuildSystemPromptAuto auto-builds system prompt (official behavior)
+// Auto-builds internally when user doesn't provide --system-prompt
 func BuildSystemPromptAuto(workDir string, withClaudeConfig bool) (string, error) {
 	vars := prompts.DefaultTemplateVars()
 
-	// 创建构建器
+	// Create builder
 	builder := prompts.NewSystemPromptBuilderV2(vars)
 
-	// 启用标准组件（官方默认行为）
+	// Enable standard components (official default behavior)
 	builder.WithRoleDefinition(true).
 		WithToolGuide(true).
 		WithPermissionRules(true).
 		WithEnvironmentInfo(true).
 		WithProjectContext(true).
 		WithCodingStandards(true).
-		WithSessionContext(false) // 会话上下文由服务器端管理
+		WithSessionContext(false) // Session context managed server-side
 
-	// 收集环境信息
+	// Collect environment info
 	if _, err := builder.CollectEnvironment(); err != nil {
 		log.Debug("Failed to collect environment: %v", err)
 	}
 
-	// 收集项目上下文
+	// Collect project context
 	if workDir != "" {
 		if _, err := builder.CollectProjectContext(workDir); err != nil {
 			log.Debug("Failed to collect project context: %v", err)
 		}
 	}
 
-	// 如果启用了 --with-claude-config，额外加载 .claude/ 配置
+	// If --with-claude-config enabled, additionally load .claude/ config
 	if withClaudeConfig {
-		// 项目上下文加载器已经会加载 .claude/ 目录
-		// 这里可以添加额外的 Claude 特定配置
+		// Project context loader already loads .claude/ directory
+		// Additional Claude-specific config can be added here
 		log.Debug("Loading .claude configuration")
 	}
 
 	return builder.Build()
 }
 
-// GetDefaultSystemPrompt 获取默认系统提示词（向后兼容）
+// GetDefaultSystemPrompt returns default system prompt (backward compatible)
 func GetDefaultSystemPrompt() string {
-	// 使用最小化构建
+	// Use minimal build
 	vars := prompts.DefaultTemplateVars()
 	builder := prompts.NewSystemPromptBuilderV2(vars)
 	builder.WithRoleDefinition(true).
@@ -61,19 +61,19 @@ func GetDefaultSystemPrompt() string {
 
 	prompt, err := builder.BuildMinimal()
 	if err != nil {
-		// 最后的回退
-		return "You are qodercli, an interactive CLI tool that helps users with software engineering tasks."
+		// Final fallback
+		return "You are qodercli-reverse, an interactive CLI tool that helps users with software engineering tasks."
 	}
 	return prompt
 }
 
-// LoadProjectContext 加载项目上下文（供外部使用）
+// LoadProjectContext loads project context (for external use)
 func LoadProjectContext(workDir string) (*prompts.ProjectContext, error) {
 	loader := prompts.NewProjectContextLoader(workDir)
 	return loader.Load()
 }
 
-// CollectEnvironmentInfo 收集环境信息（供外部使用）
+// CollectEnvironmentInfo collects environment info (for external use)
 func CollectEnvironmentInfo() (*prompts.EnvironmentInfo, error) {
 	collector := prompts.NewEnvironmentCollector()
 	return collector.Collect()

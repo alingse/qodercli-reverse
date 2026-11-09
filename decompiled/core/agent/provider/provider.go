@@ -1,5 +1,5 @@
-// Package provider LLM Provider 接口和实现
-// 反编译自 qodercli v0.1.29
+// Package provider LLM Provider interfaces and implementation
+// Decompiled from qodercli-reverse v0.1.29
 package provider
 
 import (
@@ -9,7 +9,7 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/types"
 )
 
-// EventType 事件类型
+// EventType event type
 type EventType int
 
 const (
@@ -26,7 +26,7 @@ const (
 	EventTypeError
 )
 
-// Event 流式事件
+// Event streaming event
 type Event struct {
 	Type         EventType          `json:"type"`
 	Content      string             `json:"content,omitempty"`
@@ -38,34 +38,34 @@ type Event struct {
 	FinishReason types.FinishReason `json:"finish_reason,omitempty"`
 }
 
-// ToolCall 工具调用事件
+// ToolCall tool call event
 type ToolCall struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
 	Arguments string `json:"arguments"`
 }
 
-// ToolUse 工具使用事件
+// ToolUse tool use event
 type ToolUse struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
 
-// ErrorData 错误数据
+// ErrorData error data
 type ErrorData struct {
 	Type    string `json:"type"`
 	Message string `json:"message"`
 	Code    string `json:"code,omitempty"`
 }
 
-// TokenUsage Token 使用量
+// TokenUsage token usage
 type TokenUsage struct {
 	InputTokens  int `json:"input_tokens"`
 	OutputTokens int `json:"output_tokens"`
 	TotalTokens  int `json:"total_tokens"`
 }
 
-// ThinkLevel 思考级别
+// ThinkLevel thinking level
 type ThinkLevel int
 
 const (
@@ -75,7 +75,7 @@ const (
 	ThinkLevelHigh
 )
 
-// ReasoningEffort 推理努力程度
+// ReasoningEffort reasoning effort
 type ReasoningEffort string
 
 const (
@@ -84,7 +84,7 @@ const (
 	ReasoningEffortHigh   ReasoningEffort = "high"
 )
 
-// ModelRequest 模型请求
+// ModelRequest model request
 type ModelRequest struct {
 	Model           string            `json:"model"`
 	Messages        []types.Message   `json:"messages"`
@@ -100,7 +100,7 @@ type ModelRequest struct {
 	Metadata        map[string]string `json:"metadata,omitempty"`
 }
 
-// Response 模型响应
+// Response model response
 type Response struct {
 	Content      string             `json:"content"`
 	ToolCalls    []types.ToolCall   `json:"tool_calls,omitempty"`
@@ -111,19 +111,19 @@ type Response struct {
 	Model        string             `json:"model"`
 }
 
-// Client Provider 客户端接口
+// Client Provider client interface
 type Client interface {
-	// Stream 流式请求
+	// Stream streaming request
 	Stream(ctx context.Context, req *ModelRequest) <-chan Event
 
-	// Send 同步请求
+	// Send sync request
 	Send(ctx context.Context, req *ModelRequest) (*Response, error)
 
-	// Close 关闭客户端
+	// Close closes the client
 	Close() error
 }
 
-// ClientBuilder 客户端构建器接口
+// ClientBuilder client builder interface
 type ClientBuilder interface {
 	WithAPIKey(apiKey string) ClientBuilder
 	WithBaseURL(baseURL string) ClientBuilder
@@ -133,7 +133,7 @@ type ClientBuilder interface {
 	Build() (Client, error)
 }
 
-// baseClient 基础客户端
+// baseClient base client
 type baseClient struct {
 	apiKey     string
 	baseURL    string
@@ -143,12 +143,12 @@ type baseClient struct {
 	httpClient HTTPClient
 }
 
-// HTTPClient HTTP 客户端接口
+// HTTPClient HTTP client interface
 type HTTPClient interface {
 	Do(req *HTTPRequest) (*HTTPResponse, error)
 }
 
-// HTTPRequest HTTP 请求
+// HTTPRequest HTTP request
 type HTTPRequest struct {
 	Method  string
 	URL     string
@@ -157,7 +157,7 @@ type HTTPRequest struct {
 	Timeout time.Duration
 }
 
-// HTTPResponse HTTP 响应
+// HTTPResponse HTTP response
 type HTTPResponse struct {
 	StatusCode int
 	Headers    map[string]string

@@ -9,7 +9,7 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/log"
 )
 
-// InitLogger 初始化日志系统
+// InitLogger initializes the logging system
 func InitLogger(logFile string, debug bool) error {
 	logLevel := log.LevelInfo
 	if debug {
@@ -35,29 +35,29 @@ func InitLogger(logFile string, debug bool) error {
 	return nil
 }
 
-// GetDefaultLogFile 获取默认日志文件路径
+// GetDefaultLogFile returns the default log file path
 func GetDefaultLogFile() string {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return "qodercli.log"
+		return "qodercli-reverse.log"
 	}
 
-	logDir := filepath.Join(homeDir, ".qoder")
+	logDir := filepath.Join(homeDir, ".qodercli-reverse")
 	if err := os.MkdirAll(logDir, 0755); err != nil {
-		return "qodercli.log"
+		return "qodercli-reverse.log"
 	}
 
-	return filepath.Join(logDir, "qodercli.log")
+	return filepath.Join(logDir, "qodercli-reverse.log")
 }
 
-// GetDebugLogFile 获取带时间戳的 debug 日志文件路径
+// GetDebugLogFile returns the timestamped debug log file path
 func GetDebugLogFile() string {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "debug.log"
 	}
 
-	logDir := filepath.Join(homeDir, ".qoder")
+	logDir := filepath.Join(homeDir, ".qodercli-reverse")
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		return "debug.log"
 	}

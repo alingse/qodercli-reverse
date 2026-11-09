@@ -1,42 +1,42 @@
-# Markdown 渲染实现文档
+# Markdown Rendering Implementation
 
-## 实现状态：✅ 已完成
+## Implementation Status: ✅ Completed
 
-## 一、实现文件清单
+## 1. Implementation File List
 
-| 文件 | 说明 | 状态 |
-|------|------|------|
-| `core/utils/markdown/renderer.go` | Markdown 渲染器封装 | ✅ |
-| `core/utils/markdown/renderer_test.go` | 单元测试 | ✅ |
-| `tui/components/messages/message_view.go` | 集成渲染器 | ✅ |
-| `tui/components/messages/types.go` | AssistantMessage 支持 | ✅ |
-| `core/config/config.go` | Markdown 配置 | ✅ |
+| File | Description | Status |
+|------|-------------|--------|
+| `core/utils/markdown/renderer.go` | Markdown renderer wrapper | ✅ |
+| `core/utils/markdown/renderer_test.go` | Unit tests | ✅ |
+| `tui/components/messages/message_view.go` | Renderer integration | ✅ |
+| `tui/components/messages/types.go` | AssistantMessage support | ✅ |
+| `core/config/config.go` | Markdown config | ✅ |
 
-## 二、API 使用说明
+## 2. API Usage
 
-### 2.1 基础使用
+### 2.1 Basic Usage
 
 ```go
 import "github.com/alingse/qodercli-reverse/decompiled/core/utils/markdown"
 
-// 创建渲染器（自动检测终端主题）
+// Create renderer (auto-detect terminal theme)
 renderer, err := markdown.NewRenderer(80, "")
 if err != nil {
     log.Fatal(err)
 }
 
-// 渲染 markdown
+// Render markdown
 output, err := renderer.Render("# Hello\n\n**bold** text")
 fmt.Println(output)
 ```
 
-### 2.2 在 MessageView 中自动使用
+### 2.2 Automatic Usage in MessageView
 
 ```go
-// 创建 MessageView（自动创建 markdown 渲染器）
+// Create MessageView (automatically creates markdown renderer)
 mv := NewMessageView()
 
-// 添加助手消息（自动渲染 markdown）
+// Add assistant message (auto-renders markdown)
 mv.AddAssistantMessage(`
 # Code Example
 
@@ -47,71 +47,71 @@ func main() {
 \`\`\`
 `)
 
-// 渲染后的内容会自动显示格式化后的文本
+// Rendered content is automatically displayed as formatted text
 ```
 
-### 2.3 配置主题
+### 2.3 Configuring Theme
 
 ```go
-// 设置特定主题
+// Set specific theme
 renderer.SetStyle("dracula")
 
-// 或创建时指定
+// Or specify when creating
 renderer, _ := markdown.NewRenderer(80, "light")
 
-// 可用主题（glamour 内置）
-// - dark (默认)
+// Available themes (glamour built-in)
+// - dark (default)
 // - light
 // - dracula
 // - ascii
 // - notty
 ```
 
-## 三、环境变量配置
+## 3. Environment Variable Configuration
 
-| 环境变量 | 说明 | 默认值 |
-|----------|------|--------|
-| `QODER_MARKDOWN_DISABLED` | 设置为 `true` 禁用 markdown 渲染 | `false` |
-| `QODER_MARKDOWN_STYLE` | 设置主题 | 自动检测 |
+| Environment Variable | Description | Default |
+|---------------------|-------------|---------|
+| `QODER_MARKDOWN_DISABLED` | Set to `true` to disable markdown rendering | `false` |
+| `QODER_MARKDOWN_STYLE` | Set theme | Auto-detect |
 
-## 四、实际实现 vs 设计方案
+## 4. Actual Implementation vs Design
 
-### 差异说明
+### Differences
 
-1. **可用主题**
-   - 设计：列出 30+ 个主题
-   - 实际：glamour 内置仅 5 个主题（dark/light/dracula/ascii/notty）
-   - 原因： glamour 的标准发行版只包含基础主题，其他主题需要额外加载
+1. **Available themes**
+   - Design: Lists 30+ themes
+   - Actual: glamour built-in only has 5 themes (dark/light/dracula/ascii/notty)
+   - Reason: glamour's standard distribution only includes basic themes; other themes require additional loading
 
-2. **主题自动检测**
-   - 已实现：通过 `lipgloss.HasDarkBackground()` 自动检测
+2. **Theme auto-detection**
+   - Implemented: Auto-detects via `lipgloss.HasDarkBackground()`
 
-3. **缓存机制**
-   - 已实现：AssistantMessage 中缓存渲染结果
-   - 优化：追加内容时只标记 NeedsRender，不立即重新渲染
+3. **Caching mechanism**
+   - Implemented: AssistantMessage caches render results
+   - Optimization: On content append, only marks NeedsRender, does not immediately re-render
 
-4. **并发安全**
-   - 已实现：Renderer 使用 RWMutex 保护内部状态
+4. **Concurrency safety**
+   - Implemented: Renderer uses RWMutex to protect internal state
 
-## 五、测试覆盖
+## 5. Test Coverage
 
 ```bash
 cd decompiled
 go test ./core/utils/markdown/... -v
 ```
 
-测试项目：
-- ✅ NewRenderer 创建
-- ✅ Render 渲染各种 markdown 元素
-- ✅ SetSize 动态调整宽度
-- ✅ SetStyle 切换主题
-- ✅ DetectStyle 自动检测
-- ✅ 主题列表验证
-- ✅ Nil 安全处理
+Test items:
+- ✅ NewRenderer creation
+- ✅ Render various markdown elements
+- ✅ SetSize dynamic width adjustment
+- ✅ SetStyle theme switching
+- ✅ DetectStyle auto-detection
+- ✅ Theme list validation
+- ✅ Nil safety handling
 
-## 六、示例输出
+## 6. Example Output
 
-输入：
+Input:
 ```markdown
 # Hello World
 
@@ -122,30 +122,30 @@ This is **bold** and _italic_ text.
 - Item 3
 ```
 
-输出（带 ANSI 颜色代码的终端格式化文本）：
+Output (terminal-formatted text with ANSI color codes):
 ```
 ┌─────────────────────────────┐
-│  Hello World                │  ← 标题样式
+│  Hello World                │  ← title style
 │                             │
-│  This is bold and italic    │  ← 粗体/斜体
+│  This is bold and italic    │  ← bold/italic
 │  text.                      │
 │                             │
-│  • Item 1                   │  ← 列表
+│  • Item 1                   │  ← list
 │  • Item 2                   │
 │  • Item 3                   │
 └─────────────────────────────┘
 ```
 
-## 七、注意事项
+## 7. Notes
 
-1. **性能**：首次渲染会有轻微延迟（解析 markdown），后续使用缓存
-2. **宽度调整**：终端大小变化时会重新渲染所有消息
-3. **流式输出**：支持追加内容，自动标记需要重新渲染
-4. **主题限制**：如需更多主题，需通过 `glamour.WithStylesFromJSONFile()` 加载自定义主题
+1. **Performance**: First render has slight delay (parsing markdown); subsequent uses cache
+2. **Width adjustment**: Re-renders all messages when terminal size changes
+3. **Streaming output**: Supports content append, auto-marks as needing re-render
+4. **Theme limits**: For more themes, load custom themes via `glamour.WithStylesFromJSONFile()`
 
-## 八、后续优化方向
+## 8. Future Optimization Directions
 
-1. **自定义主题加载**：支持从配置文件加载官方二进制中的主题（如 catppuccin、tokyonight）
-2. **图片链接处理**：将 `![alt](url)` 转为可点击文本
-3. **代码块复制**：添加复制代码块的功能按钮
-4. **性能优化**：大文档的增量渲染
+1. **Custom theme loading**: Support loading official binary themes (e.g., catppuccin, tokyonight) from config file
+2. **Image link handling**: Convert `![alt](url)` to clickable text
+3. **Code block copy**: Add copy code block feature button
+4. **Performance optimization**: Incremental rendering for large documents

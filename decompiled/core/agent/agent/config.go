@@ -1,7 +1,7 @@
-// Package agent Agent 配置和提示词集成
+// Package agent Agent config and prompt integration
 //
-// 本文件扩展了 Agent 的配置功能，集成系统提示词管理
-// 参考官方架构: code.alibaba-inc.com/qoder-core/qodercli/core/agent
+// This file extends Agent config with system prompt management
+// Reference official architecture: code.alibaba-inc.com/qoder-core/qodercli-reverse/core/agent
 package agent
 
 import (
@@ -12,9 +12,9 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/prompts"
 )
 
-// AgentConfig 扩展的 Agent 配置
+// AgentConfig extended Agent config
 type AgentConfig struct {
-	// 基础配置（继承自原有 Config）
+	// base config (inherited from original Config)
 	SystemPrompt          string
 	Model                 string
 	MaxTokens             int
@@ -28,21 +28,21 @@ type AgentConfig struct {
 	AgentName             string
 	EnableEnhancedCompact bool
 
-	// 提示词配置
-	PromptType    prompts.PromptType    // 使用内置提示词类型
-	PromptVars    *prompts.TemplateVars // 提示词模板变量
-	CustomPrompt  string                // 自定义提示词（覆盖内置）
-	PromptOptions PromptOptions         // 提示词选项
+	// prompt config
+	PromptType    prompts.PromptType    // use built-in prompt type
+	PromptVars    *prompts.TemplateVars // prompt template variables
+	CustomPrompt  string                // custom prompt (overrides built-in)
+	PromptOptions PromptOptions         // prompt options
 
-	// 子 Agent 配置
+	// subagent config
 	IsSubagent      bool
 	SubagentType    string
 	ParentAgentName string
 }
 
-// PromptOptions 提示词选项
+// PromptOptions prompt options
 type PromptOptions struct {
-	// 提示词组件开关
+	// prompt component toggles
 	IncludeCoreInstructions bool
 	IncludeToolRules        bool
 	IncludeFileRules        bool
@@ -50,21 +50,21 @@ type PromptOptions struct {
 	IncludeSecurityRules    bool
 	IncludeOutputFormat     bool
 
-	// 自定义内容
+	// custom content
 	ExtraSections []ExtraPromptSection
 
-	// 覆盖选项
+	// override options
 	OverrideRoleDefinition string
 }
 
-// ExtraPromptSection 额外提示词章节
+// ExtraPromptSection extra prompt section
 type ExtraPromptSection struct {
 	Title    string
 	Content  string
 	Priority int
 }
 
-// DefaultPromptOptions 默认提示词选项
+// DefaultPromptOptions default prompt options
 func DefaultPromptOptions() PromptOptions {
 	return PromptOptions{
 		IncludeCoreInstructions: true,
@@ -76,7 +76,7 @@ func DefaultPromptOptions() PromptOptions {
 	}
 }
 
-// ToConfig 转换为基础 Config
+// ToConfig converts to base Config
 func (ac *AgentConfig) ToConfig() *Config {
 	return &Config{
 		SystemPrompt:          ac.SystemPrompt,
@@ -94,89 +94,89 @@ func (ac *AgentConfig) ToConfig() *Config {
 	}
 }
 
-// BuildSystemPrompt 构建系统提示词
+// BuildSystemPrompt builds system prompt
 func (ac *AgentConfig) BuildSystemPrompt() (string, error) {
-	// 如果指定了自定义提示词，直接使用
+	// if custom prompt specified, use directly
 	if ac.CustomPrompt != "" {
 		return ac.renderCustomPrompt(ac.CustomPrompt)
 	}
 
-	// 如果指定了提示词类型，使用对应类型
+	// if prompt type specified, use corresponding type
 	if ac.PromptType != "" {
 		return ac.buildFromPromptType()
 	}
 
-	// 默认使用主 Agent 提示词
+	// default to main Agent prompt
 	return ac.buildDefaultPrompt()
 }
 
-// buildFromPromptType 从提示词类型构建
+// buildFromPromptType builds from prompt type
 func (ac *AgentConfig) buildFromPromptType() (string, error) {
 	vars := ac.getTemplateVars()
 
-	// 子 Agent 特殊处理
+	// subagent special handling
 	if ac.IsSubagent && ac.SubagentType != "" {
 		return prompts.GetSubagentPrompt(ac.SubagentType, vars)
 	}
 
-	// 使用提示词管理器获取
+	// get via prompt manager
 	manager := prompts.NewManager(vars)
 
-	// 如果有选项，使用组合构建
+	// if options present, build with composition
 	if ac.hasPromptOptions() {
 		return ac.buildWithOptions(manager, vars)
 	}
 
-	// 直接获取渲染后的提示词
+	// directly get rendered prompt
 	return manager.GetRendered(ac.PromptType, vars)
 }
 
-// buildDefaultPrompt 构建默认提示词
+// buildDefaultPrompt builds default prompt
 func (ac *AgentConfig) buildDefaultPrompt() (string, error) {
 	vars := ac.getTemplateVars()
 	options := ac.PromptOptions
 
-	// 如果没有设置选项，使用默认
+	// if no options set, use default
 	if !ac.hasPromptOptions() {
 		options = DefaultPromptOptions()
 	}
 
-	// 使用组合器构建
+	// build with composer
 	composer := prompts.NewPromptComposer(prompts.NewRegistry(), vars)
 
-	// 角色定义
+	// role definition
 	roleDef := options.OverrideRoleDefinition
 	if roleDef == "" {
 		roleDef = "You are {{.AppName}}, an interactive CLI tool that helps users with software engineering tasks."
 	}
 	composer.AddRaw(roleDef, 0)
 
-	// 核心指令
+	// core instructions
 	if options.IncludeCoreInstructions {
 		composer.AddSection("Core Instructions", prompts.CoreInstructions(), 10)
 	}
 
-	// 工具规则
+	// tool rules
 	if options.IncludeToolRules {
 		composer.AddSection("Tool Usage Rules", prompts.ToolRules(vars), 20)
 	}
 
-	// 文件操作规则
+	// file operation rules
 	if options.IncludeFileRules {
 		composer.AddSection("File Operation Rules", prompts.FileOperationRules(), 30)
 	}
 
-	// 安全规则
+	// security rules
 	if options.IncludeSecurityRules {
 		composer.AddSection("Security Rules", prompts.SecurityRules(), 40)
 	}
 
-	// 输出格式规则
+	// output format rules
 	if options.IncludeOutputFormat {
 		composer.AddSection("Output Format", prompts.OutputFormatRules(), 50)
 	}
 
-	// 额外章节
+	// extra sections
 	for _, section := range options.ExtraSections {
 		composer.AddSection(section.Title, section.Content, section.Priority)
 	}
@@ -184,34 +184,34 @@ func (ac *AgentConfig) buildDefaultPrompt() (string, error) {
 	return composer.Compose(), nil
 }
 
-// buildWithOptions 使用选项构建提示词
+// buildWithOptions builds prompt with options
 func (ac *AgentConfig) buildWithOptions(manager prompts.Manager, vars *prompts.TemplateVars) (string, error) {
-	// 直接使用组合器构建
+	// build directly with composer
 	composer := prompts.NewSystemPromptBuilder(vars)
 
-	// 角色定义
+	// role definition
 	roleDef := ac.PromptOptions.OverrideRoleDefinition
 	if roleDef == "" {
 		roleDef = fmt.Sprintf("You are %s, an interactive CLI tool that helps users with software engineering tasks.", vars.AppName)
 	}
 	composer.AddRoleDefinition(roleDef)
 
-	// 核心指令
+	// core instructions
 	if ac.PromptOptions.IncludeCoreInstructions {
 		composer.AddCoreInstructions(prompts.CoreInstructions())
 	}
 
-	// 工具规则
+	// tool rules
 	if ac.PromptOptions.IncludeToolRules {
 		composer.AddToolRules(prompts.ToolRules(vars))
 	}
 
-	// 文件操作规则
+	// file operation rules
 	if ac.PromptOptions.IncludeFileRules {
 		composer.AddFileOperationRules(prompts.FileOperationRules())
 	}
 
-	// 额外章节
+	// extra sections
 	for _, section := range ac.PromptOptions.ExtraSections {
 		composer.AddCustomSection(section.Title, section.Content)
 	}
@@ -219,7 +219,7 @@ func (ac *AgentConfig) buildWithOptions(manager prompts.Manager, vars *prompts.T
 	return composer.Build(), nil
 }
 
-// renderCustomPrompt 渲染自定义提示词
+// renderCustomPrompt renders custom prompt
 func (ac *AgentConfig) renderCustomPrompt(template string) (string, error) {
 	vars := ac.getTemplateVars()
 
@@ -230,16 +230,16 @@ func (ac *AgentConfig) renderCustomPrompt(template string) (string, error) {
 	return prompt.Render(vars)
 }
 
-// getTemplateVars 获取模板变量
+// getTemplateVars gets template variables
 func (ac *AgentConfig) getTemplateVars() *prompts.TemplateVars {
-	// 使用配置的变量，如果没有则创建默认
+	// use configured vars, or create default if none
 	if ac.PromptVars != nil {
 		return ac.PromptVars
 	}
 
 	vars := prompts.DefaultTemplateVars()
 
-	// 设置基本变量
+	// set basic variables
 	if ac.AgentName != "" {
 		vars.AgentName = ac.AgentName
 	}
@@ -253,7 +253,7 @@ func (ac *AgentConfig) getTemplateVars() *prompts.TemplateVars {
 	return vars
 }
 
-// hasPromptOptions 检查是否有提示词选项
+// hasPromptOptions checks if prompt options present
 func (ac *AgentConfig) hasPromptOptions() bool {
 	return ac.PromptOptions.IncludeCoreInstructions ||
 		ac.PromptOptions.IncludeToolRules ||
@@ -265,9 +265,9 @@ func (ac *AgentConfig) hasPromptOptions() bool {
 		ac.PromptOptions.OverrideRoleDefinition != ""
 }
 
-// ConfigFromAgentConfig 从扩展配置创建基础配置
+// ConfigFromAgentConfig creates base config from extended config
 func ConfigFromAgentConfig(ac *AgentConfig) (*Config, error) {
-	// 构建系统提示词
+	// build system prompt
 	systemPrompt, err := ac.BuildSystemPrompt()
 	if err != nil {
 		return nil, err
@@ -279,13 +279,13 @@ func ConfigFromAgentConfig(ac *AgentConfig) (*Config, error) {
 	return config, nil
 }
 
-// NewAgentWithConfig 使用扩展配置创建 Agent
+// NewAgentWithConfig creates Agent with extended config
 func NewAgentWithConfig(ac *AgentConfig) (*Agent, error) {
 	config, err := ConfigFromAgentConfig(ac)
 	if err != nil {
 		return nil, err
 	}
 
-	// TODO: 需要传入 provider
+	// TODO: need to pass provider
 	return NewAgent(config, nil)
 }

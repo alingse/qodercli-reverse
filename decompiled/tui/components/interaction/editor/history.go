@@ -4,14 +4,14 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// HistoryHandler 历史记录处理器
+// HistoryHandler history handler
 type HistoryHandler struct {
 	history      []string
 	index        int
 	isNavigating bool
 }
 
-// NewHistoryHandler 创建新的历史记录处理器
+// NewHistoryHandler creates a new history handler
 func NewHistoryHandler() *HistoryHandler {
 	return &HistoryHandler{
 		history: make([]string, 0),
@@ -19,26 +19,26 @@ func NewHistoryHandler() *HistoryHandler {
 	}
 }
 
-// Init 初始化
+// Init initializes
 func (hh *HistoryHandler) Init() tea.Cmd {
 	return nil
 }
 
-// AddHistory 添加历史记录
+// AddHistory adds history record
 func (hh *HistoryHandler) AddHistory(input string) {
 	if input == "" {
 		return
 	}
-	// 避免重复添加相同的连续输入
+	// avoid duplicate consecutive identical inputs
 	if len(hh.history) > 0 && hh.history[len(hh.history)-1] == input {
 		return
 	}
 	hh.history = append(hh.history, input)
-	hh.index = len(hh.history) // 重置索引到末尾
+	hh.index = len(hh.history) // reset index to end
 }
 
-// Navigate 导航历史记录
-// direction: -1 向上(上一个), 1 向下(下一个)
+// Navigate navigates history
+// direction: -1 up (previous), 1 down (next)
 func (hh *HistoryHandler) Navigate(direction int) string {
 	if len(hh.history) == 0 {
 		return ""
@@ -56,23 +56,23 @@ func (hh *HistoryHandler) Navigate(direction int) string {
 	hh.isNavigating = true
 
 	if hh.index >= len(hh.history) {
-		return "" // 返回空表示恢复到当前输入
+		return "" // empty means restore to current input
 	}
 	return hh.history[hh.index]
 }
 
-// ReloadHistory 重新加载历史记录（用于从文件恢复）
+// ReloadHistory reloads history (for restoring from file)
 func (hh *HistoryHandler) ReloadHistory(history []string) {
 	hh.history = history
 	hh.index = len(history)
 }
 
-// GetHistory 获取所有历史记录
+// GetHistory gets all history records
 func (hh *HistoryHandler) GetHistory() []string {
 	return hh.history
 }
 
-// ResetNavigation 重置导航状态
+// ResetNavigation resets navigation state
 func (hh *HistoryHandler) ResetNavigation() {
 	hh.index = len(hh.history)
 	hh.isNavigating = false

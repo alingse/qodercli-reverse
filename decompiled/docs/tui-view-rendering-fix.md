@@ -1,19 +1,19 @@
-# TUI View 渲染优化
+# TUI View Rendering Optimization
 
-## 问题背景
+## Problem Background
 
-在实现基于回合的 TUI 渲染后，发现 View 的流式内容显示存在以下问题：
+After implementing turn-based TUI rendering, the View's streaming content display had the following issues:
 
-1. **内容截断**：流式内容只显示部分文字，出现很多空行
-2. **显示异常**：内容被强制换行，格式混乱
-3. **屏幕占用**：View 内容太长时，编辑器和状态栏被推到屏幕外
+1. **Content truncation**: Streaming content only shows partial text, with many blank lines
+2. **Display anomalies**: Content is force-wrapped, formatting is messy
+3. **Screen occupation**: When View content is too long, the editor and status bar are pushed off-screen
 
-## 问题分析
+## Problem Analysis
 
-### 原始实现的问题
+### Issues in the Original Implementation
 
 ```go
-// 问题代码
+// Problematic code
 func (m appModel) renderCurrentTurn() string {
     if m.currentTurn.StreamingText.Len() > 0 {
         preview := &messages.AssistantMessage{
@@ -30,56 +30,56 @@ func (m appModel) renderCurrentTurn() string {
             Foreground(lipgloss.Color("246")).
             Italic(true).
             Padding(0, 1).
-            Width(previewWidth).  // 问题1: 固定宽度导致截断
-            Border(lipgloss.NormalBorder(), false, false, false, true).  // 问题2: 边框显示异常
+            Width(previewWidth).  // Issue 1: fixed width causes truncation
+            Border(lipgloss.NormalBorder(), false, false, false, true).  // Issue 2: border display anomaly
             BorderForeground(lipgloss.Color("240"))
 
-        sections = append(sections, previewStyle.Render(preview.Render()))  // 问题3: 双重渲染
+        sections = append(sections, previewStyle.Render(preview.Render()))  // Issue 3: double rendering
     }
 }
 ```
 
-**问题原因**：
+**Root causes**:
 
-1. **固定宽度 `Width(previewWidth)`**：
-   - 强制设置宽度会导致内容被截断或强制换行
-   - 当内容超出宽度时，lipgloss 会自动换行，但可能导致格式混乱
+1. **Fixed width `Width(previewWidth)`**:
+   - Forcing a width causes content to be truncated or force-wrapped
+   - When content exceeds the width, lipgloss auto-wraps, which may cause formatting mess
 
-2. **双重渲染**：
-   - `preview.Render()` 已经返回格式化的字符串（`⏺ 内容`）
-   - 再用 `previewStyle.Render()` 包装，导致格式问题
+2. **Double rendering**:
+   - `preview.Render()` already returns a formatted string (`⏺ content`)
+   - Wrapping it again with `previewStyle.Render()` causes formatting issues
 
-3. **边框和 padding**：
-   - 左边框 `│` 可能导致显示异常
-   - padding 增加了额外的空间占用
+3. **Border and padding**:
+   - The left border `│` may cause display anomalies
+   - Padding adds extra space
 
-4. **无高度限制**：
-   - 流式内容可能很长，占用大量屏幕空间
-   - 导致编辑器和状态栏被推到屏幕外
+4. **No height limit**:
+   - Streaming content may be very long, occupying a lot of screen space
+   - Causes the editor and status bar to be pushed off-screen
 
-## 优化方案
+## Optimization Plan
 
-### 1. 移除固定宽度限制
+### 1. Remove Fixed Width Limit
 
 ```go
-// 不设置固定宽度，让内容自然换行
+// Do not set a fixed width, let content wrap naturally
 previewStyle := lipgloss.NewStyle().
     Foreground(lipgloss.Color("246")).
     Italic(true)
 ```
 
-### 2. 简化渲染逻辑
+### 2. Simplify Rendering Logic
 
 ```go
-// 直接渲染内容，不使用双重渲染
+// Render content directly, without double rendering
 content := m.currentTurn.StreamingText.String()
 sections = append(sections, previewStyle.Render(fmt.Sprintf("⏺ %s", strings.TrimSpace(content))))
 ```
 
-### 3. 限制预览区高度
+### 3. Limit Preview Area Height
 
 ```go
-// 最多显示最后 10 行，超出部分用 "..." 表示
+// Show at most the last 10 lines; use "..." for the rest
 lines := strings.Split(content, "\n")
 maxLines := 10
 if len(lines) > maxLines {
@@ -88,16 +88,16 @@ if len(lines) > maxLines {
 }
 ```
 
-### 4. 移除边框和 padding
+### 4. Remove Border and Padding
 
 ```go
-// 不使用边框和 padding，让内容更紧凑
+// Do not use border and padding, making content more compact
 previewStyle := lipgloss.NewStyle().
     Foreground(lipgloss.Color("246")).
     Italic(true)
 ```
 
-## 优化后的实现
+## Optimized Implementation
 
 ```go
 func (m appModel) renderCurrentTurn() string {
@@ -107,12 +107,12 @@ func (m appModel) renderCurrentTurn() string {
 
     var sections []string
 
-    // 1. 渲染流式文本（如果有）
+    // 1. Render streaming text (if any)
     if m.currentTurn.StreamingText.Len() > 0 {
         content := m.currentTurn.StreamingText.String()
 
-        // 限制预览区的高度，避免占用太多屏幕空间
-        // 最多显示 10 行，超出部分用 "..." 表示
+        // Limit preview area height to avoid taking too much screen space
+        // Show at most 10 lines; use "..." for the rest
         lines := strings.Split(content, "\n")
         maxLines := 10
         if len(lines) > maxLines {
@@ -120,16 +120,16 @@ func (m appModel) renderCurrentTurn() string {
             content = "...\n" + strings.Join(lines, "\n")
         }
 
-        // 使用灰色斜体样式表示正在生成的内容
+        // Use gray italic style to represent content being generated
         previewStyle := lipgloss.NewStyle().
             Foreground(lipgloss.Color("246")).
             Italic(true)
 
-        // 直接渲染内容，添加 ⏺ 前缀
+        // Render content directly, add ⏺ prefix
         sections = append(sections, previewStyle.Render(fmt.Sprintf("⏺ %s", strings.TrimSpace(content))))
     }
 
-    // 2. 渲染工具调用（如果有）
+    // 2. Render tool calls (if any)
     for _, toolCall := range m.currentTurn.ToolCalls {
         toolMsg := &messages.ToolCallInfo{
             ID:        toolCall.ID,
@@ -141,19 +141,19 @@ func (m appModel) renderCurrentTurn() string {
             MsgTime:   time.Now(),
         }
 
-        // 使用不同的颜色表示不同状态
+        // Use different colors for different states
         var color string
         switch toolCall.Status {
         case ToolCallStatusPending:
-            color = "248" // 灰色
+            color = "248" // gray
         case ToolCallStatusRunning:
-            color = "255" // 白色
+            color = "255" // white
         case ToolCallStatusCompleted:
-            color = "82" // 绿色
+            color = "82" // green
         case ToolCallStatusError:
-            color = "203" // 红色
+            color = "203" // red
         default:
-            color = "255" // 默认白色
+            color = "255" // default white
         }
 
         style := lipgloss.NewStyle().Foreground(lipgloss.Color(color))
@@ -164,57 +164,57 @@ func (m appModel) renderCurrentTurn() string {
 }
 ```
 
-## 优化效果
+## Optimization Results
 
-### 之前的问题
-
-```
-│ 核心
-│
-│
-│ 类型
-│
-│ 定义
-│
-│ ：
-```
-
-- 内容被截断，只显示部分文字
-- 大量空行
-- 边框显示异常
-
-### 优化后的效果
+### Previous Issues
 
 ```
-⏺ 你好！我是 qodercli，一个交互式 CLI 工具，可以帮助您处理软件工程任务。
-
-我看到您在一个 Go 项目中，当前工作目录是 `/Users/zhihu/output/github/qodercli-reverse/decompiled`。
-
-有什么我可以帮助您的吗？
+│ core
+│
+│
+│ types
+│
+│ definition
+│
+│ :
 ```
 
-- 内容完整显示
-- 格式正确
-- 无多余空行
-- 预览区高度受限，不会占用过多屏幕空间
+- Content was truncated, only partial text shown
+- Many blank lines
+- Border display anomalies
 
-## 关键改进点
+### After Optimization
 
-1. **内容完整性**：移除固定宽度限制，内容不再被截断
-2. **格式正确**：简化渲染逻辑，避免双重渲染导致的格式问题
-3. **屏幕空间管理**：限制预览区高度，确保编辑器和状态栏始终可见
-4. **视觉清晰**：移除边框和 padding，让内容更紧凑清晰
+```
+⏺ Hello! I am qodercli-reverse, an interactive CLI tool that can help you with software engineering tasks.
 
-## 注意事项
+I see you are in a Go project, current working directory is `/Users/zhihu/output/github/qodercli-reverse/decompiled`.
 
-1. **高度限制**：当前设置为最多显示 10 行，可以根据实际需求调整
-2. **截断提示**：使用 "..." 表示有更多内容，用户可以通过滚动查看完整历史
-3. **性能考虑**：每次流式更新都会触发 View 重新渲染，对于高频更新可能需要添加节流
+Is there anything I can help you with?
+```
 
-## 文件变更
+- Content displayed completely
+- Formatting correct
+- No extra blank lines
+- Preview area height limited, won't occupy too much screen space
 
-- `tui/app/model.go` - 修改 `renderCurrentTurn()` 方法
-  - 移除固定宽度设置
-  - 简化渲染逻辑
-  - 添加高度限制
-  - 移除边框和 padding
+## Key Improvements
+
+1. **Content completeness**: Removed fixed width limit, content no longer truncated
+2. **Correct formatting**: Simplified rendering logic, avoiding formatting issues caused by double rendering
+3. **Screen space management**: Limited preview area height, ensuring editor and status bar are always visible
+4. **Visual clarity**: Removed border and padding, making content more compact and clear
+
+## Notes
+
+1. **Height limit**: Currently set to show at most 10 lines, can be adjusted according to actual needs
+2. **Truncation hint**: Uses "..." to indicate there is more content; users can scroll to view full history
+3. **Performance consideration**: Each streaming update triggers a View re-render; throttling may be needed for high-frequency updates
+
+## File Changes
+
+- `tui/app/model.go` - Modified `renderCurrentTurn()` method
+  - Removed fixed width setting
+  - Simplified rendering logic
+  - Added height limit
+  - Removed border and padding

@@ -1,5 +1,5 @@
-// Package prompts 项目上下文加载器
-// 负责加载 AGENTS.md, .claude/, .cursorrules 等项目特定指令
+// Package prompts project context loader
+// Responsible for loading project-specific instructions such as AGENTS.md, .claude/, .cursorrules, etc.
 package prompts
 
 import (
@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// ProjectContextLoader 项目上下文加载器
+// ProjectContextLoader project context loader.
 type ProjectContextLoader struct {
 	workDir     string
 	maxFileSize int64
@@ -17,7 +17,7 @@ type ProjectContextLoader struct {
 	cache       *ProjectContext
 }
 
-// NewProjectContextLoader 创建新的加载器
+// NewProjectContextLoader creates a new loader.
 func NewProjectContextLoader(workDir string) *ProjectContextLoader {
 	if workDir == "" {
 		workDir, _ = os.Getwd()
@@ -29,12 +29,12 @@ func NewProjectContextLoader(workDir string) *ProjectContextLoader {
 	}
 }
 
-// SetMaxFileSize 设置最大文件大小
+// SetMaxFileSize sets the maximum file size.
 func (l *ProjectContextLoader) SetMaxFileSize(size int64) {
 	l.maxFileSize = size
 }
 
-// Load 加载项目上下文
+// Load loads the project context.
 func (l *ProjectContextLoader) Load() (*ProjectContext, error) {
 	if l.cache != nil {
 		return l.cache, nil
@@ -45,34 +45,37 @@ func (l *ProjectContextLoader) Load() (*ProjectContext, error) {
 		GitignorePatterns: make([]string, 0),
 	}
 
-	// 检测项目类型
+	// detect project type
 	l.detectProjectType(ctx)
 
-	// 加载 AGENTS.md
+	// load AGENTS.md
 	l.loadAgentsMD(ctx)
 
-	// 加载 .claude/ 目录
+	// load .qoder/ directory
+	l.loadQoderDir(ctx)
+
+	// load .claude/ directory
 	l.loadClaudeDir(ctx)
 
-	// 加载 .cursorrules
+	// load .cursorrules
 	l.loadCursorRules(ctx)
 
-	// 加载 README 摘要
+	// load README summary
 	l.loadReadmeSummary(ctx)
 
-	// 加载编码规范文件
+	// load coding standards files
 	l.loadCodingStandards(ctx)
 
-	// 加载 .gitignore
+	// load .gitignore
 	l.loadGitignore(ctx)
 
 	l.cache = ctx
 	return ctx, nil
 }
 
-// detectProjectType 检测项目类型
+// detectProjectType detects the project type.
 func (l *ProjectContextLoader) detectProjectType(ctx *ProjectContext) {
-	// 检查各种项目配置文件
+	// check various project config files
 	if l.fileExists("go.mod") {
 		ctx.Type = "go"
 		ctx.Language = "Go"
@@ -99,26 +102,29 @@ func (l *ProjectContextLoader) detectProjectType(ctx *ProjectContext) {
 		ctx.HasPomXML = true
 	}
 
-	// 如果没有检测到名称，使用目录名
+	// if no name detected, use directory name
 	if ctx.Name == "" {
 		ctx.Name = filepath.Base(l.workDir)
 	}
 }
 
-// loadAgentsMD 加载 AGENTS.md 文件
+// loadAgentsMD loads the AGENTS.md file (and case variants).
 func (l *ProjectContextLoader) loadAgentsMD(ctx *ProjectContext) {
-	content := l.readFileWithLimit("AGENTS.md")
-	if content == "" {
-		// 尝试小写版本
-		content = l.readFileWithLimit("agents.md")
-	}
-
-	if content != "" {
-		ctx.AgentsMDContent = l.extractRelevantSections(content)
+	variants := []string{"AGENTS.md", "Agents.md", "agents.md"}
+	ctx.AgentsMdVariants = make(map[string]string)
+	for _, name := range variants {
+		content := l.readFileWithLimit(name)
+		if content == "" {
+			continue
+		}
+		ctx.AgentsMdVariants[name] = l.extractRelevantSections(content)
+		if ctx.AgentsMDContent == "" {
+			ctx.AgentsMDContent = ctx.AgentsMdVariants[name]
+		}
 	}
 }
 
-// loadClaudeDir 加载 .claude/ 目录
+// loadClaudeDir loads the .claude/ directory.
 func (l *ProjectContextLoader) loadClaudeDir(ctx *ProjectContext) {
 	claudeDir := filepath.Join(l.workDir, ".claude")
 
@@ -129,25 +135,25 @@ func (l *ProjectContextLoader) loadClaudeDir(ctx *ProjectContext) {
 
 	var parts []string
 
-	// 读取 CLAUDE.md
+	// read CLAUDE.md
 	if content := l.readFileWithLimit(filepath.Join(".claude", "CLAUDE.md")); content != "" {
 		parts = append(parts, "CLAUDE.md:")
 		parts = append(parts, l.extractRelevantSections(content))
 	}
 
-	// 读取 instructions.md
+	// read instructions.md
 	if content := l.readFileWithLimit(filepath.Join(".claude", "instructions.md")); content != "" {
 		parts = append(parts, "Instructions:")
 		parts = append(parts, l.extractRelevantSections(content))
 	}
 
-	// 读取 context.md
+	// read context.md
 	if content := l.readFileWithLimit(filepath.Join(".claude", "context.md")); content != "" {
 		parts = append(parts, "Context:")
 		parts = append(parts, l.extractRelevantSections(content))
 	}
 
-	// 读取所有 .md 文件
+	// read all .md files
 	entries, err := os.ReadDir(claudeDir)
 	if err == nil {
 		for _, entry := range entries {
@@ -172,11 +178,82 @@ func (l *ProjectContextLoader) loadClaudeDir(ctx *ProjectContext) {
 	}
 }
 
-// loadCursorRules 加载 .cursorrules 文件
+// loadQoderDir loads the .qoder/ directory (commands, subagents, settings, instructions).
+func (l *ProjectContextLoader) loadQoderDir(ctx *ProjectContext) {
+	qoderDir := filepath.Join(l.workDir, ".qoder")
+	info, err := os.Stat(qoderDir)
+	if err != nil || !info.IsDir() {
+		return
+	}
+
+	var parts []string
+
+	// Project-level instructions
+	for _, name := range []string{"AGENTS.md", "instructions.md", "context.md", "README.md"} {
+		if content := l.readFileWithLimit(filepath.Join(".qoder", name)); content != "" {
+			parts = append(parts, fmt.Sprintf("%s:", name))
+			parts = append(parts, l.extractRelevantSections(content))
+		}
+	}
+
+	// commands/
+	if entries, err := os.ReadDir(filepath.Join(qoderDir, "commands")); err == nil {
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			name := entry.Name()
+			if !strings.HasSuffix(name, ".md") {
+				continue
+			}
+			if content := l.readFileWithLimit(filepath.Join(".qoder", "commands", name)); content != "" {
+				parts = append(parts, fmt.Sprintf("command %s:", name))
+				parts = append(parts, l.extractRelevantSections(content))
+			}
+		}
+	}
+
+	// subagents/
+	if entries, err := os.ReadDir(filepath.Join(qoderDir, "subagents")); err == nil {
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			name := entry.Name()
+			if !strings.HasSuffix(name, ".md") && !strings.HasSuffix(name, ".json") {
+				continue
+			}
+			if content := l.readFileWithLimit(filepath.Join(".qoder", "subagents", name)); content != "" {
+				parts = append(parts, fmt.Sprintf("subagent %s:", name))
+				parts = append(parts, l.extractRelevantSections(content))
+			}
+		}
+	}
+
+	// settings/
+	if entries, err := os.ReadDir(filepath.Join(qoderDir, "settings")); err == nil {
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			name := entry.Name()
+			if content := l.readFileWithLimit(filepath.Join(".qoder", "settings", name)); content != "" {
+				parts = append(parts, fmt.Sprintf("setting %s:", name))
+				parts = append(parts, l.truncateString(content, 1000))
+			}
+		}
+	}
+
+	if len(parts) > 0 {
+		ctx.QoderDirContent = strings.Join(parts, "\n\n")
+	}
+}
+
+// loadCursorRules loads the .cursorrules file.
 func (l *ProjectContextLoader) loadCursorRules(ctx *ProjectContext) {
 	content := l.readFileWithLimit(".cursorrules")
 	if content != "" {
-		// 合并到编码规范中
+		// merge into coding standards
 		if ctx.CodingStandards != "" {
 			ctx.CodingStandards += "\n\n"
 		}
@@ -184,7 +261,7 @@ func (l *ProjectContextLoader) loadCursorRules(ctx *ProjectContext) {
 	}
 }
 
-// loadReadmeSummary 加载 README 摘要
+// loadReadmeSummary loads the README summary.
 func (l *ProjectContextLoader) loadReadmeSummary(ctx *ProjectContext) {
 	content := l.readFileWithLimit("README.md")
 	if content == "" {
@@ -195,14 +272,14 @@ func (l *ProjectContextLoader) loadReadmeSummary(ctx *ProjectContext) {
 	}
 
 	if content != "" {
-		// 提取前 500 个字符作为摘要
+		// extract first 500 characters as summary
 		ctx.ReadmeContent = l.truncateString(content, 500)
 	}
 }
 
-// loadCodingStandards 加载编码规范文件
+// loadCodingStandards loads coding standards files.
 func (l *ProjectContextLoader) loadCodingStandards(ctx *ProjectContext) {
-	// 根据项目类型加载对应的规范文件
+	// load corresponding standards file based on project type
 	switch ctx.Type {
 	case "go":
 		if content := l.readFileWithLimit(".golangci.yml"); content != "" {
@@ -232,7 +309,7 @@ func (l *ProjectContextLoader) loadCodingStandards(ctx *ProjectContext) {
 		}
 	}
 
-	// 通用规范文件
+	// generic standards files
 	if content := l.readFileWithLimit("CONTRIBUTING.md"); content != "" {
 		if ctx.CodingStandards != "" {
 			ctx.CodingStandards += "\n\n"
@@ -248,7 +325,7 @@ func (l *ProjectContextLoader) loadCodingStandards(ctx *ProjectContext) {
 	}
 }
 
-// loadGitignore 加载 .gitignore 模式
+// loadGitignore loads .gitignore patterns.
 func (l *ProjectContextLoader) loadGitignore(ctx *ProjectContext) {
 	content := l.readFileWithLimit(".gitignore")
 	if content == "" {
@@ -258,14 +335,14 @@ func (l *ProjectContextLoader) loadGitignore(ctx *ProjectContext) {
 	lines := strings.Split(content, "\n")
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
-		// 忽略注释和空行
+		// ignore comments and empty lines
 		if line != "" && !strings.HasPrefix(line, "#") {
 			ctx.GitignorePatterns = append(ctx.GitignorePatterns, line)
 		}
 	}
 }
 
-// ==================== 辅助方法 ====================
+// ==================== helper methods ====================
 
 func (l *ProjectContextLoader) fileExists(name string) bool {
 	path := filepath.Join(l.workDir, name)
@@ -281,7 +358,7 @@ func (l *ProjectContextLoader) readFileWithLimit(path string) string {
 		return ""
 	}
 
-	// 检查文件大小
+	// check file size
 	if info.Size() > l.maxFileSize {
 		return fmt.Sprintf("[File too large: %d bytes]", info.Size())
 	}
@@ -295,12 +372,12 @@ func (l *ProjectContextLoader) readFileWithLimit(path string) string {
 }
 
 func (l *ProjectContextLoader) extractRelevantSections(content string) string {
-	// 提取相关章节，过滤掉不相关的内容
+	// extract relevant sections, filtering out irrelevant content
 	lines := strings.Split(content, "\n")
 	var relevant []string
 
 	for _, line := range lines {
-		// 保留标题、列表项和重要段落
+		// keep headings, list items, and important paragraphs
 		trimmed := strings.TrimSpace(line)
 		if strings.HasPrefix(trimmed, "#") ||
 			strings.HasPrefix(trimmed, "-") ||
@@ -312,7 +389,7 @@ func (l *ProjectContextLoader) extractRelevantSections(content string) string {
 			strings.HasPrefix(trimmed, "NEVER:") {
 			relevant = append(relevant, line)
 		} else if len(trimmed) > 0 && len(relevant) > 0 {
-			// 保留非空行，可能是段落的一部分
+			// keep non-empty lines; they may be part of a paragraph
 			relevant = append(relevant, line)
 		}
 	}
@@ -327,7 +404,7 @@ func (l *ProjectContextLoader) truncateString(s string, maxLen int) string {
 	return s[:maxLen] + "..."
 }
 
-// ==================== 项目特定读取方法 ====================
+// ==================== project-specific read methods ====================
 
 func (l *ProjectContextLoader) readGoModuleName() string {
 	content := l.readFileWithLimit("go.mod")
@@ -350,19 +427,19 @@ func (l *ProjectContextLoader) readNodeProjectName() string {
 		return ""
 	}
 
-	// 简单的字符串提取
+	// simple string extraction
 	const nameKey = `"name"`
 	idx := strings.Index(content, nameKey)
 	if idx == -1 {
 		return ""
 	}
 
-	// 找到值
+	// find value
 	rest := content[idx+len(nameKey):]
 	rest = strings.TrimSpace(rest)
 	if strings.HasPrefix(rest, ":") {
 		rest = strings.TrimSpace(rest[1:])
-		// 提取引号中的值
+		// extract value in quotes
 		if strings.HasPrefix(rest, `"`) {
 			rest = rest[1:]
 			endIdx := strings.Index(rest, `"`)
@@ -375,7 +452,7 @@ func (l *ProjectContextLoader) readNodeProjectName() string {
 }
 
 func (l *ProjectContextLoader) readPythonProjectName() string {
-	// 尝试从 pyproject.toml 读取
+	// try reading from pyproject.toml
 	content := l.readFileWithLimit("pyproject.toml")
 	if content != "" {
 		const nameKey = `name`
@@ -415,7 +492,7 @@ func (l *ProjectContextLoader) readRustProjectName() string {
 	return ""
 }
 
-// ClearCache 清除缓存
+// ClearCache clears the cache.
 func (l *ProjectContextLoader) ClearCache() {
 	l.cache = nil
 }

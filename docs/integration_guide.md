@@ -1,42 +1,42 @@
-# qodercli 系统提示词集成指南（基于实际架构）
+# qodercli-reverse System Prompt Integration Guide (Based on Actual Architecture)
 
-## 一、官方架构分析
+## 1. Official Architecture Analysis
 
-### 1. 实际的包结构
+### 1. Actual Package Structure
 
 ```
 core/agent/
-├── agent.go           # Agent 主循环
-├── option/            # ← 选项配置（包含系统提示词）
+├── agent.go           # Agent main loop
+├── option/            # ← Option configuration (includes system prompt)
 │   └── options.go     # WithSystemPrompt, WithRoleDefinition
-├── tools/             # 工具实现
-│   ├── tools.go       # Tool 接口和注册表
-│   ├── bash.go        # Bash 工具（含描述）
-│   └── file.go        # 文件工具
+├── tools/             # Tool implementations
+│   ├── tools.go       # Tool interface and registry
+│   ├── bash.go        # Bash tool (with description)
+│   └── file.go        # File tools
 ├── provider/          # LLM Provider
-├── state/             # 状态管理
-├── hooks/             # Hook 系统
-└── permission/        # 权限控制
+├── state/             # State management
+├── hooks/             # Hook system
+└── permission/        # Permission control
 ```
 
-### 2. 关键发现
+### 2. Key Findings
 
-**没有 `core/agent/prompt` 包！**
+**There is no `core/agent/prompt` package!**
 
-系统提示词是通过 `core/agent/option` 包管理的：
+The system prompt is managed through the `core/agent/option` package:
 
 ```go
-// 从二进制提取的符号
-code.alibaba-inc.com/qoder-core/qodercli/core/agent/option.WithSystemPrompt
-code.alibaba-inc.com/qoder-core/qodercli/core/agent/option.WithRoleDefinition
-code.alibaba-inc.com/qoder-core/qodercli/core/agent.(*agentContext).GetSystemPrompt
+// Symbols extracted from the binary
+code.alibaba-inc.com/qoder-core/qodercli-reverse/core/agent/option.WithSystemPrompt
+code.alibaba-inc.com/qoder-core/qodercli-reverse/core/agent/option.WithRoleDefinition
+code.alibaba-inc.com/qoder-core/qodercli-reverse/core/agent.(*agentContext).GetSystemPrompt
 ```
 
 ---
 
-## 二、正确的集成方式
+## 2. Correct Integration Approach
 
-### 方式一：通过 option 包（推荐）
+### Approach 1: Through the option package (recommended)
 
 ```go
 // core/agent/option/options.go
@@ -44,17 +44,17 @@ package option
 
 import "github.com/alingse/qodercli-reverse/decompiled/core/resource/subagent"
 
-// Options Agent 配置选项
+// Options Agent configuration options
 type Options struct {
     SystemPrompt   string
     RoleDefinition string
-    // ... 其他选项
+    // ... other options
 }
 
-// Option 函数选项类型
+// Option functional option type
 type Option func(*Options)
 
-// NewOptions 创建默认选项
+// NewOptions creates default options
 func NewOptions() *Options {
     return &Options{
         SystemPrompt:   DefaultSystemPrompt(),
@@ -62,23 +62,23 @@ func NewOptions() *Options {
     }
 }
 
-// WithSystemPrompt 设置系统提示词
+// WithSystemPrompt sets the system prompt
 func WithSystemPrompt(prompt string) Option {
     return func(o *Options) {
         o.SystemPrompt = prompt
     }
 }
 
-// WithRoleDefinition 设置角色定义
+// WithRoleDefinition sets the role definition
 func WithRoleDefinition(role string) Option {
     return func(o *Options) {
         o.RoleDefinition = role
     }
 }
 
-// DefaultSystemPrompt 默认系统提示词
+// DefaultSystemPrompt default system prompt
 func DefaultSystemPrompt() string {
-    return `You are qodercli, an interactive CLI tool that helps users with software engineering tasks.
+    return `You are qodercli-reverse, an interactive CLI tool that helps users with software engineering tasks.
 
 IMPORTANT: Assist with defensive security tasks only. Refuse to create, modify, or improve code that may be used maliciously.
 
@@ -90,13 +90,13 @@ Use the instructions below and the tools available to you to assist the user.`
 }
 ```
 
-### 方式二：工具描述直接嵌入工具代码
+### Approach 2: Tool descriptions embedded directly in tool code
 
 ```go
 // core/agent/tools/bash.go
 package tools
 
-// NewBashTool 创建 Bash 工具
+// NewBashTool creates the Bash tool
 func NewBashTool(manager ShellManager, defaultTimeout time.Duration) *BashTool {
     return &BashTool{
         BaseTool: BaseTool{
@@ -115,7 +115,7 @@ func NewBashTool(manager ShellManager, defaultTimeout time.Duration) *BashTool {
 }
 ```
 
-### 方式三：从服务器动态获取（acp 包）
+### Approach 3: Dynamic fetch from server (acp package)
 
 ```go
 // acp/prompt.go
@@ -127,16 +127,16 @@ import (
     "net/http"
 )
 
-// PromptService 提示词服务
+// PromptService prompt service
 type PromptService struct {
-    client *http.Client
+    client  *http.Client
     baseURL string
 }
 
-// FetchSessionPrompt 从服务器获取会话提示词
+// FetchSessionPrompt fetches the session prompt from the server
 func (s *PromptService) FetchSessionPrompt(ctx context.Context, sessionID string) (string, error) {
-    // 调用 /session/prompt API
-    // 从二进制提取: "session/prompt"
+    // Call /session/prompt API
+    // Extracted from binary: "session/prompt"
     resp, err := s.client.Get(s.baseURL + "/session/prompt?sessionId=" + sessionID)
     if err != nil {
         return "", err
@@ -153,18 +153,18 @@ func (s *PromptService) FetchSessionPrompt(ctx context.Context, sessionID string
     return result.SystemPrompt, nil
 }
 
-// buildPrompt 构建完整提示词（从二进制提取的符号）
+// buildPrompt builds the full prompt (symbol extracted from binary)
 func (a *QoderAcpAgent) buildPrompt(ctx context.Context) (string, error) {
-    // 1. 获取基础提示词
+    // 1. Get base prompt
     basePrompt := a.options.SystemPrompt
     
-    // 2. 获取工具描述
+    // 2. Get tool descriptions
     toolDescriptions := a.buildToolDescriptions()
     
-    // 3. 获取动态规则
+    // 3. Get dynamic rules
     dynamicRules := a.fetchDynamicRules(ctx)
     
-    // 4. 拼接完整提示词
+    // 4. Concatenate full prompt
     fullPrompt := basePrompt + "\n\n" + toolDescriptions + "\n\n" + dynamicRules
     
     return fullPrompt, nil
@@ -173,7 +173,7 @@ func (a *QoderAcpAgent) buildPrompt(ctx context.Context) (string, error) {
 
 ---
 
-## 三、与 Agent 的集成
+## 3. Integration with Agent
 
 ```go
 // core/agent/agent.go
@@ -186,15 +186,15 @@ import (
 
 // Agent AI Agent
 type Agent struct {
-    config   *option.Options  // ← 使用 option.Options
+    config   *option.Options  // ← Uses option.Options
     provider provider.Client
     tools    *tools.Registry
     // ...
 }
 
-// NewAgent 创建 Agent
+// NewAgent creates an Agent
 func NewAgent(opts ...option.Option) (*Agent, error) {
-    // 应用选项
+    // Apply options
     config := option.NewOptions()
     for _, opt := range opts {
         opt(config)
@@ -208,14 +208,14 @@ func NewAgent(opts ...option.Option) (*Agent, error) {
     return agent, nil
 }
 
-// generate 生成响应
+// generate generates a response
 func (a *Agent) generate(ctx context.Context) error {
-    // 使用 config.SystemPrompt
+    // Use config.SystemPrompt
     req := &provider.ModelRequest{
         Model:        a.config.Model,
         Messages:     a.state.GetMessages(),
         Tools:        a.toolRegistry.ToToolInfo(),
-        SystemPrompt: a.config.SystemPrompt,  // ← 直接使用
+        SystemPrompt: a.config.SystemPrompt,  // ← used directly
         // ...
     }
     
@@ -225,9 +225,9 @@ func (a *Agent) generate(ctx context.Context) error {
 
 ---
 
-## 四、使用示例
+## 4. Usage Examples
 
-### 基础用法
+### Basic Usage
 
 ```go
 package main
@@ -238,20 +238,20 @@ import (
 )
 
 func main() {
-    // 方式 1：使用默认系统提示词
+    // Approach 1: Use default system prompt
     a, err := agent.NewAgent()
     
-    // 方式 2：自定义系统提示词
+    // Approach 2: Custom system prompt
     a, err := agent.NewAgent(
         option.WithSystemPrompt("You are a specialized code reviewer..."),
     )
     
-    // 方式 3：使用角色定义
+    // Approach 3: Use role definition
     a, err := agent.NewAgent(
         option.WithRoleDefinition("You are a security expert..."),
     )
     
-    // 方式 4：组合多个选项
+    // Approach 4: Combine multiple options
     a, err := agent.NewAgent(
         option.WithSystemPrompt(customPrompt),
         option.WithRoleDefinition("You are an expert debugger..."),
@@ -259,7 +259,7 @@ func main() {
 }
 ```
 
-### 从文件加载提示词
+### Load prompt from file
 
 ```go
 // cmd/root.go
@@ -284,9 +284,9 @@ func initAgent() (*agent.Agent, error) {
 
 ---
 
-## 五、工具使用规则的组织
+## 5. Organizing Tool Usage Rules
 
-### 方案一：嵌入工具描述（推荐）
+### Approach 1: Embed tool descriptions (recommended)
 
 ```go
 func NewGrepTool(rgPath string) *GrepTool {
@@ -304,7 +304,7 @@ func NewGrepTool(rgPath string) *GrepTool {
 }
 ```
 
-### 方案二：通过 InputSchema 描述
+### Approach 2: Via InputSchema description
 
 ```go
 func BuildGrepSchema() map[string]interface{} {
@@ -321,7 +321,7 @@ func BuildGrepSchema() map[string]interface{} {
 }
 ```
 
-### 方案三：Hook 注入
+### Approach 3: Hook injection
 
 ```go
 // core/agent/hooks/pre_tool_use.go
@@ -331,9 +331,9 @@ import (
     "strings"
 )
 
-// PreToolUseHook 工具使用前 Hook
+// PreToolUseHook pre-tool-use hook
 type PreToolUseHook struct {
-    rules map[string][]string  // 工具名 -> 规则列表
+    rules map[string][]string  // tool name -> rule list
 }
 
 func NewPreToolUseHook() *PreToolUseHook {
@@ -352,7 +352,7 @@ func NewPreToolUseHook() *PreToolUseHook {
 }
 
 func (h *PreToolUseHook) Execute(ctx *HookContext) error {
-    // 在调用前检查/注入规则
+    // Check/inject rules before invocation
     if rules, ok := h.rules[ctx.ToolCall.Name]; ok {
         ctx.ToolCall.Rules = rules
     }
@@ -362,46 +362,46 @@ func (h *PreToolUseHook) Execute(ctx *HookContext) error {
 
 ---
 
-## 六、对比：错误 vs 正确
+## 6. Comparison: Wrong vs Correct
 
-### ❌ 错误的方式（我之前写的）
+### ❌ Wrong approach (my previous version)
 
 ```go
-// 创建单独的 prompt 包
+// Creating a separate prompt package
 core/agent/prompt/
 ├── templates.go
 ├── rules.go
 └── builder.go
 
-// 这种方式在官方二进制中不存在！
+// This approach does not exist in the official binary!
 ```
 
-### ✅ 正确的方式（基于反编译）
+### ✅ Correct approach (based on reverse engineering)
 
 ```go
-// 1. 使用 option 包管理配置
+// 1. Use option package to manage configuration
 core/agent/option/options.go
 
-// 2. 工具描述嵌入工具代码
+// 2. Tool descriptions embedded in tool code
 core/agent/tools/bash.go
 
-// 3. 动态提示词通过 acp 包获取
+// 3. Dynamic prompts fetched via acp package
 core/agent/acp/prompt.go
 ```
 
 ---
 
-## 七、总结
+## 7. Summary
 
-| 功能 | 实际位置 | 说明 |
-|------|----------|------|
-| 系统提示词配置 | `core/agent/option` | Functional Options 模式 |
-| 工具描述 | `core/agent/tools/*.go` | 嵌入在工具代码中 |
-| 动态提示词 | `core/agent/acp` | 通过 API 获取 |
-| 提示词构建 | `(*QoderAcpAgent).buildPrompt` | 运行时拼接 |
+| Feature | Actual Location | Description |
+|---------|----------------|-------------|
+| System prompt config | `core/agent/option` | Functional Options pattern |
+| Tool descriptions | `core/agent/tools/*.go` | Embedded in tool code |
+| Dynamic prompts | `core/agent/acp` | Fetched via API |
+| Prompt building | `(*QoderAcpAgent).buildPrompt` | Runtime concatenation |
 
-**关键点**：
-1. 没有独立的 `prompt` 包
-2. 系统提示词通过 `option.WithSystemPrompt` 设置
-3. 工具使用规则嵌入工具描述中
-4. 完整提示词在 `acp` 包中构建
+**Key points**:
+1. There is no standalone `prompt` package
+2. The system prompt is set via `option.WithSystemPrompt`
+3. Tool usage rules are embedded in tool descriptions
+4. The full prompt is built in the `acp` package

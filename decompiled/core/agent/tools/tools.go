@@ -1,5 +1,5 @@
-// Package tools 工具系统接口和基础实现
-// 反编译自 qodercli v0.1.29
+// Package tools tool system interfaces and base implementation
+// Decompiled from qodercli-reverse v0.1.29
 package tools
 
 import (
@@ -10,56 +10,56 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/types"
 )
 
-// Tool 工具接口
+// Tool tool interface
 type Tool interface {
-	// Name 工具名称
+	// Name tool name
 	Name() string
 
-	// Description 工具描述
+	// Description tool description
 	Description() string
 
-	// InputSchema 输入 Schema (JSON Schema)
+	// InputSchema input schema (JSON Schema)
 	InputSchema() map[string]interface{}
 
-	// Execute 执行工具
+	// Execute executes the tool
 	Execute(ctx context.Context, input string) (string, error)
 }
 
-// BaseTool 基础工具
+// BaseTool base tool
 type BaseTool struct {
 	name        string
 	description string
 	inputSchema map[string]interface{}
 }
 
-// Name 返回工具名称
+// Name returns the tool name
 func (t *BaseTool) Name() string {
 	return t.name
 }
 
-// Description 返回工具描述
+// Description returns the tool description
 func (t *BaseTool) Description() string {
 	return t.description
 }
 
-// InputSchema 返回输入 Schema
+// InputSchema returns the input schema
 func (t *BaseTool) InputSchema() map[string]interface{} {
 	return t.inputSchema
 }
 
-// Registry 工具注册表
+// Registry tool registry
 type Registry struct {
 	tools map[string]Tool
 }
 
-// NewRegistry 创建新的注册表
+// NewRegistry creates a new registry
 func NewRegistry() *Registry {
 	return &Registry{
 		tools: make(map[string]Tool),
 	}
 }
 
-// Register 注册工具
+// Register registers a tool
 func (r *Registry) Register(tool Tool) error {
 	if _, exists := r.tools[tool.Name()]; exists {
 		return fmt.Errorf("tool %s already registered", tool.Name())
@@ -68,7 +68,7 @@ func (r *Registry) Register(tool Tool) error {
 	return nil
 }
 
-// Get 获取工具
+// Get gets a tool
 func (r *Registry) Get(name string) (Tool, error) {
 	tool, exists := r.tools[name]
 	if !exists {
@@ -77,7 +77,7 @@ func (r *Registry) Get(name string) (Tool, error) {
 	return tool, nil
 }
 
-// List 列出所有工具
+// List lists all tools
 func (r *Registry) List() []Tool {
 	tools := make([]Tool, 0, len(r.tools))
 	for _, tool := range r.tools {
@@ -86,7 +86,7 @@ func (r *Registry) List() []Tool {
 	return tools
 }
 
-// ListNames 列出所有工具名称
+// ListNames lists all tool names
 func (r *Registry) ListNames() []string {
 	names := make([]string, 0, len(r.tools))
 	for name := range r.tools {
@@ -95,7 +95,7 @@ func (r *Registry) ListNames() []string {
 	return names
 }
 
-// ToToolInfo 转换为 ToolInfo 列表
+// ToToolInfo converts to ToolInfo list
 func (r *Registry) ToToolInfo() []types.ToolInfo {
 	tools := r.List()
 	infos := make([]types.ToolInfo, len(tools))
@@ -109,52 +109,52 @@ func (r *Registry) ToToolInfo() []types.ToolInfo {
 	return infos
 }
 
-// ToolInfo 工具信息
+// ToolInfo tool info
 type ToolInfo struct {
 	Name        string                 `json:"name"`
 	Description string                 `json:"description"`
 	InputSchema map[string]interface{} `json:"input_schema"`
 }
 
-// ExecuteRequest 执行请求
+// ExecuteRequest execute request
 type ExecuteRequest struct {
 	ToolName string          `json:"tool_name"`
 	Input    json.RawMessage `json:"input"`
 }
 
-// ExecuteResponse 执行响应
+// ExecuteResponse execute response
 type ExecuteResponse struct {
 	Content string `json:"content,omitempty"`
 	Error   string `json:"error,omitempty"`
 	IsError bool   `json:"is_error"`
 }
 
-// ToolCall 工具调用
+// ToolCall tool call
 type ToolCall struct {
 	ID        string          `json:"id"`
 	Name      string          `json:"name"`
 	Arguments json.RawMessage `json:"arguments"`
 }
 
-// ToolResult 工具结果
+// ToolResult tool result
 type ToolResult struct {
 	ToolCallID string `json:"tool_call_id"`
-	Name       string `json:"name,omitempty"` // 工具名称，用于 OpenAI API
+	Name       string `json:"name,omitempty"` // tool name, used for OpenAI API
 	Content    string `json:"content"`
 	IsError    bool   `json:"is_error"`
 }
 
-// Executor 工具执行器
+// Executor tool executor
 type Executor struct {
 	registry *Registry
 }
 
-// NewExecutor 创建新的执行器
+// NewExecutor creates a new executor
 func NewExecutor(registry *Registry) *Executor {
 	return &Executor{registry: registry}
 }
 
-// Execute 执行工具调用
+// Execute executes the tool call
 func (e *Executor) Execute(ctx context.Context, call *ToolCall) (*ToolResult, error) {
 	tool, err := e.registry.Get(call.Name)
 	if err != nil {
@@ -184,7 +184,7 @@ func (e *Executor) Execute(ctx context.Context, call *ToolCall) (*ToolResult, er
 	}, nil
 }
 
-// ExecuteBatch 批量执行工具调用
+// ExecuteBatch batch executes tool calls
 func (e *Executor) ExecuteBatch(ctx context.Context, calls []*ToolCall) ([]*ToolResult, error) {
 	results := make([]*ToolResult, len(calls))
 	for i, call := range calls {
@@ -203,7 +203,7 @@ func (e *Executor) ExecuteBatch(ctx context.Context, calls []*ToolCall) ([]*Tool
 	return results, nil
 }
 
-// BuildStringSchema 构建字符串参数 Schema
+// BuildStringSchema builds string parameter schema
 func BuildStringSchema(properties map[string]struct {
 	Description string
 	Required    bool
@@ -233,7 +233,7 @@ func BuildStringSchema(properties map[string]struct {
 	return schema
 }
 
-// BuildFileSchema 构建文件操作 Schema
+// BuildFileSchema builds file operation schema
 func BuildFileSchema() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -255,7 +255,7 @@ func BuildFileSchema() map[string]interface{} {
 	}
 }
 
-// BuildEditSchema 构建编辑操作 Schema
+// BuildEditSchema builds edit operation schema
 func BuildEditSchema() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -281,7 +281,7 @@ func BuildEditSchema() map[string]interface{} {
 	}
 }
 
-// BuildBashSchema 构建 Bash 命令 Schema
+// BuildBashSchema builds Bash command schema
 func BuildBashSchema() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -307,7 +307,7 @@ func BuildBashSchema() map[string]interface{} {
 	}
 }
 
-// BuildGrepSchema 构建 Grep 搜索 Schema
+// BuildGrepSchema builds Grep search schema
 func BuildGrepSchema() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -342,7 +342,7 @@ func BuildGrepSchema() map[string]interface{} {
 	}
 }
 
-// BuildGlobSchema 构建 Glob 模式 Schema
+// BuildGlobSchema builds Glob pattern schema
 func BuildGlobSchema() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",
@@ -360,7 +360,7 @@ func BuildGlobSchema() map[string]interface{} {
 	}
 }
 
-// BuildTaskSchema 构建 Task 工具 Schema
+// BuildTaskSchema builds Task tool schema
 func BuildTaskSchema() map[string]interface{} {
 	return map[string]interface{}{
 		"type": "object",

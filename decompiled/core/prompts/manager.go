@@ -1,4 +1,4 @@
-// Package prompts 提示词管理器实现
+// Package prompts Prompt manager implementation
 package prompts
 
 import (
@@ -10,25 +10,25 @@ import (
 	"sync"
 )
 
-// DefaultManager 默认提示词管理器实例
+// DefaultManager Default prompt manager instance
 var DefaultManager Manager = NewDefaultManager()
 
-// defaultManager 提示词管理器默认实现
+// defaultManager Default prompt manager implementation
 type defaultManager struct {
 	mu      sync.RWMutex
 	prompts map[PromptType]*Prompt
 	vars    *TemplateVars
-	dataDir string // 外部提示词文件目录
+	dataDir string // External prompt files directory
 }
 
-// NewDefaultManager 创建默认提示词管理器
+// NewDefaultManager Creates the default prompt manager
 func NewDefaultManager() Manager {
 	m := &defaultManager{
 		prompts: make(map[PromptType]*Prompt),
 		vars:    DefaultTemplateVars(),
 	}
 
-	// 加载内置提示词
+	// Load built-in prompts
 	for t, p := range builtinPrompts {
 		m.prompts[t] = p
 	}
@@ -36,7 +36,7 @@ func NewDefaultManager() Manager {
 	return m
 }
 
-// NewManager 创建自定义提示词管理器
+// NewManager Creates a custom prompt manager
 func NewManager(vars *TemplateVars) Manager {
 	if vars == nil {
 		vars = DefaultTemplateVars()
@@ -46,7 +46,7 @@ func NewManager(vars *TemplateVars) Manager {
 		vars:    vars,
 	}
 
-	// 加载内置提示词
+	// Load built-in prompts
 	for t, p := range builtinPrompts {
 		m.prompts[t] = p
 	}
@@ -54,7 +54,7 @@ func NewManager(vars *TemplateVars) Manager {
 	return m
 }
 
-// SetDataDir 设置外部提示词文件目录
+// SetDataDir Sets the external prompt files directory
 func (m *defaultManager) SetDataDir(dir string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -69,11 +69,11 @@ func (m *defaultManager) SetDataDir(dir string) error {
 
 	m.dataDir = dir
 
-	// 自动加载目录中的提示词文件
+	// Auto-load prompt files in the directory
 	return m.loadFromDataDir()
 }
 
-// loadFromDataDir 从数据目录加载提示词
+// loadFromDataDir Loads prompts from the data directory
 func (m *defaultManager) loadFromDataDir() error {
 	if m.dataDir == "" {
 		return nil
@@ -92,14 +92,14 @@ func (m *defaultManager) loadFromDataDir() error {
 		name := entry.Name()
 		ext := filepath.Ext(name)
 
-		// 支持 .json, .yaml, .yml, .md 格式
+		// Supports .json, .yaml, .yml, .md formats
 		if ext != ".json" && ext != ".yaml" && ext != ".yml" && ext != ".md" {
 			continue
 		}
 
 		path := filepath.Join(m.dataDir, name)
 		if err := m.loadPromptFile(path, ext); err != nil {
-			// 记录错误但继续加载其他文件
+			// Log the error but continue loading other files
 			fmt.Fprintf(os.Stderr, "Warning: failed to load prompt file %s: %v\n", name, err)
 		}
 	}
@@ -107,7 +107,7 @@ func (m *defaultManager) loadFromDataDir() error {
 	return nil
 }
 
-// loadPromptFile 加载单个提示词文件
+// loadPromptFile Loads a single prompt file
 func (m *defaultManager) loadPromptFile(path string, ext string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -126,7 +126,7 @@ func (m *defaultManager) loadPromptFile(path string, ext string) error {
 	}
 }
 
-// loadJSONPrompt 加载 JSON 格式提示词
+// loadJSONPrompt Loads a JSON format prompt
 func (m *defaultManager) loadJSONPrompt(data []byte) error {
 	var prompt Prompt
 	if err := json.Unmarshal(data, &prompt); err != nil {
@@ -142,10 +142,10 @@ func (m *defaultManager) loadJSONPrompt(data []byte) error {
 	return nil
 }
 
-// loadYAMLPrompt 加载 YAML 格式提示词
+// loadYAMLPrompt Loads a YAML format prompt
 func (m *defaultManager) loadYAMLPrompt(data []byte) error {
-	// 简单实现，使用 JSON 作为中间格式
-	// 实际项目中可以导入 yaml 包
+	// Simple implementation, using JSON as an intermediate format
+	// In a real project the yaml package could be imported
 	var prompt Prompt
 	if err := json.Unmarshal(data, &prompt); err != nil {
 		return fmt.Errorf("unmarshal YAML (as JSON): %w", err)
@@ -160,27 +160,27 @@ func (m *defaultManager) loadYAMLPrompt(data []byte) error {
 	return nil
 }
 
-// loadMarkdownPrompt 加载 Markdown 格式提示词
+// loadMarkdownPrompt Loads a Markdown format prompt
 func (m *defaultManager) loadMarkdownPrompt(path string, data []byte) error {
-	// 从文件名提取提示词类型
+	// Extract prompt type from file name
 	base := filepath.Base(path)
 	name := strings.TrimSuffix(base, filepath.Ext(base))
 
 	promptType := PromptType(name)
 
-	// 尝试从文件内容解析 frontmatter
+	// Try to parse frontmatter from file content
 	content := string(data)
 	var title, description string
 
-	// 简单解析 YAML frontmatter
+	// Simple YAML frontmatter parsing
 	if strings.HasPrefix(content, "---") {
 		parts := strings.SplitN(content, "---", 3)
 		if len(parts) >= 3 {
-			// 解析 frontmatter
+			// Parse frontmatter
 			frontmatter := parts[1]
 			content = strings.TrimSpace(parts[2])
 
-			// 简单解析 key: value 行
+			// Simple key: value line parsing
 			for _, line := range strings.Split(frontmatter, "\n") {
 				line = strings.TrimSpace(line)
 				if strings.HasPrefix(line, "title:") {
@@ -208,7 +208,7 @@ func (m *defaultManager) loadMarkdownPrompt(path string, data []byte) error {
 	return nil
 }
 
-// Get 获取提示词
+// Get Retrieves a prompt
 func (m *defaultManager) Get(promptType PromptType) (*Prompt, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -218,19 +218,19 @@ func (m *defaultManager) Get(promptType PromptType) (*Prompt, error) {
 		return nil, fmt.Errorf("prompt not found: %s", promptType)
 	}
 
-	// 返回副本以避免外部修改
+	// Return a copy to avoid external modification
 	p := *prompt
 	return &p, nil
 }
 
-// GetRendered 获取渲染后的提示词
+// GetRendered Retrieves a rendered prompt
 func (m *defaultManager) GetRendered(promptType PromptType, vars *TemplateVars) (string, error) {
 	prompt, err := m.Get(promptType)
 	if err != nil {
 		return "", err
 	}
 
-	// 合并变量
+	// Merge variables
 	if vars == nil {
 		vars = m.vars
 	} else {
@@ -242,7 +242,7 @@ func (m *defaultManager) GetRendered(promptType PromptType, vars *TemplateVars) 
 	return prompt.Render(vars)
 }
 
-// Register 注册自定义提示词
+// Register Registers a custom prompt
 func (m *defaultManager) Register(prompt *Prompt) error {
 	if prompt == nil {
 		return fmt.Errorf("prompt cannot be nil")
@@ -261,7 +261,7 @@ func (m *defaultManager) Register(prompt *Prompt) error {
 	return nil
 }
 
-// RegisterFromFile 从文件注册提示词
+// RegisterFromFile Registers a prompt from a file
 func (m *defaultManager) RegisterFromFile(path string) error {
 	ext := filepath.Ext(path)
 	if ext == "" {
@@ -271,7 +271,7 @@ func (m *defaultManager) RegisterFromFile(path string) error {
 	return m.loadPromptFile(path, ext)
 }
 
-// List 列出所有提示词类型
+// List Lists all prompt types
 func (m *defaultManager) List() []PromptType {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -283,27 +283,27 @@ func (m *defaultManager) List() []PromptType {
 	return types
 }
 
-// GetMainAgentPrompt 获取主 Agent 提示词
+// GetMainAgentPrompt Retrieves the main Agent prompt
 func (m *defaultManager) GetMainAgentPrompt(vars *TemplateVars) (string, error) {
-	// 尝试获取自定义主 Agent 提示词
+	// Try to get a custom main Agent prompt
 	if prompt, err := m.GetRendered("custom_main_agent", vars); err == nil {
 		return prompt, nil
 	}
-	// 使用默认主 Agent 提示词
+	// Use the default main Agent prompt
 	return m.GetRendered(PromptTypeMainAgent, vars)
 }
 
-// GetSubagentPrompt 获取子 Agent 提示词
+// GetSubagentPrompt Retrieves a sub-agent prompt
 func (m *defaultManager) GetSubagentPrompt(subagentType string, vars *TemplateVars) (string, error) {
-	// 构建提示词类型
+	// Build prompt type
 	promptType := PromptType(subagentType)
 
-	// 尝试直接获取
+	// Try direct retrieval
 	if prompt, err := m.GetRendered(promptType, vars); err == nil {
 		return prompt, nil
 	}
 
-	// 尝试添加 "subagent_" 前缀
+	// Try adding the "subagent_" prefix
 	promptType = PromptType("subagent_" + subagentType)
 	if prompt, err := m.GetRendered(promptType, vars); err == nil {
 		return prompt, nil
@@ -312,39 +312,39 @@ func (m *defaultManager) GetSubagentPrompt(subagentType string, vars *TemplateVa
 	return "", fmt.Errorf("subagent prompt not found: %s", subagentType)
 }
 
-// ========== 便捷函数 ==========
+// ========== Convenience functions ==========
 
-// Get 使用默认管理器获取提示词
+// Get Retrieves a prompt using the default manager
 func Get(promptType PromptType) (*Prompt, error) {
 	return DefaultManager.Get(promptType)
 }
 
-// GetRendered 使用默认管理器获取渲染后的提示词
+// GetRendered Retrieves a rendered prompt using the default manager
 func GetRendered(promptType PromptType, vars *TemplateVars) (string, error) {
 	return DefaultManager.GetRendered(promptType, vars)
 }
 
-// Register 使用默认管理器注册提示词
+// Register Registers a prompt using the default manager
 func Register(prompt *Prompt) error {
 	return DefaultManager.Register(prompt)
 }
 
-// RegisterFromFile 使用默认管理器从文件注册
+// RegisterFromFile Registers a prompt from a file using the default manager
 func RegisterFromFile(path string) error {
 	return DefaultManager.RegisterFromFile(path)
 }
 
-// List 使用默认管理器列出提示词
+// List Lists prompts using the default manager
 func List() []PromptType {
 	return DefaultManager.List()
 }
 
-// GetMainAgentPrompt 使用默认管理器获取主 Agent 提示词
+// GetMainAgentPrompt Retrieves the main Agent prompt using the default manager
 func GetMainAgentPrompt(vars *TemplateVars) (string, error) {
 	return DefaultManager.GetMainAgentPrompt(vars)
 }
 
-// GetSubagentPrompt 使用默认管理器获取子 Agent 提示词
+// GetSubagentPrompt Retrieves a sub-agent prompt using the default manager
 func GetSubagentPrompt(subagentType string, vars *TemplateVars) (string, error) {
 	return DefaultManager.GetSubagentPrompt(subagentType, vars)
 }

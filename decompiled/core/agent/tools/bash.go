@@ -1,5 +1,5 @@
-// Package tools Bash 工具实现
-// 反编译自 qodercli v0.1.29
+// Package tools Bash tool implementation
+// Decompiled from qodercli-reverse v0.1.29
 package tools
 
 import (
@@ -13,14 +13,14 @@ import (
 	"time"
 )
 
-// BashTool Bash 工具
+// BashTool Bash tool
 type BashTool struct {
 	BaseTool
 	shellManager ShellManager
 	timeout      time.Duration
 }
 
-// BashParams Bash 参数
+// BashParams Bash parameters
 type BashParams struct {
 	Command         string `json:"command"`
 	Description     string `json:"description,omitempty"`
@@ -28,7 +28,7 @@ type BashParams struct {
 	RunInBackground bool   `json:"run_in_background,omitempty"`
 }
 
-// BashResult Bash 执行结果
+// BashResult Bash execution result
 type BashResult struct {
 	ExitCode int    `json:"exit_code"`
 	Stdout   string `json:"stdout"`
@@ -36,7 +36,7 @@ type BashResult struct {
 	ShellID  string `json:"shell_id,omitempty"`
 }
 
-// ShellManager Shell 管理器接口
+// ShellManager Shell manager interface
 type ShellManager interface {
 	Execute(ctx context.Context, command string, timeout time.Duration) (*ShellResult, error)
 	ExecuteBackground(command string) (string, error)
@@ -46,7 +46,7 @@ type ShellManager interface {
 	Restore(snapshot *ShellSnapshot) error
 }
 
-// ShellResult Shell 执行结果
+// ShellResult Shell execution result
 type ShellResult struct {
 	ExitCode int
 	Stdout   string
@@ -55,14 +55,14 @@ type ShellResult struct {
 	Running  bool
 }
 
-// ShellSnapshot Shell 快照
+// ShellSnapshot Shell snapshot
 type ShellSnapshot struct {
 	ID        string
 	Directory string
 	Env       map[string]string
 }
 
-// NewBashTool 创建 Bash 工具
+// NewBashTool creates the Bash tool
 func NewBashTool(manager ShellManager, defaultTimeout time.Duration) *BashTool {
 	return &BashTool{
 		BaseTool: BaseTool{
@@ -75,25 +75,25 @@ func NewBashTool(manager ShellManager, defaultTimeout time.Duration) *BashTool {
 	}
 }
 
-// Execute 执行 Bash 命令
+// Execute runs the Bash command
 func (t *BashTool) Execute(ctx context.Context, input string) (string, error) {
 	var params BashParams
 	if err := json.Unmarshal([]byte(input), &params); err != nil {
 		return "", fmt.Errorf("invalid input: %w", err)
 	}
 
-	// 验证命令
+	// validate command
 	if err := t.validateCommand(params.Command); err != nil {
 		return "", err
 	}
 
-	// 设置超时
+	// set timeout
 	timeout := t.timeout
 	if params.Timeout > 0 {
 		timeout = time.Duration(params.Timeout) * time.Millisecond
 	}
 
-	// 后台执行
+	// background execution
 	if params.RunInBackground {
 		shellID, err := t.shellManager.ExecuteBackground(params.Command)
 		if err != nil {
@@ -109,7 +109,7 @@ func (t *BashTool) Execute(ctx context.Context, input string) (string, error) {
 		return string(output), nil
 	}
 
-	// 前台执行
+	// foreground execution
 	shellResult, err := t.shellManager.Execute(ctx, params.Command, timeout)
 	if err != nil {
 		return "", fmt.Errorf("command execution failed: %w", err)
@@ -125,9 +125,9 @@ func (t *BashTool) Execute(ctx context.Context, input string) (string, error) {
 	return string(output), nil
 }
 
-// validateCommand 验证命令
+// validateCommand validates the command
 func (t *BashTool) validateCommand(command string) error {
-	// 检查危险命令
+	// check dangerous commands
 	dangerousPatterns := []string{
 		"rm -rf /",
 		"> /dev/sda",
@@ -144,18 +144,18 @@ func (t *BashTool) validateCommand(command string) error {
 	return nil
 }
 
-// BashOutputTool BashOutput 工具
+// BashOutputTool BashOutput tool
 type BashOutputTool struct {
 	BaseTool
 	shellManager ShellManager
 }
 
-// BashOutputParams BashOutput 参数
+// BashOutputParams BashOutput parameters
 type BashOutputParams struct {
 	ShellID string `json:"shell_id"`
 }
 
-// NewBashOutputTool 创建 BashOutput 工具
+// NewBashOutputTool creates the BashOutput tool
 func NewBashOutputTool(manager ShellManager) *BashOutputTool {
 	return &BashOutputTool{
 		BaseTool: BaseTool{
@@ -176,7 +176,7 @@ func NewBashOutputTool(manager ShellManager) *BashOutputTool {
 	}
 }
 
-// Execute 执行 BashOutput
+// Execute runs BashOutput
 func (t *BashOutputTool) Execute(ctx context.Context, input string) (string, error) {
 	var params BashOutputParams
 	if err := json.Unmarshal([]byte(input), &params); err != nil {
@@ -199,18 +199,18 @@ func (t *BashOutputTool) Execute(ctx context.Context, input string) (string, err
 	return string(output), nil
 }
 
-// KillBashTool KillBash 工具
+// KillBashTool KillBash tool
 type KillBashTool struct {
 	BaseTool
 	shellManager ShellManager
 }
 
-// KillBashParams KillBash 参数
+// KillBashParams KillBash parameters
 type KillBashParams struct {
 	ShellID string `json:"shell_id"`
 }
 
-// NewKillBashTool 创建 KillBash 工具
+// NewKillBashTool creates the KillBash tool
 func NewKillBashTool(manager ShellManager) *KillBashTool {
 	return &KillBashTool{
 		BaseTool: BaseTool{
@@ -231,7 +231,7 @@ func NewKillBashTool(manager ShellManager) *KillBashTool {
 	}
 }
 
-// Execute 执行 KillBash
+// Execute runs KillBash
 func (t *KillBashTool) Execute(ctx context.Context, input string) (string, error) {
 	var params KillBashParams
 	if err := json.Unmarshal([]byte(input), &params); err != nil {
@@ -245,13 +245,13 @@ func (t *KillBashTool) Execute(ctx context.Context, input string) (string, error
 	return fmt.Sprintf("Shell %s killed successfully", params.ShellID), nil
 }
 
-// defaultShellManager 默认 Shell 管理器
+// defaultShellManager default Shell manager
 type defaultShellManager struct {
 	shells   map[string]*runningShell
 	bashPath string
 }
 
-// runningShell 运行中的 Shell
+// runningShell running shell
 type runningShell struct {
 	ID       string
 	Cmd      *exec.Cmd
@@ -262,7 +262,7 @@ type runningShell struct {
 	Done     chan struct{}
 }
 
-// NewDefaultShellManager 创建默认 Shell 管理器
+// NewDefaultShellManager creates the default Shell manager
 func NewDefaultShellManager() ShellManager {
 	bashPath := os.Getenv("QODER_BASH_PATH")
 	if bashPath == "" {
@@ -275,7 +275,7 @@ func NewDefaultShellManager() ShellManager {
 	}
 }
 
-// Execute 执行命令
+// Execute runs the command
 func (m *defaultShellManager) Execute(ctx context.Context, command string, timeout time.Duration) (*ShellResult, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
@@ -299,7 +299,7 @@ func (m *defaultShellManager) Execute(ctx context.Context, command string, timeo
 	return result, nil
 }
 
-// ExecuteBackground 后台执行命令
+// ExecuteBackground runs the command in background
 func (m *defaultShellManager) ExecuteBackground(command string) (string, error) {
 	shellID := generateShellID()
 
@@ -327,7 +327,7 @@ func (m *defaultShellManager) ExecuteBackground(command string) (string, error) 
 	return shellID, nil
 }
 
-// Kill 终止 Shell
+// Kill terminates the shell
 func (m *defaultShellManager) Kill(shellID string) error {
 	shell, exists := m.shells[shellID]
 	if !exists {
@@ -341,7 +341,7 @@ func (m *defaultShellManager) Kill(shellID string) error {
 	return nil
 }
 
-// GetOutput 获取输出
+// GetOutput gets output
 func (m *defaultShellManager) GetOutput(shellID string) (*ShellResult, error) {
 	shell, exists := m.shells[shellID]
 	if !exists {
@@ -357,7 +357,7 @@ func (m *defaultShellManager) GetOutput(shellID string) (*ShellResult, error) {
 	}, nil
 }
 
-// Snapshot 创建快照
+// Snapshot creates snapshot
 func (m *defaultShellManager) Snapshot() (*ShellSnapshot, error) {
 	dir, _ := os.Getwd()
 	return &ShellSnapshot{
@@ -367,7 +367,7 @@ func (m *defaultShellManager) Snapshot() (*ShellSnapshot, error) {
 	}, nil
 }
 
-// Restore 恢复快照
+// Restore restores snapshot
 func (m *defaultShellManager) Restore(snapshot *ShellSnapshot) error {
 	if snapshot.Directory != "" {
 		os.Chdir(snapshot.Directory)
@@ -375,12 +375,12 @@ func (m *defaultShellManager) Restore(snapshot *ShellSnapshot) error {
 	return nil
 }
 
-// generateShellID 生成 Shell ID
+// generateShellID generates the shell ID
 func generateShellID() string {
 	return fmt.Sprintf("shell-%d", time.Now().UnixNano())
 }
 
-// GetBashPath 获取 Bash 路径
+// GetBashPath gets the Bash path
 func GetBashPath() string {
 	if path := os.Getenv("QODER_BASH_PATH"); path != "" {
 		return path
@@ -388,9 +388,9 @@ func GetBashPath() string {
 	return "/bin/bash"
 }
 
-// IsSafePath 检查路径是否安全
+// IsSafePath checks whether the path is safe
 func IsSafePath(path string) bool {
-	// 检查是否在允许的路径范围内
+	// check whether within allowed path range
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return false
@@ -401,7 +401,7 @@ func IsSafePath(path string) bool {
 		return true
 	}
 
-	// 检查是否在项目目录内
+	// check whether inside project directory
 	if cwd, err := os.Getwd(); err == nil {
 		if strings.HasPrefix(absPath, cwd) {
 			return true

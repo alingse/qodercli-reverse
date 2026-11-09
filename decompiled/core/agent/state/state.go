@@ -1,4 +1,4 @@
-// Package state Agent 状态管理
+// Package state Agent state management
 package state
 
 import (
@@ -7,7 +7,7 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/types"
 )
 
-// Stats 会话统计信息
+// Stats Session statistics
 type Stats struct {
 	TotalInputTokens  int
 	TotalOutputTokens int
@@ -16,7 +16,7 @@ type Stats struct {
 	AssistantReplies  int
 }
 
-// State Agent 状态
+// State Agent state
 type State struct {
 	messages    []types.Message
 	toolResults map[string]*types.ToolResult
@@ -24,7 +24,7 @@ type State struct {
 	mu          sync.RWMutex
 }
 
-// New 创建新的状态实例
+// New Creates a new state instance
 func New() *State {
 	return &State{
 		messages:    make([]types.Message, 0),
@@ -33,22 +33,22 @@ func New() *State {
 	}
 }
 
-// AddMessage 添加消息
+// AddMessage Adds a message
 func (s *State) AddMessage(msg *types.Message) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.messages = append(s.messages, *msg)
 }
 
-// AddToolResult 添加工具结果
+// AddToolResult Adds a tool result
 func (s *State) AddToolResult(result *types.ToolResult) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.toolResults[result.ToolCallID] = result
 
-	// 同时将工具结果作为 tool 角色的消息添加到消息列表
-	// 这样 API 才能正确识别工具调用的响应
-	// 注意：OpenAI API 要求工具响应消息必须包含 name 字段
+	// Also add the tool result as a message with the tool role to the message list
+	// so the API can correctly identify the tool call response
+	// Note: the OpenAI API requires tool response messages to include the name field
 	toolMsg := types.Message{
 		Role:       types.RoleTool,
 		Name:       result.Name,
@@ -58,21 +58,21 @@ func (s *State) AddToolResult(result *types.ToolResult) {
 	s.messages = append(s.messages, toolMsg)
 }
 
-// GetMessages 获取所有消息
+// GetMessages Returns all messages
 func (s *State) GetMessages() []types.Message {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.messages
 }
 
-// SetMessages 设置消息
+// SetMessages Sets messages
 func (s *State) SetMessages(messages []types.Message) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.messages = messages
 }
 
-// ClearMessages 清空消息
+// ClearMessages Clears messages
 func (s *State) ClearMessages() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -80,14 +80,14 @@ func (s *State) ClearMessages() {
 	s.toolResults = make(map[string]*types.ToolResult)
 }
 
-// GetToolResult 获取工具结果
+// GetToolResult Retrieves a tool result
 func (s *State) GetToolResult(toolCallID string) *types.ToolResult {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.toolResults[toolCallID]
 }
 
-// UpdateTokenUsage 更新 Token 使用统计
+// UpdateTokenUsage Updates token usage statistics
 func (s *State) UpdateTokenUsage(inputTokens, outputTokens int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -96,21 +96,21 @@ func (s *State) UpdateTokenUsage(inputTokens, outputTokens int) {
 	s.stats.TotalTokens += inputTokens + outputTokens
 }
 
-// IncrementToolCallCount 增加工具调用计数
+// IncrementToolCallCount Increments the tool call count
 func (s *State) IncrementToolCallCount() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.stats.ToolCallCount++
 }
 
-// IncrementAssistantReplies 增加助手回复计数
+// IncrementAssistantReplies Increments the assistant reply count
 func (s *State) IncrementAssistantReplies() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.stats.AssistantReplies++
 }
 
-// GetStats 获取统计信息
+// GetStats Retrieves statistics
 func (s *State) GetStats() Stats {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

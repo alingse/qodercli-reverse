@@ -1,44 +1,44 @@
-# qodercli AI/LLM 集成分析
+# qodercli-reverse AI/LLM Integration Analysis
 
-## 1. Provider 架构
+## 1. Provider Architecture
 
-### 1.1 Provider 接口层级
+### 1.1 Provider Interface Hierarchy
 
 ```
 core/agent/provider/
-├── provider/          # Provider 接口定义
-├── qoder/             # Qoder 自有 Provider (默认)
-├── openai/            # OpenAI 兼容 Provider
+├── provider/          # Provider interface definition
+├── qoder/             # Qoder proprietary Provider (default)
+├── openai/            # OpenAI-compatible Provider
 ├── idealab/           # IdeaLab Provider
-├── think/             # 思考/推理层
-├── options/           # Provider 选项
+├── think/             # Thinking/reasoning layer
+├── options/           # Provider options
 └── idealab/           # IdeaLab Provider
 ```
 
-### 1.2 核心类型
+### 1.2 Core Types
 
 ```go
-// Provider 客户端接口
+// Provider client interface
 type Client interface {
     Stream(ctx context.Context, req ModelRequest) <-chan Event
     Send(ctx context.Context, req ModelRequest) (*Response, error)
 }
 
-// 客户端构建器
+// Client builder
 type ClientBuilder interface {
     Build() (Client, error)
 }
 
-// 流式事件
+// Streaming event
 type Event struct {
     Type    EventType
     Content string
     // ...
 }
 
-type EventType int  // 事件类型枚举
+type EventType int  // Event type enum
 
-// 模型请求
+// Model request
 type ModelRequest struct {
     Model       string
     Messages    []Message
@@ -48,7 +48,7 @@ type ModelRequest struct {
     // ...
 }
 
-// 响应
+// Response
 type Response struct {
     Content     string
     ToolCalls   []ToolCall
@@ -56,35 +56,35 @@ type Response struct {
     TokenUsage  TokenUsage
 }
 
-// Token 使用量
+// Token usage
 type TokenUsage struct {
     InputTokens  int
     OutputTokens int
     TotalTokens  int
 }
 
-// 思考级别
+// Thinking level
 type ThinkLevel int
 
-// 推理努力程度
+// Reasoning effort
 type ReasoningEffort string
 ```
 
-### 1.3 具体客户端实现
+### 1.3 Concrete Client Implementations
 
 ```
-provider.QoderClient      # Qoder 自有 API 客户端
-provider.OpenAIClient     # OpenAI 兼容 API 客户端
-provider.IdeaLabClient    # IdeaLab API 客户端
-provider.baseClient       # 基础客户端 (泛型模板)
+provider.QoderClient      # Qoder proprietary API client
+provider.OpenAIClient     # OpenAI-compatible API client
+provider.IdeaLabClient    # IdeaLab API client
+provider.baseClient       # Base client (generic template)
 ```
 
-## 2. 支持的模型
+## 2. Supported Models
 
-### 2.1 Claude 系列 (Anthropic)
+### 2.1 Claude Series (Anthropic)
 
-| 模型 ID | 显示名称 |
-|---------|----------|
+| Model ID | Display Name |
+|----------|--------------|
 | `claude-3-haiku-20240307` | Claude 3 Haiku |
 | `claude-3-5-haiku-latest` | Claude 3.5 Haiku |
 | `claude-3-5-sonnet-latest` | Claude 3.5 Sonnet |
@@ -93,10 +93,10 @@ provider.baseClient       # 基础客户端 (泛型模板)
 | `claude-opus-4-0` | Claude Opus 4 |
 | `anthropic.claude-opus-4-20250514-v1:0` | Claude Opus 4 (AWS Bedrock) |
 
-### 2.2 GPT 系列 (OpenAI)
+### 2.2 GPT Series (OpenAI)
 
-| 模型 ID | 显示名称 |
-|---------|----------|
+| Model ID | Display Name |
+|----------|--------------|
 | `gpt-4o` | GPT 4o |
 | `gpt-4o-mini` | GPT 4o mini |
 | `gpt-4.1` | GPT 4.1 |
@@ -109,116 +109,116 @@ provider.baseClient       # 基础客户端 (泛型模板)
 | `o4-mini` | o4 Mini |
 | `OpenAI GPT-5` | GPT-5 |
 
-### 2.3 Qwen 系列 (DashScope)
+### 2.3 Qwen Series (DashScope)
 
-| 模型 ID | 显示名称 |
-|---------|----------|
+| Model ID | Display Name |
+|----------|--------------|
 | `qwen3-coder-plus` | Qwen3 Coder Plus |
 
-### 2.4 Qoder 模型级别
+### 2.4 Qoder Model Levels
 
-| 级别 | 说明 |
-|------|------|
-| `auto` | 自动选择最优模型 |
-| `efficient` | 高效模式 (快速响应) |
-| `performance` | 性能模式 (平衡) |
-| `ultimate` | 终极模式 (最强) |
-| `lite` | 轻量模式 |
-| `qmodel` | Q 模型 |
-| `q35model` | Q3.5 模型 |
-| `gmodel` | G 模型 (GPT) |
-| `kmodel` | K 模型 (Kimi) |
-| `mmodel` | M 模型 |
+| Level | Description |
+|-------|-------------|
+| `auto` | Automatically select the best model |
+| `efficient` | Efficient mode (fast response) |
+| `performance` | Performance mode (balanced) |
+| `ultimate` | Ultimate mode (most powerful) |
+| `lite` | Lightweight mode |
+| `qmodel` | Q model |
+| `q35model` | Q3.5 model |
+| `gmodel` | G model (GPT) |
+| `kmodel` | K model (Kimi) |
+| `mmodel` | M model |
 
-## 3. 认证机制
+## 3. Authentication Mechanism
 
-### 3.1 认证方式
+### 3.1 Authentication Methods
 
 ```
 core/auth/model/
-├── anthropic/    # Anthropic API Key 认证
-├── openai/       # OpenAI API Key 认证
-├── dashscope/    # DashScope API Key 认证
-├── idealab/      # IdeaLab API Key 认证
-├── qoder/        # Qoder OAuth/Token 认证
-├── models/       # 模型列表
-└── filter/       # 模型过滤器
+├── anthropic/    # Anthropic API Key authentication
+├── openai/       # OpenAI API Key authentication
+├── dashscope/    # DashScope API Key authentication
+├── idealab/      # IdeaLab API Key authentication
+├── qoder/        # Qoder OAuth/Token authentication
+├── models/       # Model list
+└── filter/       # Model filter
 ```
 
-### 3.2 环境变量配置
+### 3.2 Environment Variable Configuration
 
-| Provider | 环境变量 |
-|----------|----------|
+| Provider | Environment Variable |
+|----------|----------------------|
 | Qoder | `QODER_PERSONAL_ACCESS_TOKEN` |
 | Anthropic | `QODER_ANTHROPIC_API_KEY` |
 | OpenAI | `QODER_OPENAI_API_KEY` |
 | DashScope | `QODER_DASHSCOPE_API_KEY` |
 | IdeaLab | `QODER_IDEALAB_API_KEY` |
 
-### 3.3 认证流程
+### 3.3 Authentication Flow
 
 ```
-1. 检查环境变量 QODER_PERSONAL_ACCESS_TOKEN
-2. 如未设置，检查本地存储的 token (~/.qoder/)
-3. 如无有效 token，启动 OAuth 登录流程:
-   a. 打开浏览器访问 qoder.com/oauth
-   b. 轮询设备 token (Device Token Polling)
-   c. 获取 access_token 并存储
-4. 刷新 token (如已过期)
+1. Check environment variable QODER_PERSONAL_ACCESS_TOKEN
+2. If not set, check locally stored token (~/.qoder/)
+3. If no valid token, start OAuth login flow:
+   a. Open browser to qoder.com/oauth
+   b. Poll device token (Device Token Polling)
+   c. Obtain access_token and store it
+4. Refresh token (if expired)
 ```
 
-## 4. 流式传输
+## 4. Streaming
 
-### 4.1 事件类型
+### 4.1 Event Types
 
 ```
-content_block_start    # 内容块开始
-content_block_delta    # 内容块增量
-content_block_stop     # 内容块结束
-tool_use_start         # 工具调用开始
-tool_use_delta         # 工具调用增量
-tool_use_stop          # 工具调用结束
-message_start          # 消息开始
-message_delta          # 消息增量
-message_stop           # 消息结束
-thinking_delta         # 思考增量
+content_block_start    # Content block start
+content_block_delta    # Content block delta
+content_block_stop     # Content block end
+tool_use_start         # Tool call start
+tool_use_delta         # Tool call delta
+tool_use_stop          # Tool call end
+message_start          # Message start
+message_delta          # Message delta
+message_stop           # Message end
+thinking_delta         # Thinking delta
 ```
 
-### 4.2 流式处理流程
+### 4.2 Streaming Processing Flow
 
 ```
 Provider.Stream() -> chan Event
     │
     ├── Event{Type: message_start}
     ├── Event{Type: content_block_start}
-    ├── Event{Type: content_block_delta, Content: "..."} (多次)
+    ├── Event{Type: content_block_delta, Content: "..."} (multiple)
     ├── Event{Type: content_block_stop}
     │
     ├── Event{Type: tool_use_start, ToolName: "Bash"}
-    ├── Event{Type: tool_use_delta, Arguments: "..."} (多次)
+    ├── Event{Type: tool_use_delta, Arguments: "..."} (multiple)
     ├── Event{Type: tool_use_stop}
     │
     └── Event{Type: message_stop, FinishReason: "tool_use"}
 ```
 
-## 5. 消息格式转换
+## 5. Message Format Conversion
 
-### 5.1 转换器
+### 5.1 Converters
 
 ```
 core/utils/converter/
-├── anthropic/    # Anthropic 格式 <-> 内部格式
-└── qoder/        # Qoder 格式 <-> 内部格式
+├── anthropic/    # Anthropic format <-> internal format
+└── qoder/        # Qoder format <-> internal format
 ```
 
-### 5.2 消息类型
+### 5.2 Message Types
 
 ```go
 type Message struct {
     Role       string        // "user", "assistant", "system"
-    Content    []ContentPart // 多部分内容
-    ToolCalls  []ToolCall    // 工具调用
-    ToolCallID string        // 工具调用 ID (用于 tool 结果)
+    Content    []ContentPart // Multi-part content
+    ToolCalls  []ToolCall    // Tool calls
+    ToolCallID string        // Tool call ID (for tool result)
 }
 
 type ContentPart struct {
@@ -230,101 +230,101 @@ type ContentPart struct {
 type ImageSource struct {
     Type      string // "base64", "url"
     MediaType string // "image/png", "image/jpeg"
-    Data      string // base64 数据或 URL
+    Data      string // base64 data or URL
 }
 
 type ToolCall struct {
     ID        string
     Name      string
-    Arguments string // JSON 字符串
+    Arguments string // JSON string
 }
 ```
 
-## 6. Token 管理
+## 6. Token Management
 
-### 6.1 Token 计算
+### 6.1 Token Calculation
 
 ```
 core/utils/tokens/
-└── tokens.go    # Token 计算和追踪
+└── tokens.go    # Token calculation and tracking
 ```
 
-### 6.2 相关环境变量
+### 6.2 Related Environment Variables
 
 ```
-QODER_SHOW_TOKEN_USAGE     # 显示 Token 用量
-QODER_EXPOSE_TOKEN_USAGE   # 暴露 Token 用量给 API
+QODER_SHOW_TOKEN_USAGE     # Show token usage
+QODER_EXPOSE_TOKEN_USAGE   # Expose token usage to API
 ```
 
-### 6.3 Token 使用统计
+### 6.3 Token Usage Statistics
 
 ```go
 type TokenUsage struct {
     InputTokens         int
     OutputTokens        int
     TotalTokens         int
-    CachedTokens        int      // 缓存命中的 Token
-    PreContextTokens    int      // 上下文前 Token
-    PostContextTokens   int      // 上下文后 Token
-    CompressionTokens   int      // 压缩节省的 Token
+    CachedTokens        int      // Tokens hit from cache
+    PreContextTokens    int      // Tokens before context
+    PostContextTokens   int      // Tokens after context
+    CompressionTokens   int      // Tokens saved by compaction
 }
 ```
 
-## 7. API 端点
+## 7. API Endpoints
 
-### 7.1 Qoder 自有 API
+### 7.1 Qoder Proprietary API
 
-| 端点 | 说明 |
-|------|------|
-| `https://openapi.qoder.sh` | OpenAPI 服务 |
-| `https://center.qoder.sh` | 中心服务 |
-| `https://daily.qoder.ai` | 日常服务 |
+| Endpoint | Description |
+|----------|-------------|
+| `https://openapi.qoder.sh` | OpenAPI service |
+| `https://center.qoder.sh` | Center service |
+| `https://daily.qoder.ai` | Daily service |
 | `https://api2.qoder.sh` | API v2 |
-| `https://qts2.qoder.sh` | QTS 服务 |
-| `https://test.qoder.ai` | 测试环境 |
+| `https://qts2.qoder.sh` | QTS service |
+| `https://test.qoder.ai` | Test environment |
 
-### 7.2 API 路径
+### 7.2 API Paths
 
-| 路径 | 说明 |
-|------|------|
-| `/api/v1/userinfo` | 用户信息 |
-| `/api/v1/deviceToken/poll` | 设备 Token 轮询 |
-| `/api/v1/tracking` | 事件追踪 |
-| `/api/v1/heartbeat` | 心跳 |
-| `/api/v2/model/list` | 模型列表 |
-| `/api/v2/quota/usage` | 配额使用 |
-| `/api/v2/user/plan` | 用户计划 |
-| `/api/v3/user/status` | 用户状态 |
-| `/algo/api/v2/user/plan` | 用户计划 (算法) |
-| `/algo/api/v2/quota/usage` | 配额使用 (算法) |
+| Path | Description |
+|------|-------------|
+| `/api/v1/userinfo` | User info |
+| `/api/v1/deviceToken/poll` | Device token polling |
+| `/api/v1/tracking` | Event tracking |
+| `/api/v1/heartbeat` | Heartbeat |
+| `/api/v2/model/list` | Model list |
+| `/api/v2/quota/usage` | Quota usage |
+| `/api/v2/user/plan` | User plan |
+| `/api/v3/user/status` | User status |
+| `/algo/api/v2/user/plan` | User plan (algorithm) |
+| `/algo/api/v2/quota/usage` | Quota usage (algorithm) |
 
-## 8. 请求头
+## 8. Request Headers
 
 ```
-Cosy-ClientIp        # 客户端 IP
-Cosy-ClientType      # 客户端类型
-Cosy-MachineType     # 机器类型
-Cosy-Data-Policy     # 数据策略
-Cosy-User            # 用户标识
-Cosy-Date            # 日期
-Cosy-Version         # 版本
-Cosy-Organization-Id # 组织 ID
-Cosy-Organization-Tags # 组织标签
-Cosy-Key             # 密钥
-X-Model-Key          # 模型密钥
-X-Model-Source       # 模型来源
-X-Request-Id         # 请求 ID
-X-Machine-Id         # 机器 ID
-X-Machine-OS         # 机器操作系统
-X-IDE-Platform       # IDE 平台
-X-Client-Timestamp   # 客户端时间戳
+Cosy-ClientIp        # Client IP
+Cosy-ClientType      # Client type
+Cosy-MachineType     # Machine type
+Cosy-Data-Policy     # Data policy
+Cosy-User            # User identifier
+Cosy-Date            # Date
+Cosy-Version         # Version
+Cosy-Organization-Id # Organization ID
+Cosy-Organization-Tags # Organization tags
+Cosy-Key             # Secret key
+X-Model-Key          # Model key
+X-Model-Source       # Model source
+X-Request-Id         # Request ID
+X-Machine-Id         # Machine ID
+X-Machine-OS         # Machine OS
+X-IDE-Platform       # IDE platform
+X-Client-Timestamp   # Client timestamp
 ```
 
-## 9. 特殊功能
+## 9. Special Features
 
-### 9.1 思考模式 (Thinking)
+### 9.1 Thinking Mode
 
-支持扩展思考的模型可以启用思考模式:
+Models supporting extended thinking can enable thinking mode:
 
 ```
 \bthink about it\b
@@ -333,15 +333,15 @@ X-Client-Timestamp   # 客户端时间戳
 \bthink hard\b
 \bthink more\b
 \bultrathink\b
-\bdenk gründlich nach\b      # 德语
-\bnachdenken\b               # 德语
-\briflettere\b               # 意大利语
-\bpensare profondamente\b    # 意大利语
-\bpensando\b                 # 西班牙语
-\bpiensa profundamente\b     # 西班牙语
+\bdenk gründlich nach\b      # German
+\b nachdenken\b               # German
+\briflettere\b               # Italian
+\bpensare profondamente\b    # Italian
+\bpensando\b                 # Spanish
+\bpiensa profundamente\b     # Spanish
 ```
 
-### 9.2 缓存控制
+### 9.2 Cache Control
 
 ```
 cache_control
@@ -349,13 +349,13 @@ budget_tokens
 cache_creation_input_tokens
 ```
 
-### 9.3 引用 (Citations)
+### 9.3 Citations
 
-支持返回回答中的引用来源。
+Supports returning citation sources in answers.
 
-## 10. 错误处理
+## 10. Error Handling
 
-### 10.1 错误类型
+### 10.1 Error Types
 
 ```go
 type ErrorResponse struct {
@@ -369,14 +369,16 @@ type ErrorData struct {
 }
 ```
 
-### 10.2 常见错误
+### 10.2 Common Errors
 
-| 错误 | 说明 |
-|------|------|
-| `invalid token` | Token 无效 |
-| `model not available` | 模型不可用 |
-| `token output exceeded` | 输出 Token 超限 |
-| `exceeded max turns` | 超过最大循环次数 |
-| `[EXCEED_QUOTA]` | 配额超限 |
-| `ip_banned_error` | IP 被封禁 |
-| `app_disabled_error` | 应用被禁用 |
+| Error | Description |
+|-------|-------------|
+| `invalid token` | Invalid token |
+| `model not available` | Model unavailable |
+| `token output exceeded` | Output token limit exceeded |
+| `exceeded max turns` | Maximum loop iterations exceeded |
+| `[EXCEED_QUOTA]` | Quota exceeded |
+| `ip_banned_error` | IP banned |
+| `app_disabled_error` | Application disabled |<|end|><|start|>write to=assistant<|channel|>analysis<|message|>Wrote file successfully: docs/03-llm-integration.md<|end|><|end|>assistant<|channel|>analysis<|message|>Wait, in 9.1 I accidentally wrote "\b nachdenken\b" with a space. Original was "\bnachdenken\b". Let me fix.<|end|><|start|> fileList <|constrain|>xml<|message|><rfl:parameter name="oldString">
+\bdenk gründlich nach\b      # German
+\b nachdenken\b               # German

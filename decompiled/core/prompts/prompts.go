@@ -1,17 +1,17 @@
-// Package prompts 系统提示词管理
-// 参考官方架构: code.alibaba-inc.com/qoder-core/qodercli/core/agent
+// Package prompts System prompt management
+// Reference official architecture: code.alibaba-inc.com/qoder-core/qodercli-reverse/core/agent
 //
-// 官方二进制中发现的提示词相关路径:
-// - code.alibaba-inc.com/qoder-core/qodercli/core/agent.(*agentContext).GetSystemPrompt
-// - code.alibaba-inc.com/qoder-core/qodercli/core/resource/command.(*Command).RenderPrompt
-// - code.alibaba-inc.com/qoder-core/qodercli/core/resource/command.loadBuiltinPromptsCommands
-// - code.alibaba-inc.com/qoder-core/qodercli/tui/texts.(*Service).GetText
+// Prompt-related paths discovered in the official binary:
+// - code.alibaba-inc.com/qoder-core/qodercli-reverse/core/agent.(*agentContext).GetSystemPrompt
+// - code.alibaba-inc.com/qoder-core/qodercli-reverse/core/resource/command.(*Command).RenderPrompt
+// - code.alibaba-inc.com/qoder-core/qodercli-reverse/core/resource/command.loadBuiltinPromptsCommands
+// - code.alibaba-inc.com/qoder-core/qodercli-reverse/tui/texts.(*Service).GetText
 //
-// 本包实现了系统提示词的统一管理，支持:
-// 1. 内置提示词（常量定义）
-// 2. 外部提示词文件加载
-// 3. 模板变量替换
-// 4. 角色定义组合
+// This package implements unified management of system prompts, supporting:
+// 1. Built-in prompts (constant definitions)
+// 2. Loading external prompt files
+// 3. Template variable substitution
+// 4. Role definition composition
 package prompts
 
 import (
@@ -21,19 +21,19 @@ import (
 	"text/template"
 )
 
-// TemplateVars 提示词模板变量
+// TemplateVars Prompt template variables
 type TemplateVars struct {
-	// 基础信息
-	AppName     string // 应用名称 (如 "qodercli")
-	BrandName   string // 品牌名称 (如 "Qoder")
-	ProductName string // 产品名称
-	Version     string // 版本号
+	// Basic info
+	AppName     string // Application name (e.g. "qodercli-reverse")
+	BrandName   string // Brand name (e.g. "Qoder")
+	ProductName string // Product name
+	Version     string // Version number
 
-	// Agent 配置
-	RoleDefinition string // 角色定义
-	AgentName      string // Agent 名称
+	// Agent config
+	RoleDefinition string // Role definition
+	AgentName      string // Agent name
 
-	// 工具名称（可配置）
+	// Tool names (configurable)
 	ReadToolName         string
 	BashToolName         string
 	BashOutputToolName   string
@@ -43,30 +43,30 @@ type TemplateVars struct {
 	SearchSymbolTool     string
 	BrowserUseToolPrefix string
 
-	// 输出样式
+	// Output style
 	OutputStyleName   string
 	OutputStylePrompt string
 
-	// 超时配置
+	// Timeout config
 	MaxTimeoutMs      int
 	MaxTimeoutMin     int
 	DefaultTimeoutMs  int
 	DefaultTimeoutMin int
 
-	// 动态内容
-	PlanFilePath    string // Plan 文件路径
-	ContextDirs     string // 上下文目录
-	Language        string // 用户语言
-	PreviousSummary string // 会话摘要
+	// Dynamic content
+	PlanFilePath    string // Plan file path
+	ContextDirs     string // Context directories
+	Language        string // User language
+	PreviousSummary string // Session summary
 
-	// 自定义变量
+	// Custom variables
 	Custom map[string]string
 }
 
-// DefaultTemplateVars 返回默认模板变量
+// DefaultTemplateVars Returns default template variables
 func DefaultTemplateVars() *TemplateVars {
 	return &TemplateVars{
-		AppName:              "qodercli",
+		AppName:              "qodercli-reverse",
 		BrandName:            "Qoder",
 		ProductName:          "Qoder CLI",
 		Version:              "0.1.29",
@@ -86,7 +86,7 @@ func DefaultTemplateVars() *TemplateVars {
 	}
 }
 
-// Merge 合并另一个 TemplateVars
+// Merge Merges another TemplateVars
 func (v *TemplateVars) Merge(other *TemplateVars) *TemplateVars {
 	if other.AppName != "" {
 		v.AppName = other.AppName
@@ -115,7 +115,7 @@ func (v *TemplateVars) Merge(other *TemplateVars) *TemplateVars {
 	return v
 }
 
-// Get 获取变量值，优先从 Custom 获取
+// Get Retrieves a variable value, preferring Custom
 func (v *TemplateVars) Get(key string) string {
 	if val, ok := v.Custom[key]; ok {
 		return val
@@ -166,17 +166,17 @@ func (v *TemplateVars) Get(key string) string {
 	}
 }
 
-// PromptType 提示词类型
+// PromptType Prompt type
 type PromptType string
 
 const (
-	// 主 Agent 提示词
+	// Main Agent prompts
 	PromptTypeMainAgent            PromptType = "main_agent"
 	PromptTypeMainAgentEducational PromptType = "main_agent_educational"
 	PromptTypeMainAgentPractice    PromptType = "main_agent_practice"
 	PromptTypeGenericTask          PromptType = "generic_task"
 
-	// 子 Agent 提示词
+	// Sub-agent prompts
 	PromptTypeBrowserSubagent      PromptType = "browser_subagent"
 	PromptTypeCodeImplement        PromptType = "code_implement"
 	PromptTypeTaskExecutor         PromptType = "task_executor"
@@ -202,12 +202,12 @@ const (
 	PromptTypeSpecLeader           PromptType = "spec_leader"
 	PromptTypeExploreAgent         PromptType = "explore_agent"
 
-	// IDE 集成提示词
+	// IDE integration prompts
 	PromptTypeQoderWork    PromptType = "qoderwork"
 	PromptTypeQoderStudio  PromptType = "qoder_studio"
 	PromptTypeQoderDesktop PromptType = "qoder_desktop"
 
-	// 专项提示词
+	// Specialized prompts
 	PromptTypeConversationSummary PromptType = "conversation_summary"
 	PromptTypeAgentArchitect      PromptType = "agent_architect"
 	PromptTypeCommandArchitect    PromptType = "command_architect"
@@ -216,17 +216,17 @@ const (
 	PromptTypePlanModeReturn      PromptType = "plan_mode_return"
 )
 
-// Prompt 提示词定义
+// Prompt Prompt definition
 type Prompt struct {
 	Type        PromptType
 	Name        string
 	Description string
 	Template    string
 	IsBuiltIn   bool
-	Vars        []string // 所需的模板变量
+	Vars        []string // Required template variables
 }
 
-// Render 渲染提示词模板
+// Render Renders the prompt template
 func (p *Prompt) Render(vars *TemplateVars) (string, error) {
 	if vars == nil {
 		vars = DefaultTemplateVars()
@@ -252,7 +252,7 @@ func (p *Prompt) Render(vars *TemplateVars) (string, error) {
 	return buf.String(), nil
 }
 
-// RenderWithVars 使用 map 渲染提示词
+// RenderWithVars Renders the prompt using a map
 func (p *Prompt) RenderWithVars(vars map[string]string) (string, error) {
 	tv := DefaultTemplateVars()
 	for k, v := range vars {
@@ -261,13 +261,13 @@ func (p *Prompt) RenderWithVars(vars map[string]string) (string, error) {
 	return p.Render(tv)
 }
 
-// SystemPromptBuilder 系统提示词构建器
+// SystemPromptBuilder System prompt builder
 type SystemPromptBuilder struct {
 	parts []string
 	vars  *TemplateVars
 }
 
-// NewSystemPromptBuilder 创建新的构建器
+// NewSystemPromptBuilder Creates a new builder
 func NewSystemPromptBuilder(vars *TemplateVars) *SystemPromptBuilder {
 	if vars == nil {
 		vars = DefaultTemplateVars()
@@ -278,7 +278,7 @@ func NewSystemPromptBuilder(vars *TemplateVars) *SystemPromptBuilder {
 	}
 }
 
-// AddRoleDefinition 添加角色定义
+// AddRoleDefinition Adds a role definition
 func (b *SystemPromptBuilder) AddRoleDefinition(role string) *SystemPromptBuilder {
 	if role != "" {
 		b.parts = append(b.parts, role)
@@ -286,7 +286,7 @@ func (b *SystemPromptBuilder) AddRoleDefinition(role string) *SystemPromptBuilde
 	return b
 }
 
-// AddCoreInstructions 添加核心指令
+// AddCoreInstructions Adds core instructions
 func (b *SystemPromptBuilder) AddCoreInstructions(instructions string) *SystemPromptBuilder {
 	if instructions != "" {
 		b.parts = append(b.parts, instructions)
@@ -294,7 +294,7 @@ func (b *SystemPromptBuilder) AddCoreInstructions(instructions string) *SystemPr
 	return b
 }
 
-// AddToolRules 添加工具使用规则
+// AddToolRules Adds tool usage rules
 func (b *SystemPromptBuilder) AddToolRules(rules string) *SystemPromptBuilder {
 	if rules != "" {
 		b.parts = append(b.parts, "## Tool Usage Rules", rules)
@@ -302,7 +302,7 @@ func (b *SystemPromptBuilder) AddToolRules(rules string) *SystemPromptBuilder {
 	return b
 }
 
-// AddFileOperationRules 添加文件操作规则
+// AddFileOperationRules Adds file operation rules
 func (b *SystemPromptBuilder) AddFileOperationRules(rules string) *SystemPromptBuilder {
 	if rules != "" {
 		b.parts = append(b.parts, "## File Operation Rules", rules)
@@ -310,7 +310,7 @@ func (b *SystemPromptBuilder) AddFileOperationRules(rules string) *SystemPromptB
 	return b
 }
 
-// AddOutputFormatRules 添加输出格式规则
+// AddOutputFormatRules Adds output format rules
 func (b *SystemPromptBuilder) AddOutputFormatRules(rules string) *SystemPromptBuilder {
 	if rules != "" {
 		b.parts = append(b.parts, "## Output Format Rules", rules)
@@ -318,7 +318,7 @@ func (b *SystemPromptBuilder) AddOutputFormatRules(rules string) *SystemPromptBu
 	return b
 }
 
-// AddCustomSection 添加自定义章节
+// AddCustomSection Adds a custom section
 func (b *SystemPromptBuilder) AddCustomSection(title, content string) *SystemPromptBuilder {
 	if content != "" {
 		b.parts = append(b.parts, fmt.Sprintf("## %s", title), content)
@@ -326,12 +326,12 @@ func (b *SystemPromptBuilder) AddCustomSection(title, content string) *SystemPro
 	return b
 }
 
-// Build 构建最终提示词
+// Build Builds the final prompt
 func (b *SystemPromptBuilder) Build() string {
 	return strings.Join(b.parts, "\n\n")
 }
 
-// BuildWithTemplate 使用模板构建
+// BuildWithTemplate Builds using a template
 func (b *SystemPromptBuilder) BuildWithTemplate(tmpl string) (string, error) {
 	prompt := &Prompt{
 		Template: tmpl,
@@ -339,26 +339,26 @@ func (b *SystemPromptBuilder) BuildWithTemplate(tmpl string) (string, error) {
 	return prompt.Render(b.vars)
 }
 
-// Manager 提示词管理器接口
+// Manager Prompt manager interface
 type Manager interface {
-	// Get 获取指定类型的提示词
+	// Get Retrieves the prompt of the specified type
 	Get(promptType PromptType) (*Prompt, error)
 
-	// GetRendered 获取渲染后的提示词
+	// GetRendered Retrieves the rendered prompt
 	GetRendered(promptType PromptType, vars *TemplateVars) (string, error)
 
-	// Register 注册自定义提示词
+	// Register Registers a custom prompt
 	Register(prompt *Prompt) error
 
-	// RegisterFromFile 从文件加载并注册提示词
+	// RegisterFromFile Loads and registers a prompt from a file
 	RegisterFromFile(path string) error
 
-	// List 列出所有可用的提示词类型
+	// List Lists all available prompt types
 	List() []PromptType
 
-	// GetMainAgentPrompt 获取主 Agent 提示词（常用快捷方法）
+	// GetMainAgentPrompt Retrieves the main Agent prompt (common shortcut method)
 	GetMainAgentPrompt(vars *TemplateVars) (string, error)
 
-	// GetSubagentPrompt 获取子 Agent 提示词
+	// GetSubagentPrompt Retrieves a sub-agent prompt
 	GetSubagentPrompt(subagentType string, vars *TemplateVars) (string, error)
 }

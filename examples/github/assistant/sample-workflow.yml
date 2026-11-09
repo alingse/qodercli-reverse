@@ -1,0 +1,29 @@
+name: Qoder Assistant
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  assistant:
+    if: contains(github.event.comment.body, '@qoder') && !endsWith(github.event.comment.user.login, '[bot]')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+      - run: cd decompiled && go build -o /usr/local/bin/qodercli-reverse .
+      - env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          qodercli-reverse assistant \
+            --repo ${{ github.repository }} \
+            --issue ${{ github.event.issue.number }} \
+            --comment "${{ github.event.comment.body }}" \
+            --author "${{ github.event.comment.user.login }}" \
+            --post

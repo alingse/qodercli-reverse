@@ -4,7 +4,7 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/config"
 )
 
-// Flags 包含所有 CLI 标志 - 严格对齐官方
+// Flags contains all CLI flags - strictly aligned with official
 type Flags struct {
 	Model           string
 	MaxTokens       int
@@ -16,16 +16,16 @@ type Flags struct {
 	DisallowedTools []string
 	Workspace       string
 
-	// 官方标志
+	// Official flags
 	WithClaudeConfig bool // Load .claude configuration
-	Debug            bool // 启用调试模式
+	Debug            bool // Enable debug mode
 }
 
-// LoadConfig 从标志和环境变量加载配置
+// LoadConfig loads config from flags and env vars
 func LoadConfig(flags *Flags) *config.Config {
 	cfg := config.LoadFromEnv()
 
-	// CLI 标志覆盖环境变量
+	// CLI flags override env vars
 	if flags.Model != "" && flags.Model != "auto" {
 		cfg.Model = flags.Model
 	}

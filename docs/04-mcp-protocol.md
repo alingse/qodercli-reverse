@@ -1,37 +1,37 @@
-# qodercli MCP 协议实现分析
+# qodercli-reverse MCP Protocol Implementation Analysis
 
-## 1. MCP 架构概述
+## 1. MCP Architecture Overview
 
-MCP (Model Context Protocol) 是 qodercli 用于扩展 AI 能力的核心协议，允许集成外部工具、资源和提示。
+MCP (Model Context Protocol) is the core protocol qodercli-reverse uses to extend AI capabilities, allowing integration of external tools, resources, and prompts.
 
-### 1.1 包结构
+### 1.1 Package Structure
 
 ```
 core/resource/mcp/
-├── mcp/                    # MCP 核心实现
-├── mcp_ipc_client_unix/    # Unix IPC 客户端
-├── mcps/                   # MCP 服务器列表管理
-├── process/                # MCP 进程管理
-└── token_store/            # MCP Token 存储
+├── mcp/                    # MCP core implementation
+├── mcp_ipc_client_unix/    # Unix IPC client
+├── mcps/                   # MCP server list management
+├── process/                # MCP process management
+└── token_store/            # MCP Token storage
 
 cmd/mcp/
-├── add/                    # 添加 MCP 服务器
-├── auth/                   # MCP OAuth 认证
-├── get/                    # 获取 MCP 服务器信息
-├── list/                   # 列出 MCP 服务器
-└── remove/                 # 移除 MCP 服务器
+├── add/                    # Add MCP server
+├── auth/                   # MCP OAuth authentication
+├── get/                    # Get MCP server info
+├── list/                   # List MCP servers
+└── remove/                 # Remove MCP server
 ```
 
-## 2. MCP 服务器配置
+## 2. MCP Server Configuration
 
-### 2.1 配置文件位置
+### 2.1 Configuration File Location
 
 ```
-~/.mcp.json           # 全局 MCP 配置
-./.mcp.json           # 项目级 MCP 配置
+~/.mcp.json           # Global MCP configuration
+./.mcp.json           # Project-level MCP configuration
 ```
 
-### 2.2 配置格式
+### 2.2 Configuration Format
 
 ```json
 {
@@ -48,61 +48,61 @@ cmd/mcp/
 }
 ```
 
-### 2.3 服务器类型
+### 2.3 Server Types
 
-- **stdio**: 通过标准输入输出通信
-- **sse**: 通过 Server-Sent Events 通信
-- **http**: 通过 HTTP 通信
+- **stdio**: Communicate via standard input/output
+- **sse**: Communicate via Server-Sent Events
+- **http**: Communicate via HTTP
 
-## 3. MCP 协议方法
+## 3. MCP Protocol Methods
 
-### 3.1 核心方法
+### 3.1 Core Methods
 
-| 方法 | 说明 |
-|------|------|
-| `initialize` | 初始化连接 |
-| `tools/list` | 列出可用工具 |
-| `tools/call` | 调用工具 |
-| `resources/list` | 列出可用资源 |
-| `resources/read` | 读取资源 |
-| `resources/templates/list` | 列出资源模板 |
-| `resources/subscribe` | 订阅资源更新 |
-| `resources/unsubscribe` | 取消订阅 |
-| `prompts/list` | 列出可用提示 |
-| `prompts/get` | 获取提示 |
-| `logging/setLevel` | 设置日志级别 |
+| Method | Description |
+|--------|-------------|
+| `initialize` | Initialize connection |
+| `tools/list` | List available tools |
+| `tools/call` | Call a tool |
+| `resources/list` | List available resources |
+| `resources/read` | Read a resource |
+| `resources/templates/list` | List resource templates |
+| `resources/subscribe` | Subscribe to resource updates |
+| `resources/unsubscribe` | Unsubscribe |
+| `prompts/list` | List available prompts |
+| `prompts/get` | Get a prompt |
+| `logging/setLevel` | Set log level |
 
-### 3.2 通知类型
+### 3.2 Notification Types
 
-| 通知 | 说明 |
-|------|------|
-| `notifications/resources/list_changed` | 资源列表变更 |
-| `notifications/prompts/list_changed` | 提示列表变更 |
-| `notifications/tools/list_changed` | 工具列表变更 |
+| Notification | Description |
+|--------------|-------------|
+| `notifications/resources/list_changed` | Resource list changed |
+| `notifications/prompts/list_changed` | Prompt list changed |
+| `notifications/tools/list_changed` | Tool list changed |
 
-## 4. 工具集成
+## 4. Tool Integration
 
-### 4.1 工具命名规范
+### 4.1 Tool Naming Convention
 
-MCP 工具在 qodercli 中以 `mcp__<server>__<tool>` 格式命名：
-
-```
-mcp__browser-use__*          # browser-use 服务器的所有工具
-mcp__quest__search_codebase  # quest 服务器的搜索代码库工具
-mcp__acp__delete_file        # ACP 服务器的删除文件工具
-```
-
-### 4.2 工具调用流程
+MCP tools are named in the format `mcp__<server>__<tool>` in qodercli-reverse:
 
 ```
-1. Agent 决定调用 MCP 工具
-2. core/resource/mcp/mcp.go 查找对应服务器
-3. 通过 IPC/HTTP 发送 tools/call 请求
-4. MCP 服务器执行工具
-5. 返回结果给 Agent
+mcp__browser-use__*          # All tools of the browser-use server
+mcp__quest__search_codebase  # search_codebase tool of the quest server
+mcp__acp__delete_file        # delete_file tool of the ACP server
 ```
 
-### 4.3 工具定义格式
+### 4.2 Tool Call Flow
+
+```
+1. Agent decides to call an MCP tool
+2. core/resource/mcp/mcp.go locates the corresponding server
+3. Send tools/call request via IPC/HTTP
+4. MCP server executes the tool
+5. Return result to Agent
+```
+
+### 4.3 Tool Definition Format
 
 ```json
 {
@@ -121,70 +121,70 @@ mcp__acp__delete_file        # ACP 服务器的删除文件工具
 }
 ```
 
-## 5. 资源管理
+## 5. Resource Management
 
-### 5.1 资源类型
+### 5.1 Resource Types
 
-- **文本资源**: `text/plain`, `text/markdown`, `text/html`
-- **二进制资源**: 通过 base64 编码
-- **资源链接**: `resource_link`
+- **Text resources**: `text/plain`, `text/markdown`, `text/html`
+- **Binary resources**: via base64 encoding
+- **Resource links**: `resource_link`
 
-### 5.2 资源 URI 格式
-
-```
-file:///path/to/file          # 文件资源
-qoder:///agent/...            # Qoder 内部资源
-```
-
-## 6. OAuth 认证
-
-### 6.1 OAuth 流程
+### 5.2 Resource URI Format
 
 ```
-1. 用户执行 `qodercli mcp auth <server>`
-2. 发现 OAuth 配置 (.well-known/oauth-protected-resource)
-3. 生成 code_verifier 和 code_challenge
-4. 打开浏览器进行授权
-5. 回调获取 authorization_code
-6. 交换 access_token
-7. 存储 token 到 token_store
+file:///path/to/file          # File resource
+qoder:///agent/...            # Qoder internal resource
 ```
 
-### 6.2 相关字段
+## 6. OAuth Authentication
+
+### 6.1 OAuth Flow
+
+```
+1. User runs `qodercli-reverse mcp auth <server>`
+2. Discover OAuth configuration (.well-known/oauth-protected-resource)
+3. Generate code_verifier and code_challenge
+4. Open browser for authorization
+5. Callback obtains authorization_code
+6. Exchange access_token
+7. Store token in token_store
+```
+
+### 6.2 Related Fields
 
 ```
 response_type        # "code"
 code_challenge       # PKCE challenge
 code_challenge_method # "S256"
-redirect_uri         # 回调地址
-client_id            # 客户端 ID
-client_secret        # 客户端密钥 (可选)
+redirect_uri         # Callback URL
+client_id            # Client ID
+client_secret        # Client secret (optional)
 ```
 
-## 7. 进程管理
+## 7. Process Management
 
-### 7.1 进程生命周期
+### 7.1 Process Lifecycle
 
 ```
 core/resource/mcp/process/
-├── 启动 MCP 服务器进程
-├── 管理进程状态
-├── 处理进程崩溃和重启
-└── 清理进程资源
+├── Start MCP server process
+├── Manage process state
+├── Handle process crashes and restarts
+└── Clean up process resources
 ```
 
-### 7.2 IPC 通信 (Unix)
+### 7.2 IPC Communication (Unix)
 
 ```
 core/resource/mcp/mcp_ipc_client_unix/
-├── Unix socket 通信
-├── JSON-RPC 消息封装
-└── 异步消息处理
+├── Unix socket communication
+├── JSON-RPC message encapsulation
+└── Asynchronous message handling
 ```
 
-## 8. JSON-RPC 协议
+## 8. JSON-RPC Protocol
 
-### 8.1 请求格式
+### 8.1 Request Format
 
 ```json
 {
@@ -200,7 +200,7 @@ core/resource/mcp/mcp_ipc_client_unix/
 }
 ```
 
-### 8.2 响应格式
+### 8.2 Response Format
 
 ```json
 {
@@ -217,7 +217,7 @@ core/resource/mcp/mcp_ipc_client_unix/
 }
 ```
 
-### 8.3 错误格式
+### 8.3 Error Format
 
 ```json
 {
@@ -231,12 +231,12 @@ core/resource/mcp/mcp_ipc_client_unix/
 }
 ```
 
-## 9. MCP 与 Agent 集成
+## 9. MCP and Agent Integration
 
-### 9.1 工具注册
+### 9.1 Tool Registration
 
 ```go
-// MCP 工具转换为 Agent 工具
+// Convert MCP tool to Agent tool
 func ToACPToolCall(mcpTool MCPTool) ToolCall {
     return ToolCall{
         ID:        generateID(),
@@ -246,58 +246,58 @@ func ToACPToolCall(mcpTool MCPTool) ToolCall {
 }
 ```
 
-### 9.2 权限控制
+### 9.2 Permission Control
 
-MCP 工具调用受 qodercli 权限系统控制：
+MCP tool calls are governed by the qodercli-reverse permission system:
 
 ```
 core/agent/permission/mcp_rule_matcher/
-├── 检查 MCP 工具调用权限
-├── 应用 config_rule 规则
-└── 用户确认 (如需要)
+├── Check MCP tool call permission
+├── Apply config_rule rules
+└── User confirmation (if needed)
 ```
 
-### 9.3 结果处理
+### 9.3 Result Handling
 
 ```go
 func ToToolCallResult(result MCPResult) ToolResult {
-    // 将 MCP 结果转换为 Agent 可用格式
+    // Convert MCP result into Agent-usable format
 }
 ```
 
-## 10. 内置 MCP 服务器
+## 10. Built-in MCP Servers
 
-### 10.1 ACP 服务器
+### 10.1 ACP Server
 
 ```
 acp/mcp_server/
-├── 提供 delete_file 等工具
-└── 与 ACP 协议集成
+├── Provides tools such as delete_file
+└── Integrates with the ACP protocol
 ```
 
-### 10.2 Quest 适配器
+### 10.2 Quest Adapter
 
 ```
 quest-mcp-adaptor
-├── 提供 search_codebase 工具
-└── 代码库搜索功能
+├── Provides search_codebase tool
+└── Codebase search functionality
 ```
 
-## 11. 错误处理
+## 11. Error Handling
 
-### 11.1 常见错误
+### 11.1 Common Errors
 
-| 错误 | 说明 |
-|------|------|
-| `mcp server initialization failed` | MCP 服务器初始化失败 |
-| `failed to probe MCP server` | 探测 MCP 服务器失败 |
-| `tool not found` | 工具未找到 |
-| `prompt not found` | 提示未找到 |
-| `method not found` | 方法未找到 |
-| `invalid resource URI` | 无效的资源 URI |
-| `Invalid JSON-RPC version` | 无效的 JSON-RPC 版本 |
+| Error | Description |
+|-------|-------------|
+| `mcp server initialization failed` | MCP server initialization failed |
+| `failed to probe MCP server` | Failed to probe MCP server |
+| `tool not found` | Tool not found |
+| `prompt not found` | Prompt not found |
+| `method not found` | Method not found |
+| `invalid resource URI` | Invalid resource URI |
+| `Invalid JSON-RPC version` | Invalid JSON-RPC version |
 
-### 11.2 错误码
+### 11.2 Error Codes
 
 ```
 -32700: Parse error
@@ -307,9 +307,9 @@ quest-mcp-adaptor
 -32603: Internal error
 ```
 
-## 12. 调试与日志
+## 12. Debugging and Logging
 
-### 12.1 日志级别
+### 12.1 Log Levels
 
 ```
 logging/setLevel
@@ -319,28 +319,28 @@ logging/setLevel
 └── error
 ```
 
-### 12.2 连接状态
+### 12.2 Connection State
 
 ```
-Mcp-Session-Id     # 会话 ID
-Content-Length     # 消息长度
+Mcp-Session-Id     # Session ID
+Content-Length     # Message length
 ```
 
-## 13. CLI 命令
+## 13. CLI Commands
 
 ```bash
-# 添加 MCP 服务器
-qodercli mcp add
+# Add MCP server
+qodercli-reverse mcp add
 
-# 列出 MCP 服务器
-qodercli mcp list
+# List MCP servers
+qodercli-reverse mcp list
 
-# 获取服务器详情
-qodercli mcp get <server-name>
+# Get server details
+qodercli-reverse mcp get <server-name>
 
-# 移除服务器
-qodercli mcp remove <server-name>
+# Remove server
+qodercli-reverse mcp remove <server-name>
 
-# OAuth 认证
-qodercli mcp auth <server-name>
+# OAuth authentication
+qodercli-reverse mcp auth <server-name>
 ```

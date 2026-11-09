@@ -1,16 +1,16 @@
-# qodercli 完整架构概览
+# qodercli-reverse Complete Architecture Overview
 
-## 项目信息
+## Project Information
 
-- **内部 Module 路径**: `code.alibaba-inc.com/qoder-core/qodercli`
-- **版本**: v0.1.29
-- **平台**: darwin arm64 (Mach-O 64-bit executable)
-- **语言**: Go 1.25.7
-- **文件大小**: ~37.2 MB
+- **Internal Module Path**: `code.alibaba-inc.com/qoder-core/qodercli-reverse`
+- **Version**: v0.1.29
+- **Platform**: darwin arm64 (Mach-O 64-bit executable)
+- **Language**: Go 1.25.7
+- **File Size**: ~37.2 MB
 
 ---
 
-## 1. 整体架构图
+## 1. Overall Architecture Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -39,15 +39,15 @@
 │                            Agent Core Layer                              │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
 │  │ core/agent/                                                     │   │
-│  │ ├── agent/           # Agent 主循环                             │   │
-│  │ ├── provider/        # LLM Provider (Qoder/OpenAI/IdeaLab)      │   │
-│  │ ├── tools/           # 内置工具 (Bash/Read/Write/Edit/...)     │   │
-│  │ ├── permission/      # 权限系统                                  │   │
-│  │ ├── hooks/           # Hook 系统                                 │   │
-│  │ ├── prompt/          # Prompt 管理                               │   │
-│  │ ├── state/           # 状态管理                                  │   │
-│  │ ├── compact/         # 上下文压缩                                │   │
-│  │ └── task/            # SubAgent 调度                             │   │
+│  │ ├── agent/           # Agent main loop                          │   │
+│  │ ├── provider/        # LLM Provider (Qoder/OpenAI/IdeaLab)     │   │
+│  │ ├── tools/           # Built-in tools (Bash/Read/Write/Edit/...) │   │
+│  │ ├── permission/      # Permission system                        │   │
+│  │ ├── hooks/           # Hook system                              │   │
+│  │ ├── prompt/          # Prompt management                        │   │
+│  │ ├── state/           # State management                         │   │
+│  │ ├── compact/         # Context compression                      │   │
+│  │ └── task/            # SubAgent scheduling                     │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────┘
                                     │
@@ -56,13 +56,13 @@
 │                          Resource Layer                                  │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
 │  │ core/resource/                                                  │   │
-│  │ ├── mcp/             # MCP 服务器管理                            │   │
-│  │ ├── skill/           # Skill 系统                                │   │
-│  │ ├── subagent/        # SubAgent 定义                             │   │
-│  │ ├── command/         # 斜杠命令                                  │   │
-│  │ ├── hook/            # Hook 定义                                 │   │
-│  │ ├── plugin/          # 插件系统                                  │   │
-│  │ └── output_style/    # 输出样式                                  │   │
+│  │ ├── mcp/             # MCP server management                    │   │
+│  │ ├── skill/           # Skill system                             │   │
+│  │ ├── subagent/        # SubAgent definitions                    │   │
+│  │ ├── command/         # Slash commands                           │   │
+│  │ ├── hook/            # Hook definitions                         │   │
+│  │ ├── plugin/          # Plugin system                            │   │
+│  │ └── output_style/    # Output styles                            │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────┘
                                     │
@@ -71,11 +71,11 @@
 │                          Utility Layer                                   │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
 │  │ core/utils/                                                     │   │
-│  │ ├── qoder/           # Qoder API 客户端                         │   │
-│  │ ├── http/            # HTTP 客户端                               │   │
-│  │ ├── tokens/          # Token 计算                                │   │
-│  │ ├── storage/         # 本地存储                                  │   │
-│  │ ├── sls/             # 日志上报                                  │   │
+│  │ ├── qoder/           # Qoder API client                         │   │
+│  │ ├── http/            # HTTP client                               │   │
+│  │ ├── tokens/          # Token calculation                        │   │
+│  │ ├── storage/         # Local storage                             │   │
+│  │ ├── sls/             # Log reporting                             │   │
 │  │ └── ...                                                         │   │
 │  └─────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────┘
@@ -98,80 +98,80 @@
 
 ---
 
-## 2. 核心数据流
+## 2. Core Data Flow
 
-### 2.1 用户输入 → Agent 响应
+### 2.1 User Input → Agent Response
 
 ```
-用户输入
+User input
     │
     ▼
-TUI 编辑器 (tui/components/interaction/editor/)
+TUI editor (tui/components/interaction/editor/)
     │
     ▼
-用户提交 Hook (core/agent/hooks/user_prompt_submit/)
+User submit Hook (core/agent/hooks/user_prompt_submit/)
     │
     ▼
-Agent 主循环 (core/agent/agent/)
+Agent main loop (core/agent/agent/)
     │
-    ├── 构建消息 (core/agent/state/message/)
+    ├── Build messages (core/agent/state/message/)
     │
-    ├── 调用 Provider (core/agent/provider/)
+    ├── Call Provider (core/agent/provider/)
     │   │
     │   ▼
     │   LLM API (Qoder/OpenAI/Anthropic/IdeaLab)
     │   │
     │   ▼
-    │   流式响应事件
+    │   Streaming response events
     │
-    ├── 解析工具调用
+    ├── Parse tool calls
     │   │
     │   ▼
-    │   权限检查 (core/agent/permission/)
+    │   Permission check (core/agent/permission/)
     │   │
     │   ▼
     │   PreToolUse Hook
     │   │
     │   ▼
-    │   工具执行 (core/agent/tools/)
+    │   Tool execution (core/agent/tools/)
     │   │
     │   ▼
     │   PostToolUse Hook
     │
-    └── 循环直到完成
+    └── Loop until done
 ```
 
-### 2.2 MCP 工具调用
+### 2.2 MCP Tool Call
 
 ```
-Agent 决定调用 MCP 工具
+Agent decides to call MCP tool
     │
     ▼
-MCP 规则匹配 (core/agent/permission/mcp_rule_matcher/)
+MCP rule matching (core/agent/permission/mcp_rule_matcher/)
     │
     ▼
-MCP 客户端 (core/resource/mcp/)
+MCP client (core/resource/mcp/)
     │
-    ├── stdio/SSE 通信
-    │
-    ▼
-MCP 服务器进程
+    ├── stdio/SSE communication
     │
     ▼
-返回结果
+MCP server process
+    │
+    ▼
+Return result
 ```
 
 ---
 
-## 3. 关键类型定义
+## 3. Key Type Definitions
 
-### 3.1 消息类型
+### 3.1 Message Types
 
 ```go
 type Message struct {
     Role       string        // "user", "assistant", "system"
-    Content    []ContentPart // 多部分内容
-    ToolCalls  []ToolCall    // 工具调用
+    Content    []ContentPart // multi-part content
+    ToolCalls  []ToolCall    // tool calls
 }
 
 type ToolCall struct {
@@ -187,7 +187,7 @@ type ToolResult struct {
 }
 ```
 
-### 3.2 Provider 接口
+### 3.2 Provider Interface
 
 ```go
 type Client interface {
@@ -196,7 +196,7 @@ type Client interface {
 }
 ```
 
-### 3.3 工具接口
+### 3.3 Tool Interface
 
 ```go
 type Tool interface {
@@ -209,84 +209,84 @@ type Tool interface {
 
 ---
 
-## 4. 配置层次结构
+## 4. Configuration Hierarchy
 
 ```
-优先级 (低 → 高):
+Priority (low → high):
 
-1. 内置默认值
-2. ~/.qoder/config.json          # 全局配置
-3. ~/.qoder/settings.json        # 全局设置
-4. ./.qoder/settings.json        # 项目设置
-5. ./.qoder/settings.local.json  # 本地覆盖
-6. ./.claude/CLAUDE.md           # Claude 兼容配置
-7. 环境变量 (QODER_*)
-8. 命令行参数
+1. Built-in defaults
+2. ~/.qoder/config.json          # Global config
+3. ~/.qoder/settings.json        # Global settings
+4. ./.qoder/settings.json        # Project settings
+5. ./.qoder/settings.local.json  # Local override
+6. ./.claude/CLAUDE.md           # Claude-compatible config
+7. Environment variables (QODER_*)
+8. Command-line arguments
 ```
 
 ---
 
-## 5. 运行模式
+## 5. Runtime Modes
 
-| 模式 | 说明 | 入口 |
-|------|------|------|
-| **交互模式** | TUI 交互式对话 | `qodercli` |
-| **非交互模式** | 单次查询后退出 | `qodercli -p "..."` |
-| **SDK 模式** | JSON 协议通信 | stdin/stdout |
-| **ACP Server** | Agent Communication Protocol | 内部服务 |
-| **Worktree** | Git worktree 并发 | `--worktree` |
-| **Container** | Docker 容器 | 内部模式 |
-| **Kubernetes** | K8s Job | 内部模式 |
+| Mode | Description | Entry |
+|------|-------------|-------|
+| **Interactive** | TUI interactive chat | `qodercli-reverse` |
+| **Non-interactive** | Single query then exit | `qodercli-reverse -p "..."` |
+| **SDK** | JSON protocol communication | stdin/stdout |
+| **ACP Server** | Agent Communication Protocol | Internal service |
+| **Worktree** | Git worktree concurrency | `--worktree` |
+| **Container** | Docker container | Internal mode |
+| **Kubernetes** | K8s Job | Internal mode |
 
 ---
 
-## 6. 第三方依赖
+## 6. Third-Party Dependencies
 
-| 类别 | 依赖 |
-|------|------|
-| CLI 框架 | `github.com/spf13/cobra` |
-| TUI 框架 | Bubble Tea (推断) |
+| Category | Dependency |
+|----------|------------|
+| CLI Framework | `github.com/spf13/cobra` |
+| TUI Framework | Bubble Tea (inferred) |
 | LLM SDK | `github.com/anthropics/anthropic-sdk-go` |
 | GitHub API | `github.com/google/go-github/v57` |
-| 配置解析 | `github.com/BurntSushi/toml` |
-| 语法高亮 | `github.com/alecthomas/chroma/v2` |
-| HTML 转换 | `github.com/JohannesKaufmann/html-to-markdown/v2` |
-| 压缩 | `github.com/andybalholm/brotli` |
+| Config Parsing | `github.com/BurntSushi/toml` |
+| Syntax Highlighting | `github.com/alecthomas/chroma/v2` |
+| HTML Conversion | `github.com/JohannesKaufmann/html-to-markdown/v2` |
+| Compression | `github.com/andybalholm/brotli` |
 | HTTPDNS | `github.com/aliyun/alicloud-httpdns-go-sdk` |
 
 ---
 
-## 7. 文件清单
+## 7. File Inventory
 
-| 文档 | 说明 |
-|------|------|
-| `PLAN.md` | 任务规划 |
-| `01-package-structure.md` | 包结构和依赖图 |
-| `02-cli-commands.md` | CLI 命令系统 |
-| `03-llm-integration.md` | AI/LLM 集成 |
-| `04-mcp-protocol.md` | MCP 协议实现 |
-| `05-tools-system.md` | 工具系统 |
-| `06-session-management.md` | 会话管理 |
-| `07-permission-security.md` | 权限和安全 |
-| `08-config-api.md` | 配置和 API |
-| `09-github-integration.md` | GitHub 集成 |
-| `10-subagent-skill.md` | SubAgent 和 Skill |
-| `architecture-overview.md` | 本文档 |
+| Document | Description |
+|----------|-------------|
+| `PLAN.md` | Task planning |
+| `01-package-structure.md` | Package structure and dependency graph |
+| `02-cli-commands.md` | CLI command system |
+| `03-llm-integration.md` | AI/LLM integration |
+| `04-mcp-protocol.md` | MCP protocol implementation |
+| `05-tools-system.md` | Tool system |
+| `06-session-management.md` | Session management |
+| `07-permission-security.md` | Permissions and security |
+| `08-config-api.md` | Configuration and API |
+| `09-github-integration.md` | GitHub integration |
+| `10-subagent-skill.md` | SubAgent and Skill |
+| `architecture-overview.md` | This document |
 
 ---
 
-## 8. 总结
+## 8. Summary
 
-qodercli 是一个功能完善的 AI 编程助手 CLI 工具，具有以下特点：
+qodercli-reverse is a fully-featured AI programming assistant CLI tool with the following characteristics:
 
-1. **多 Provider 支持**: Qoder、Anthropic、OpenAI、IdeaLab、DashScope
-2. **丰富的工具集**: Bash、文件操作、搜索、网络请求等
-3. **MCP 协议**: 可扩展的工具和资源集成
-4. **权限系统**: 细粒度的操作权限控制
-5. **Hook 系统**: 可定制的工作流钩子
-6. **SubAgent**: 并行任务执行能力
-7. **Skill 系统**: 可复用的技能定义
-8. **GitHub 集成**: PR 审查、Actions 集成
-9. **多运行模式**: 交互、非交互、SDK、容器化
+1. **Multi-Provider Support**: Qoder, Anthropic, OpenAI, IdeaLab, DashScope
+2. **Rich Toolset**: Bash, file operations, search, network requests, etc.
+3. **MCP Protocol**: Extensible tool and resource integration
+4. **Permission System**: Fine-grained operation permission control
+5. **Hook System**: Customizable workflow hooks
+6. **SubAgent**: Parallel task execution capability
+7. **Skill System**: Reusable skill definitions
+8. **GitHub Integration**: PR review, Actions integration
+9. **Multiple Runtime Modes**: Interactive, non-interactive, SDK, containerized
 
-该项目代码结构清晰，模块化程度高，是一个典型的 Go CLI 应用架构。
+The project has a clear code structure and a high degree of modularity, representing a typical Go CLI application architecture.

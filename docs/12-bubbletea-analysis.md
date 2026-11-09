@@ -1,28 +1,28 @@
-# Bubble Tea 使用分析
+# Bubble Tea Usage Analysis
 
-## 发现总结
+## Summary of Findings
 
-通过对官方 qodercli 二进制的逆向分析，发现了以下关键信息：
+Through reverse engineering of the official qodercli-reverse binary, the following key information was discovered:
 
-### 1. 双重依赖
+### 1. Dual Dependency
 
-qodercli 同时依赖两个版本的 Bubble Tea：
+qodercli-reverse depends on two versions of Bubble Tea simultaneously:
 
 ```
 github.com/charmbracelet/bubbletea v1.3.4
 code.alibaba-inc.com/qoder-core/bubbletea v0.0.2
 ```
 
-### 2. 自定义 Fork
+### 2. Custom Fork
 
-**关键发现**：qodercli 使用的是阿里内部 fork 的 Bubble Tea 版本：
-- 包路径：`code.alibaba-inc.com/qoder-core/bubbletea`
-- 版本：v0.0.2
-- 这是一个自定义修改版本，不是直接使用官方的 charmbracelet/bubbletea
+**Key finding**: qodercli-reverse uses Alibaba's internal fork of Bubble Tea:
+- Package path: `code.alibaba-inc.com/qoder-core/bubbletea`
+- Version: v0.0.2
+- This is a custom modified version, not directly using official charmbracelet/bubbletea
 
-### 3. 相关依赖
+### 3. Related Dependencies
 
-同时还使用了 Charm 生态系统的其他组件：
+Also uses other components from the Charm ecosystem:
 
 ```
 github.com/charmbracelet/bubbles v0.21.0
@@ -34,12 +34,12 @@ github.com/charmbracelet/x/cellbuf
 github.com/charmbracelet/x/term
 ```
 
-## TUI 组件结构
+## TUI Component Structure
 
-从二进制中提取的 TUI 包结构：
+TUI package structure extracted from the binary:
 
 ```
-code.alibaba-inc.com/qoder-core/qodercli/tui/
+code.alibaba-inc.com/qoder-core/qodercli-reverse/tui/
 ├── components/
 │   ├── command/
 │   │   └── github/
@@ -63,88 +63,89 @@ code.alibaba-inc.com/qoder-core/qodercli/tui/
 └── util/
 ```
 
-## 为什么使用自定义 Fork？
+## Why Use a Custom Fork?
 
-可能的原因：
+Possible reasons:
 
-### 1. 定制化需求
-- 需要修改 Bubble Tea 的核心行为以适配 qodercli 的特殊需求
-- 可能添加了自定义的事件处理或渲染逻辑
-- 从错误信息 `bubbletea: error creating cancel reader: %w` 可以看出有自定义的取消机制
+### 1. Customization Needs
+- Need to modify Bubble Tea's core behavior to fit qodercli-reverse's special requirements
+- May have added custom event handling or rendering logic
+- From error message `bubbletea: error creating cancel reader: %w` there is a custom cancel mechanism
 
-### 2. 内部依赖管理
-- 阿里内部可能有统一的依赖管理策略
-- 需要对开源组件进行安全审计和修改
-- 便于内部版本控制和 bug 修复
+### 2. Internal Dependency Management
+- Alibaba internally may have a unified dependency management strategy
+- Need security audit and modification of open source components
+- Facilitates internal version control and bug fixes
 
-### 3. 性能优化
-- 可能针对大规模 TUI 应用进行了性能优化
-- 自定义的输入处理和上下文管理
+### 3. Performance Optimization
+- May have performance optimizations for large-scale TUI applications
+- Custom input handling and context management
 
-## 证据分析
+## Evidence Analysis
 
-### 错误信息
+### Error Messages
+
 ```
 bubbletea: error creating cancel reader: %w
 found context error while reading input: %w
 ```
 
-这些错误信息表明自定义版本增强了：
-- 取消读取器（cancel reader）机制
-- 上下文错误处理
+These error messages indicate the custom version enhances:
+- Cancel reader mechanism
+- Context error handling
 
-### 组件架构
+### Component Architecture
 
-自定义组件非常丰富：
-- **交互组件**：editor, status, progress, selectors
-- **对话组件**：askuser, permission, dialog
-- **文件组件**：filepicker
-- **消息组件**：messages
-- **命令组件**：command (包括 GitHub 集成)
+Custom components are very rich:
+- **Interaction components**: editor, status, progress, selectors
+- **Dialog components**: askuser, permission, dialog
+- **File components**: filepicker
+- **Message components**: messages
+- **Command components**: command (including GitHub integration)
 
-这些组件都是基于 Bubble Tea 框架构建的自定义实现。
+These components are all custom implementations built on the Bubble Tea framework.
 
-## 对逆向工程的影响
+## Impact on Reverse Engineering
 
-### 1. 无法直接使用官方 Bubble Tea
+### 1. Cannot Directly Use Official Bubble Tea
 
-我们的 decompiled 代码不能简单地使用 `github.com/charmbracelet/bubbletea`，因为：
-- 官方版本可能缺少自定义功能
-- API 可能有差异
-- 行为可能不一致
+Our decompiled code cannot simply use `github.com/charmbracelet/bubbletea`, because:
+- Official version may lack custom features
+- APIs may differ
+- Behavior may be inconsistent
 
-### 2. 需要模拟自定义行为
+### 2. Need to Simulate Custom Behavior
 
-在逆向实现中，我们需要：
-- 使用官方 Bubble Tea 作为基础
-- 根据二进制行为推断自定义修改
-- 实现兼容的接口和行为
+In reverse implementation, we need to:
+- Use official Bubble Tea as base
+- Infer custom modifications from binary behavior
+- Implement compatible interfaces and behavior
 
-### 3. 组件实现策略
+### 3. Component Implementation Strategy
 
-对于 TUI 组件：
-- 可以使用官方 `github.com/charmbracelet/bubbles` 作为参考
-- 需要自己实现 qodercli 特有的组件（askuser, permission 等）
-- 保持与官方架构一致的组件结构
+For TUI components:
+- Can use official `github.com/charmbracelet/bubbles` as reference
+- Need to implement qodercli-reverse-specific components (askuser, permission, etc.) ourselves
+- Keep component structure consistent with official architecture
 
-## 建议
+## Recommendations
 
-### 短期方案
-1. 使用官方 `github.com/charmbracelet/bubbletea` v1.3.4
-2. 根据需要实现自定义功能
-3. 重点关注取消机制和上下文处理
+### Short-term Plan
+1. Use official `github.com/charmbracelet/bubbletea` v1.3.4
+2. Implement custom features as needed
+3. Focus on cancel mechanism and context handling
 
-### 长期方案
-1. 尝试获取或推断自定义 fork 的具体修改
-2. 创建兼容层来桥接官方版本和自定义行为
-3. 完整实现所有自定义组件
+### Long-term Plan
+1. Try to obtain or infer specific modifications in the custom fork
+2. Create compatibility layer bridging official version and custom behavior
+3. Fully implement all custom components
 
-## 相关文件
+## Related Files
 
-- `docs/official-architecture.md` - 官方架构分析
-- `decompiled/tui/` - TUI 实现目录
-- `decompiled/tui/components/` - 组件实现
+- `docs/official-architecture.md` - Official architecture analysis
+- `decompiled/tui/` - TUI implementation directory
+- `decompiled/tui/components/` - Component implementations
 
-## 更新日志
+## Changelog
 
-- 2026-03-10: 初始分析，发现自定义 Bubble Tea fork
+- 2026-03-10: Initial analysis, discovered custom Bubble Tea fork

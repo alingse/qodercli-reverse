@@ -1,5 +1,5 @@
-// Package provider Qoder Provider 实现
-// 反编译自 qodercli v0.1.29
+// Package provider Qoder Provider implementation
+// Decompiled from qodercli-reverse v0.1.29
 package provider
 
 import (
@@ -16,14 +16,14 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/types"
 )
 
-// QoderClient Qoder 客户端
+// QoderClient Qoder client
 type QoderClient struct {
 	*baseClient
 	endpoint    string
 	accessToken string
 }
 
-// NewQoderClient 创建 Qoder 客户端
+// NewQoderClient creates the Qoder client
 func NewQoderClient(opts ...ClientOption) (*QoderClient, error) {
 	client := &QoderClient{
 		baseClient: &baseClient{
@@ -39,10 +39,10 @@ func NewQoderClient(opts ...ClientOption) (*QoderClient, error) {
 	return client, nil
 }
 
-// ClientOption 客户端选项
+// ClientOption client option
 type ClientOption func(Client)
 
-// WithAPIKey 设置 API Key
+// WithAPIKey sets API Key
 func WithAPIKey(apiKey string) ClientOption {
 	return func(c Client) {
 		switch client := c.(type) {
@@ -56,7 +56,7 @@ func WithAPIKey(apiKey string) ClientOption {
 	}
 }
 
-// WithBaseURL 设置 Base URL
+// WithBaseURL sets Base URL
 func WithBaseURL(baseURL string) ClientOption {
 	return func(c Client) {
 		switch client := c.(type) {
@@ -70,7 +70,7 @@ func WithBaseURL(baseURL string) ClientOption {
 	}
 }
 
-// WithDebug 设置调试模式
+// WithDebug sets debug mode
 func WithDebug(debug bool) ClientOption {
 	return func(c Client) {
 		switch client := c.(type) {
@@ -84,7 +84,7 @@ func WithDebug(debug bool) ClientOption {
 	}
 }
 
-// WithAgentName 设置 Agent 名称
+// WithAgentName sets agent name
 func WithAgentName(name string) ClientOption {
 	return func(c Client) {
 		switch client := c.(type) {
@@ -98,7 +98,7 @@ func WithAgentName(name string) ClientOption {
 	}
 }
 
-// WithSubagent 设置是否为子代理
+// WithSubagent sets whether subagent
 func WithSubagent(isSubagent bool) ClientOption {
 	return func(c Client) {
 		switch client := c.(type) {
@@ -112,14 +112,14 @@ func WithSubagent(isSubagent bool) ClientOption {
 	}
 }
 
-// Stream 流式请求
+// Stream streaming request
 func (c *QoderClient) Stream(ctx context.Context, req *ModelRequest) <-chan Event {
 	eventChan := make(chan Event, 100)
 
 	go func() {
 		defer close(eventChan)
 
-		// 构建请求
+		// build request
 		body, err := json.Marshal(req)
 		if err != nil {
 			eventChan <- Event{
@@ -140,7 +140,7 @@ func (c *QoderClient) Stream(ctx context.Context, req *ModelRequest) <-chan Even
 			Timeout: 5 * time.Minute,
 		}
 
-		// 发送请求
+		// send request
 		resp, err := c.httpClient.Do(httpReq)
 		if err != nil {
 			eventChan <- Event{
@@ -153,14 +153,14 @@ func (c *QoderClient) Stream(ctx context.Context, req *ModelRequest) <-chan Even
 			return
 		}
 
-		// 处理 SSE 流
+		// handle SSE stream
 		c.processSSEStream(ctx, bytes.NewReader(resp.Body), eventChan)
 	}()
 
 	return eventChan
 }
 
-// Send 同步请求
+// Send sync request
 func (c *QoderClient) Send(ctx context.Context, req *ModelRequest) (*Response, error) {
 	req.Stream = false
 
@@ -194,12 +194,12 @@ func (c *QoderClient) Send(ctx context.Context, req *ModelRequest) (*Response, e
 	return c.parseResponse(&apiResp), nil
 }
 
-// Close 关闭客户端
+// Close closes the client
 func (c *QoderClient) Close() error {
 	return nil
 }
 
-// buildHeaders 构建请求头
+// buildHeaders builds request headers
 func (c *QoderClient) buildHeaders() map[string]string {
 	headers := map[string]string{
 		"Content-Type":       "application/json",
@@ -221,7 +221,7 @@ func (c *QoderClient) buildHeaders() map[string]string {
 	return headers
 }
 
-// processSSEStream 处理 SSE 流
+// processSSEStream handles SSE stream
 func (c *QoderClient) processSSEStream(ctx context.Context, reader io.Reader, eventChan chan<- Event) {
 	scanner := bufio.NewScanner(reader)
 
@@ -263,7 +263,7 @@ func (c *QoderClient) processSSEStream(ctx context.Context, reader io.Reader, ev
 	}
 }
 
-// parseSSEEvent 解析 SSE 事件
+// parseSSEEvent parses SSE event
 func (c *QoderClient) parseSSEEvent(sse *sseEvent) *Event {
 	switch sse.Event {
 	case "message_start":
@@ -290,7 +290,7 @@ func (c *QoderClient) parseSSEEvent(sse *sseEvent) *Event {
 	return nil
 }
 
-// parseContentDelta 解析内容增量
+// parseContentDelta parses content delta
 func (c *QoderClient) parseContentDelta(data json.RawMessage) *Event {
 	var delta struct {
 		Type string `json:"type"`
@@ -311,7 +311,7 @@ func (c *QoderClient) parseContentDelta(data json.RawMessage) *Event {
 	}
 }
 
-// parseToolUseStart 解析工具使用开始
+// parseToolUseStart parses tool use start
 func (c *QoderClient) parseToolUseStart(data json.RawMessage) *Event {
 	var toolUse struct {
 		ID   string `json:"id"`
@@ -329,7 +329,7 @@ func (c *QoderClient) parseToolUseStart(data json.RawMessage) *Event {
 	}
 }
 
-// parseToolUseDelta 解析工具使用增量
+// parseToolUseDelta parses tool use delta
 func (c *QoderClient) parseToolUseDelta(data json.RawMessage) *Event {
 	var delta struct {
 		ToolCallID string `json:"tool_call_id"`
@@ -349,7 +349,7 @@ func (c *QoderClient) parseToolUseDelta(data json.RawMessage) *Event {
 	}
 }
 
-// parseMessageDelta 解析消息增量
+// parseMessageDelta parses message delta
 func (c *QoderClient) parseMessageDelta(data json.RawMessage) *Event {
 	var delta struct {
 		FinishReason string      `json:"finish_reason"`
@@ -365,7 +365,7 @@ func (c *QoderClient) parseMessageDelta(data json.RawMessage) *Event {
 	}
 }
 
-// parseError 解析错误
+// parseError parses error
 func (c *QoderClient) parseError(data json.RawMessage) *Event {
 	var errData struct {
 		Type    string `json:"type"`
@@ -385,7 +385,7 @@ func (c *QoderClient) parseError(data json.RawMessage) *Event {
 	}
 }
 
-// parseResponse 解析响应
+// parseResponse parses response
 func (c *QoderClient) parseResponse(resp *qoderAPIResponse) *Response {
 	result := &Response{
 		ID:           resp.ID,
@@ -398,7 +398,7 @@ func (c *QoderClient) parseResponse(resp *qoderAPIResponse) *Response {
 		},
 	}
 
-	// 解析内容
+	// parse content
 	for _, content := range resp.Choices[0].Message.Content {
 		if content.Type == "text" {
 			result.Content += content.Text
@@ -407,7 +407,7 @@ func (c *QoderClient) parseResponse(resp *qoderAPIResponse) *Response {
 		}
 	}
 
-	// 解析工具调用
+	// parse tool calls
 	if len(resp.Choices[0].Message.ToolCalls) > 0 {
 		result.ToolCalls = make([]types.ToolCall, len(resp.Choices[0].Message.ToolCalls))
 		for i, tc := range resp.Choices[0].Message.ToolCalls {
@@ -422,13 +422,13 @@ func (c *QoderClient) parseResponse(resp *qoderAPIResponse) *Response {
 	return result
 }
 
-// sseEvent SSE 事件
+// sseEvent SSE event
 type sseEvent struct {
 	Event string          `json:"event"`
 	Data  json.RawMessage `json:"data"`
 }
 
-// qoderAPIResponse Qoder API 响应
+// qoderAPIResponse Qoder API response
 type qoderAPIResponse struct {
 	ID      string `json:"id"`
 	Model   string `json:"model"`
@@ -444,7 +444,7 @@ type qoderAPIResponse struct {
 	} `json:"usage"`
 }
 
-// qoderMessage Qoder 消息
+// qoderMessage Qoder message
 type qoderMessage struct {
 	Role    string `json:"role"`
 	Content []struct {
@@ -462,10 +462,10 @@ type qoderMessage struct {
 	} `json:"tool_calls,omitempty"`
 }
 
-// defaultHTTPClient 默认 HTTP 客户端
+// defaultHTTPClient default HTTP client
 type defaultHTTPClient struct{}
 
-// IdeaLabClient IdeaLab 客户端（stub）
+// IdeaLabClient IdeaLab client (stub)
 type IdeaLabClient struct {
 	*baseClient
 }
@@ -510,18 +510,18 @@ func (c *defaultHTTPClient) Do(req *HTTPRequest) (*HTTPResponse, error) {
 	}, nil
 }
 
-// generateRequestID 生成请求 ID
+// generateRequestID generates request ID
 func generateRequestID() string {
 	return fmt.Sprintf("req-%d", time.Now().UnixNano())
 }
 
-// getMachineID 获取机器 ID
+// getMachineID gets machine ID
 func getMachineID() string {
-	// 实际实现会从 umid 模块获取
+	// actual implementation fetches from umid module
 	return "unknown"
 }
 
-// getMachineOS 获取机器操作系统
+// getMachineOS gets machine OS
 func getMachineOS() string {
 	return "darwin"
 }

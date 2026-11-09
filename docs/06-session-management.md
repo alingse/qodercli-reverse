@@ -1,44 +1,44 @@
-# qodercli 会话管理和持久化分析
+# qodercli-reverse Session Management and Persistence Analysis
 
-## 1. 会话架构
+## 1. Session Architecture
 
-### 1.1 包结构
+### 1.1 Package Structure
 
 ```
 core/agent/state/session/
-├── cache/          # 会话缓存
-├── options/        # 会话选项
-├── session/        # 会话核心
-└── storage/        # 会话存储
+├── cache/          # Session cache
+├── options/        # Session options
+├── session/        # Session core
+└── storage/        # Session storage
 ```
 
-## 2. 会话生命周期
+## 2. Session Lifecycle
 
 ```
-session/new      # 创建新会话
-session/load     # 加载会话
-session/update   # 更新会话
-session/cancel   # 取消会话
-session/prompt   # 会话提示
-session/set_mode # 设置会话模式
+session/new      # Create new session
+session/load     # Load session
+session/update   # Update session
+session/cancel   # Cancel session
+session/prompt   # Session prompt
+session/set_mode # Set session mode
 ```
 
-## 3. 会话存储
+## 3. Session Storage
 
-### 3.1 存储位置
+### 3.1 Storage Location
 
 ```
 ~/.qoder/
 ├── sessions/
-│   └── *-session.json    # 会话文件
+│   └── *-session.json    # Session files
 ├── conversations/
-│   └── conversation-*.txt # 导出的对话
+│   └── conversation-*.txt # Exported conversations
 └── projects/
     └── {project}/
-        └── .qoder/       # 项目级配置
+        └── .qoder/       # Project-level configuration
 ```
 
-### 3.2 会话文件格式
+### 3.2 Session File Format
 
 ```json
 {
@@ -54,140 +54,140 @@ session/set_mode # 设置会话模式
 }
 ```
 
-## 4. 消息管理
+## 4. Message Management
 
 ```
 core/agent/state/message/
-├── cache/      # 消息缓存
-├── message/    # 消息核心
-└── storage/    # 消息存储
+├── cache/      # Message cache
+├── message/    # Message core
+└── storage/    # Message storage
 ```
 
-## 5. 上下文压缩 (Compact)
+## 5. Context Compaction (Compact)
 
-### 5.1 触发条件
+### 5.1 Trigger Conditions
 
-- 上下文接近模型限制
-- 手动触发 (`/compact`)
-- 自动触发 (auto compact)
+- Context approaches model limit
+- Manual trigger (`/compact`)
+- Automatic trigger (auto compact)
 
-### 5.2 压缩流程
-
-```
-1. 分析消息历史
-2. 识别重要信息
-3. 生成摘要
-4. 替换历史消息
-5. 保存压缩元数据
-```
-
-### 5.3 相关指标
+### 5.2 Compaction Flow
 
 ```
-compact_input_tokens     # 压缩前 Token
-compact_output_tokens    # 压缩后 Token
-compressionOutputTokens  # 压缩输出
-compact_cache_read       # 缓存读取
-compact_cache_creation   # 缓存创建
-compaction_triggered     # 触发压缩
-compact_manual           # 手动压缩
+1. Analyze message history
+2. Identify important information
+3. Generate summary
+4. Replace history messages
+5. Save compaction metadata
 ```
 
-## 6. 会话恢复
+### 5.3 Related Metrics
 
-### 6.1 恢复方式
+```
+compact_input_tokens     # Tokens before compaction
+compact_output_tokens    # Tokens after compaction
+compressionOutputTokens  # Compaction output
+compact_cache_read       # Cache read
+compact_cache_creation   # Cache creation
+compaction_triggered     # Compaction triggered
+compact_manual           # Manual compaction
+```
+
+## 6. Session Recovery
+
+### 6.1 Recovery Methods
 
 ```bash
-qodercli -c                    # 继续最近会话
-qodercli -r <session-id>       # 恢复指定会话
-/resume                        # TUI 内恢复
+qodercli-reverse -c                    # Continue most recent session
+qodercli-reverse -r <session-id>       # Resume specified session
+/resume                        # Resume within TUI
 ```
 
-### 6.2 恢复流程
+### 6.2 Recovery Flow
 
 ```
-1. 加载会话文件
-2. 恢复消息历史
-3. 恢复 Shell 状态 (如有)
-4. 恢复文件状态
-5. 继续对话
+1. Load session file
+2. Restore message history
+3. Restore shell state (if any)
+4. Restore file state
+5. Continue conversation
 ```
 
-## 7. 会话导出
+## 7. Session Export
 
 ```bash
-/export [filename]   # 导出当前会话为文本
+/export [filename]   # Export current session as text
 ```
 
-导出格式:
+Export format:
 ```
 conversation-{timestamp}.txt
 ```
 
-## 8. 状态管理
+## 8. State Management
 
-### 8.1 状态类型
+### 8.1 State Types
 
 ```
 core/agent/state/
-├── active/           # 活跃状态
-├── context/          # 上下文状态
-├── file/             # 文件状态
-│   ├── file_state/   # 文件状态管理
-│   ├── snapshot/     # 文件快照
-│   └── storage/      # 文件存储
-├── memory/           # Memory 管理
-├── session/          # 会话状态
-├── shell/            # Shell 状态
-├── state/            # 状态核心
-├── state_execution/  # 执行状态
-├── state_quest/      # Quest 状态
-├── state_todo/       # Todo 状态
-└── state_vars/       # 状态变量
+├── active/           # Active state
+├── context/          # Context state
+├── file/             # File state
+│   ├── file_state/   # File state management
+│   ├── snapshot/     # File snapshot
+│   └── storage/      # File storage
+├── memory/           # Memory management
+├── session/          # Session state
+├── shell/            # Shell state
+├── state/            # State core
+├── state_execution/  # Execution state
+├── state_quest/      # Quest state
+├── state_todo/       # Todo state
+└── state_vars/       # State variables
 ```
 
-### 8.2 文件快照
+### 8.2 File Snapshots
 
 ```
 file/snapshot/
-├── 记录文件修改历史
-├── 支持回滚
-└── 用于 diff 显示
+├── Record file modification history
+├── Support rollback
+└── Used for diff display
 ```
 
-## 9. Memory 系统
+## 9. Memory System
 
 ```
 core/agent/state/memory/
-├── memory/          # Memory 入口
-├── memory_state/    # Memory 状态
-└── qoder_rule/      # Qoder 规则
+├── memory/          # Memory entry point
+├── memory_state/    # Memory state
+└── qoder_rule/      # Qoder rules
 ```
 
-Memory 文件位置:
+Memory file locations:
 ```
-~/.qoder/memory          # 全局 Memory
-./.qoder/memory          # 项目 Memory
+~/.qoder/memory          # Global Memory
+./.qoder/memory          # Project Memory
 ```
 
-## 10. 并发会话 (Jobs)
+## 10. Concurrent Sessions (Jobs)
 
-### 10.1 Job 类型
+### 10.1 Job Types
 
-- **Local Job**: 本地进程
-- **Worktree Job**: Git worktree 隔离
-- **Container Job**: Docker 容器
+- **Local Job**: local process
+- **Worktree Job**: Git worktree isolation
+- **Container Job**: Docker container
 - **Kubernetes Job**: K8s Pod
 
-### 10.2 Job 管理
+### 10.2 Job Management
 
 ```bash
-qodercli jobs           # 列出 Jobs
-qodercli jobs rm <id>   # 删除 Job
-qodercli --worktree     # 创建 Worktree Job
+qodercli-reverse jobs           # List Jobs
+qodercli-reverse jobs rm <id>   # Remove Job
+qodercli-reverse --worktree     # Create Worktree Job
 ```
 
-### 10.3 Job 存储
+### 10.3 Job Storage
 
 ```
 ~/.qoder/

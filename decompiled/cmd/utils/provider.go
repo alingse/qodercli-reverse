@@ -8,15 +8,15 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/log"
 )
 
-// CreateProvider 根据环境变量创建 Provider
-// 优先级：标准环境变量 > QODER_* 环境变量
+// CreateProvider creates a Provider from environment variables
+// Priority: standard env vars > QODER_* env vars
 func CreateProvider() (provider.Client, string, error) {
-	// 首先检查标准 OpenAI 环境变量（优先级最高）
+	// First check standard OpenAI env vars (highest priority)
 	standardOpenAIKey := os.Getenv("OPENAI_API_KEY")
 	standardBaseURL := os.Getenv("OPENAI_BASE_URL")
 	standardModel := os.Getenv("OPENAI_MODEL")
 
-	// 检查 QODER_* 格式的环境变量
+	// Check QODER_* format env vars
 	qoderToken := os.Getenv("QODER_PERSONAL_ACCESS_TOKEN")
 	anthropicKey := os.Getenv("QODER_ANTHROPIC_API_KEY")
 	qoderOpenAIKey := os.Getenv("QODER_OPENAI_API_KEY")
@@ -33,7 +33,7 @@ func CreateProvider() (provider.Client, string, error) {
 		log.Debug("Found QODER_OPENAI_API_KEY, using Qoder OpenAI provider")
 	}
 
-	// 优先使用标准 OpenAI 环境变量（支持任意 OpenAI 兼容服务）
+	// Prefer standard OpenAI env vars (supports any OpenAI-compatible service)
 	if standardOpenAIKey != "" {
 		var opts []provider.ClientOption
 		opts = append(opts, provider.WithAPIKey(standardOpenAIKey))
@@ -48,7 +48,7 @@ func CreateProvider() (provider.Client, string, error) {
 			return nil, "", fmt.Errorf("create OpenAI client: %w", err)
 		}
 
-		// 如果指定了模型，返回模型名
+		// If model specified, return model name
 		if standardModel != "" {
 			log.Debug("Using model from OPENAI_MODEL: %s", standardModel)
 			return client, standardModel, nil
@@ -57,7 +57,7 @@ func CreateProvider() (provider.Client, string, error) {
 		return client, "", nil
 	}
 
-	// 其次检查 QODER_OPENAI_* 格式
+	// Then check QODER_OPENAI_* format
 	if qoderOpenAIKey != "" {
 		var opts []provider.ClientOption
 		opts = append(opts, provider.WithAPIKey(qoderOpenAIKey))
@@ -80,14 +80,14 @@ func CreateProvider() (provider.Client, string, error) {
 		return client, "", nil
 	}
 
-	// Qoder 官方服务
+	// Qoder official service
 	if qoderToken != "" {
 		log.Debug("Using Qoder personal access token")
 		client, err := provider.NewQoderClient(provider.WithAPIKey(qoderToken))
 		return client, "", err
 	}
 
-	// 其他 Provider（暂未实现）
+	// Other providers (not yet implemented)
 	if anthropicKey != "" {
 		return nil, "", fmt.Errorf("Anthropic provider: use OPENAI_API_KEY with compatible base URL instead")
 	}

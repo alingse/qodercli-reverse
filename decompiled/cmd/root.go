@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	// 全局标志变量 - 严格对齐官方 qodercli
+	// Global flag variables - strictly aligned with official qodercli-reverse
 	model            string
 	maxTokens        int
 	temperature      float64
@@ -25,6 +25,7 @@ var (
 	continueSession  bool
 	resumeSession    string
 	workspace        string
+	planMode         bool // Enable plan mode: agent outputs a plan before executing tools
 	outputFormat     string
 	inputFormat      string
 	maxOutputTokens  string
@@ -46,40 +47,40 @@ var (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "qodercli",
+	Use:   "qodercli-reverse",
 	Short: "Qoder CLI - AI-powered development assistant",
 	Long: `Qoder CLI is an AI-powered development assistant that helps you with coding tasks,
 file operations, and system interactions through natural language commands.`,
 
-	// 不带参数时运行 TUI 模式
+	// Run TUI mode when no arguments provided
 	Run: func(cmd *cobra.Command, args []string) {
 		if showVersion {
-			fmt.Printf("qodercli version %s (decompiled)\n", version.Version)
+			fmt.Printf("qodercli-reverse version %s (decompiled)\n", version.Version)
 			return
 		}
 
-		// 初始化日志
+		// Initialize logging
 		if err := utils.InitLogger(logFile, debug); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to init log: %v\n", err)
 		}
 		defer log.Close()
 
-		// 确定工作目录
+		// Determine working directory
 		workDir := workspace
 		if workDir == "" {
 			workDir, _ = os.Getwd()
 		}
 
-		// 构建系统提示词
-		// 官方行为：如果用户指定了 --system-prompt，使用用户提供的；否则内部自动构建
+		// Build system prompt
+		// Official behavior: if user specified --system-prompt, use it; otherwise auto-build internally
 		systemPromptText := systemPrompt
 		if systemPromptText == "" {
-			// 内部自动构建系统提示词
+			// Auto-build system prompt internally
 			var buildErr error
 			systemPromptText, buildErr = utils.BuildSystemPromptAuto(workDir, withClaudeConfig)
 			if buildErr != nil {
 				log.Error("Failed to build system prompt: %v", buildErr)
-				// 回退到默认提示词
+				// Fall back to default prompt
 				systemPromptText = utils.GetDefaultSystemPrompt()
 			}
 			log.Debug("Auto-built system prompt, length: %d", len(systemPromptText))
@@ -87,7 +88,7 @@ file operations, and system interactions through natural language commands.`,
 			log.Debug("Using user-provided system prompt")
 		}
 
-		// 构建 flags 结构
+		// Build flags struct
 		flags := &utils.Flags{
 			Model:            model,
 			MaxTokens:        maxTokens,
@@ -102,16 +103,16 @@ file operations, and system interactions through natural language commands.`,
 			Debug:            debug,
 		}
 
-		// 如果有 print 参数，运行非交互模式
+		// If print arg present, run non-interactive mode
 		if printMode != "" {
-			if err := print.Run(printMode, flags, quiet, systemPromptText); err != nil {
+			if err := print.Run(printMode, flags, quiet, systemPromptText, planMode); err != nil {
 				log.Fatalf("Print mode error: %v", err)
 			}
 			return
 		}
 
-		// 运行 TUI 模式
-		if err := tui.Run(flags, systemPromptText); err != nil {
+		// Run TUI mode
+		if err := tui.Run(flags, systemPromptText, planMode); err != nil {
 			fmt.Fprintf(os.Stderr, "TUI error: %v\n", err)
 			os.Exit(1)
 		}
@@ -127,21 +128,22 @@ func Execute() {
 }
 
 func init() {
-	// 全局标志 - 严格对齐官方
+	// Global flags - strictly aligned with official
 	rootCmd.PersistentFlags().StringVarP(&model, "model", "", "auto", "Model to use (auto/efficient/gmodel/kmodel/lite/mmodel/performance/q35model/qmodel/ultimate)")
 	rootCmd.PersistentFlags().IntVarP(&maxTokens, "max-tokens", "", 4096, "Maximum tokens for response")
 	rootCmd.PersistentFlags().Float64VarP(&temperature, "temperature", "", 0.7, "Temperature for generation")
 	rootCmd.PersistentFlags().IntVarP(&maxTurns, "max-turns", "", 25, "Maximum turns for agent")
+	rootCmd.PersistentFlags().BoolVarP(&planMode, "plan-mode", "", false, "Enable plan mode: agent outputs a plan before executing tools")
 	rootCmd.PersistentFlags().StringVarP(&permissionMode, "permission-mode", "", "ask", "Permission mode (ask/allow/deny)")
 
-	// 系统提示词标志 - 官方标准
+	// System prompt flags - official standard
 	rootCmd.PersistentFlags().StringVarP(&systemPrompt, "system-prompt", "", "", "System prompt for the agent")
 
-	// 日志标志
+	// Logging flags
 	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "", false, "Enable debug logging")
-	rootCmd.PersistentFlags().StringVarP(&logFile, "log-file", "", "", "Log file path (default: ~/.qoder/qodercli.log)")
+	rootCmd.PersistentFlags().StringVarP(&logFile, "log-file", "", "", "Log file path (default: ~/.qodercli-reverse/qodercli-reverse.log)")
 
-	// 主要标志 - 严格对齐官方
+	// Main flags - strictly aligned with official
 	rootCmd.Flags().StringVarP(&printMode, "print", "p", "", "Non-interactive mode: process single prompt and exit")
 	rootCmd.Flags().BoolVarP(&continueSession, "continue", "c", false, "Continue last conversation")
 	rootCmd.Flags().StringVarP(&resumeSession, "resume", "r", "", "Resume specific session")
@@ -162,6 +164,6 @@ func init() {
 	rootCmd.Flags().BoolVarP(&quiet, "quiet", "q", false, "Hide spinner in non-interactive mode")
 	rootCmd.Flags().BoolVarP(&showVersion, "version", "v", false, "Show version information")
 
-	// 隐藏标志（用于兼容性）
-	rootCmd.Flags().BoolP("help", "h", false, "Help for qodercli")
+	// Hidden flags (for compatibility)
+	rootCmd.Flags().BoolP("help", "h", false, "Help for qodercli-reverse")
 }

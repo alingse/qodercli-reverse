@@ -1,96 +1,96 @@
-# qodercli 工具系统 (Tools) 分析
+# qodercli-reverse Tool System (Tools) Analysis
 
-## 1. 工具系统架构
+## 1. Tool System Architecture
 
-### 1.1 包结构
+### 1.1 Package Structure
 
 ```
 core/agent/tools/
-├── abstract/              # 工具抽象基类
-├── ask_user_question/     # AskUserQuestion 工具
-├── bash/                  # Bash 工具
-├── bashkill/              # KillBash 工具
-├── bashoutput/            # BashOutput 工具
-├── check_runtime/         # CheckRuntime 工具
-├── edit/                  # Edit 工具
-├── enter_plan_in_quest/   # Quest 进入 Plan 模式
-├── exit_plan_in_quest/    # Quest 退出 Plan 模式
-├── glob/                  # Glob 工具
-├── grep/                  # Grep 工具
-├── imagegen/              # ImageGen 工具
-├── ls/                    # LS 工具
-├── multiedit/             # MultiEdit 工具
-├── read/                  # Read 工具
-├── skill/                 # Skill 工具
-├── task/                  # Task (SubAgent) 工具
-├── todowrite/             # TodoWrite 工具
-├── utils/                 # 工具通用工具
-│   ├── file/              # 文件工具
-│   ├── format/            # 格式化工具
-│   └── repair/            # 修复工具
-├── webfetch/              # WebFetch 工具
-├── webfetch_trusted/      # WebFetch (受信任) 工具
-└── write/                 # Write 工具
+├── abstract/              # Tool abstract base class
+├── ask_user_question/     # AskUserQuestion tool
+├── bash/                  # Bash tool
+├── bashkill/              # KillBash tool
+├── bashoutput/            # BashOutput tool
+├── check_runtime/         # CheckRuntime tool
+├── edit/                  # Edit tool
+├── enter_plan_in_quest/   # Quest enter Plan mode
+├── exit_plan_in_quest/    # Quest exit Plan mode
+├── glob/                  # Glob tool
+├── grep/                  # Grep tool
+├── imagegen/              # ImageGen tool
+├── ls/                    # LS tool
+├── multiedit/             # MultiEdit tool
+├── read/                  # Read tool
+├── skill/                 # Skill tool
+├── task/                  # Task (SubAgent) tool
+├── todowrite/             # TodoWrite tool
+├── utils/                 # Tool common utilities
+│   ├── file/              # File utilities
+│   ├── format/            # Formatting utilities
+│   └── repair/            # Repair utilities
+├── webfetch/              # WebFetch tool
+├── webfetch_trusted/      # WebFetch (trusted) tool
+└── write/                 # Write tool
 ```
 
-## 2. 内置工具列表
+## 2. Built-in Tool List
 
-### 2.1 核心工具
+### 2.1 Core Tools
 
-| 工具名 | 类型 | 说明 |
-|--------|------|------|
-| `Bash` | 执行 | 执行 shell 命令 |
-| `Read` | 读取 | 读取文件内容 |
-| `Write` | 写入 | 创建或覆盖文件 |
-| `Edit` | 编辑 | 查找替换文件内容 |
-| `MultiEdit` | 编辑 | 批量编辑文件 |
-| `Glob` | 搜索 | 文件模式匹配搜索 |
-| `Grep` | 搜索 | 基于正则的内容搜索 |
-| `LS` | 浏览 | 列出目录内容 |
+| Tool Name | Type | Description |
+|-----------|------|-------------|
+| `Bash` | Execution | Execute shell commands |
+| `Read` | Read | Read file contents |
+| `Write` | Write | Create or overwrite files |
+| `Edit` | Edit | Find and replace file contents |
+| `MultiEdit` | Edit | Batch edit files |
+| `Glob` | Search | File pattern matching search |
+| `Grep` | Search | Regex-based content search |
+| `LS` | Browse | List directory contents |
 
-### 2.2 进程管理工具
+### 2.2 Process Management Tools
 
-| 工具名 | 说明 |
-|--------|------|
-| `KillBash` | 终止后台 Bash 进程 |
-| `BashOutput` | 获取后台 Bash 进程输出 |
+| Tool Name | Description |
+|-----------|-------------|
+| `KillBash` | Terminate background Bash process |
+| `BashOutput` | Get output of background Bash process |
 
-### 2.3 任务管理工具
+### 2.3 Task Management Tools
 
-| 工具名 | 说明 |
-|--------|------|
-| `Task` | 启动子代理 (SubAgent) |
-| `TodoWrite` | 更新任务列表 |
-| `Skill` | 执行预定义技能 |
+| Tool Name | Description |
+|-----------|-------------|
+| `Task` | Launch a sub-agent (SubAgent) |
+| `TodoWrite` | Update task list |
+| `Skill` | Execute a predefined skill |
 
-### 2.4 交互工具
+### 2.4 Interaction Tools
 
-| 工具名 | 说明 |
-|--------|------|
-| `AskUserQuestion` | 向用户提问 |
+| Tool Name | Description |
+|-----------|-------------|
+| `AskUserQuestion` | Ask the user a question |
 
-### 2.5 网络工具
+### 2.5 Network Tools
 
-| 工具名 | 说明 |
-|--------|------|
-| `WebFetch` | 获取网页内容 |
-| `WebSearch` | 搜索网络 |
+| Tool Name | Description |
+|-----------|-------------|
+| `WebFetch` | Fetch web page content |
+| `WebSearch` | Search the web |
 
-### 2.6 其他工具
+### 2.6 Other Tools
 
-| 工具名 | 说明 |
-|--------|------|
-| `ImageGen` | 生成图片 |
-| `CheckRuntime` | 检查运行时环境 |
-| `EnterSpecMode` / `EnterPlanMode` | 进入规划模式 |
-| `ExitSpecMode` / `ExitPlanMode` | 退出规划模式 |
-| `DeleteFile` | 删除文件 |
-| `SearchCodebase` | 搜索代码库 |
-| `SearchSymbol` | 搜索符号 |
+| Tool Name | Description |
+|-----------|-------------|
+| `ImageGen` | Generate images |
+| `CheckRuntime` | Check runtime environment |
+| `EnterSpecMode` / `EnterPlanMode` | Enter planning mode |
+| `ExitSpecMode` / `ExitPlanMode` | Exit planning mode |
+| `DeleteFile` | Delete files |
+| `SearchCodebase` | Search codebase |
+| `SearchSymbol` | Search symbols |
 
-## 3. 工具定义格式
+## 3. Tool Definition Format
 
-### 3.1 工具接口
+### 3.1 Tool Interface
 
 ```go
 type Tool interface {
@@ -101,7 +101,7 @@ type Tool interface {
 }
 ```
 
-### 3.2 输入 Schema 示例
+### 3.2 Input Schema Example
 
 ```json
 {
@@ -124,228 +124,228 @@ type Tool interface {
 }
 ```
 
-## 4. 核心工具详解
+## 4. Core Tools in Detail
 
-### 4.1 Bash 工具
+### 4.1 Bash Tool
 
 ```go
-// 参数结构
+// Parameter structure
 type BashParams struct {
-    Command       string   // 要执行的命令
-    Timeout       int      // 超时时间 (毫秒)
-    RunInBackground bool   // 是否后台运行
-    Description   string   // 命令描述
+    Command       string   // Command to execute
+    Timeout       int      // Timeout (milliseconds)
+    RunInBackground bool   // Whether to run in background
+    Description   string   // Command description
 }
 ```
 
-特性:
-- 支持前台和后台执行
-- 支持超时控制 (`QODER_BASH_TIMEOUT`)
-- 自动处理 Shell 快照和恢复
-- 支持 Bash 模式 (用户输入)
+Features:
+- Supports foreground and background execution
+- Timeout control (`QODER_BASH_TIMEOUT`)
+- Automatic shell snapshot and restore handling
+- Supports Bash mode (user input)
 
-### 4.2 Read 工具
+### 4.2 Read Tool
 
 ```go
 type ReadParams struct {
-    FilePath    string  // 文件路径
-    Offset      int     // 起始行号
-    Limit       int     // 读取行数
-    ReadImage   bool    // 是否读取图片
+    FilePath    string  // File path
+    Offset      int     // Starting line number
+    Limit       int     // Number of lines to read
+    ReadImage   bool    // Whether to read images
 }
 ```
 
-特性:
-- 支持文本文件和图片文件
-- 自动检测文件类型
-- 支持分页读取大文件
-- 行号前缀格式输出
+Features:
+- Supports text files and image files
+- Automatic file type detection
+- Paginated reading of large files
+- Line-number-prefixed output format
 
-### 4.3 Edit 工具
+### 4.3 Edit Tool
 
 ```go
 type EditParams struct {
-    FilePath    string  // 文件路径
-    OldString   string  // 要替换的内容
-    NewString   string  // 替换后的内容
-    ReplaceAll  bool    // 是否替换所有匹配
+    FilePath    string  // File path
+    OldString   string  // Content to replace
+    NewString   string  // Replacement content
+    ReplaceAll  bool    // Whether to replace all matches
 }
 ```
 
-特性:
-- 必须先使用 Read 工具读取文件
-- 精确匹配 (包括缩进)
-- 支持批量替换
-- 自动备份
+Features:
+- Must first use the Read tool to read the file
+- Exact match (including indentation)
+- Supports batch replacement
+- Automatic backup
 
-### 4.4 Write 工具
+### 4.4 Write Tool
 
 ```go
 type WriteParams struct {
-    FilePath    string  // 文件路径
-    Content     string  // 文件内容
+    FilePath    string  // File path
+    Content     string  // File content
 }
 ```
 
-特性:
-- 原子写入
-- 自动创建目录
-- 文件权限处理
+Features:
+- Atomic write
+- Automatic directory creation
+- File permission handling
 
-### 4.5 Grep 工具
+### 4.5 Grep Tool
 
 ```go
 type GrepParams struct {
-    Pattern     string   // 正则模式
-    Path        string   // 搜索路径
-    OutputMode  string   // 输出模式: content/files_with_matches/count
-    Type        string   // 文件类型
-    Glob        string   // 文件模式
-    HeadLimit   int      // 结果限制
-    Multiline   bool     // 多行模式
+    Pattern     string   // Regex pattern
+    Path        string   // Search path
+    OutputMode  string   // Output mode: content/files_with_matches/count
+    Type        string   // File type
+    Glob        string   // File pattern
+    HeadLimit   int      // Result limit
+    Multiline   bool     // Multiline mode
 }
 ```
 
-特性:
-- 基于 ripgrep 实现
-- 支持多种输出模式
-- 支持文件类型过滤
-- 支持上下文行 (-A, -B, -C)
+Features:
+- Implemented on top of ripgrep
+- Supports multiple output modes
+- Supports file type filtering
+- Supports context lines (-A, -B, -C)
 
-### 4.6 Glob 工具
+### 4.6 Glob Tool
 
 ```go
 type GlobParams struct {
-    Pattern     string  // glob 模式
-    Path        string  // 搜索路径
+    Pattern     string  // glob pattern
+    Path        string  // Search path
 }
 ```
 
-特性:
-- 递归搜索
-- 支持通配符
-- 按修改时间排序
+Features:
+- Recursive search
+- Supports wildcards
+- Sorted by modification time
 
-### 4.7 Task 工具
+### 4.7 Task Tool
 
 ```go
 type TaskParams struct {
-    SubagentType string  // 子代理类型
-    Description  string  // 任务描述
-    Prompt       string  // 任务提示
+    SubagentType string  // Sub-agent type
+    Description  string  // Task description
+    Prompt       string  // Task prompt
 }
 ```
 
-可用子代理类型:
-- `code-reviewer`: 代码审查
-- `design-agent`: 设计文档
-- `spec-review-agent`: 规格审查
-- `task-executor`: 任务执行
-- `general-purpose`: 通用代理
+Available sub-agent types:
+- `code-reviewer`: Code review
+- `design-agent`: Design document
+- `spec-review-agent`: Spec review
+- `task-executor`: Task execution
+- `general-purpose`: General-purpose agent
 
-### 4.8 TodoWrite 工具
+### 4.8 TodoWrite Tool
 
 ```go
 type TodoParams struct {
-    Todos []TodoItem  // 任务列表
+    Todos []TodoItem  // Task list
 }
 
 type TodoItem struct {
-    Content     string  // 任务内容
+    Content     string  // Task content
     Status      string  // pending/in_progress/completed
-    ActiveForm  string  // 进行中形式
+    ActiveForm  string  // In-progress form
 }
 ```
 
-### 4.9 AskUserQuestion 工具
+### 4.9 AskUserQuestion Tool
 
 ```go
 type AskUserQuestionParams struct {
-    Questions []Question  // 问题列表
+    Questions []Question  // Question list
 }
 
 type Question struct {
-    Question    string    // 问题文本
-    Header      string    // 简短标签
-    Options     []Option  // 选项
-    MultiSelect bool      // 是否多选
+    Question    string    // Question text
+    Header      string    // Short label
+    Options     []Option  // Options
+    MultiSelect bool      // Whether multi-select
 }
 ```
 
-## 5. 工具执行流程
+## 5. Tool Execution Flow
 
 ```
-1. Agent 生成工具调用 (ToolCall)
-2. 权限检查 (PermissionChecker)
-   ├── 检查是否在 allowed_tools 列表
-   ├── 检查是否在 disallowed_tools 列表
-   └── 检查路径/命令权限规则
-3. 如需确认，显示权限对话框
-4. 执行工具
+1. Agent generates tool call (ToolCall)
+2. Permission check (PermissionChecker)
+   ├── Check if in allowed_tools list
+   ├── Check if in disallowed_tools list
+   └── Check path/command permission rules
+3. If confirmation needed, show permission dialog
+4. Execute tool
    ├── PreToolUse Hook
-   ├── 工具执行
+   ├── Tool execution
    └── PostToolUse Hook
-5. 返回结果给 Agent
+5. Return result to Agent
 ```
 
-## 6. 权限控制
+## 6. Permission Control
 
-### 6.1 工具级别权限
+### 6.1 Tool-Level Permissions
 
 ```
---allowed-tools "Bash,Edit"      # 只允许指定工具
---disallowed-tools "WebFetch"    # 禁用指定工具
---dangerously-skip-permissions   # 跳过所有权限检查
+--allowed-tools "Bash,Edit"      # Only allow specified tools
+--disallowed-tools "WebFetch"    # Disable specified tools
+--dangerously-skip-permissions   # Skip all permission checks
 ```
 
-### 6.2 路径级别权限
+### 6.2 Path-Level Permissions
 
 ```
 core/agent/permission/file_rule_matcher/
-├── 检查文件路径是否允许访问
-├── 应用项目规则
-└── 应用用户规则
+├── Check whether file path is allowed to access
+├── Apply project rules
+└── Apply user rules
 ```
 
-### 6.3 Bash 命令权限
+### 6.3 Bash Command Permissions
 
 ```
 core/agent/permission/bash_rule_matcher/
-├── 检查命令是否允许执行
-├── 应用 gitignore 规则
-└── 应用危险命令列表
+├── Check whether command is allowed to execute
+├── Apply gitignore rules
+└── Apply dangerous command list
 ```
 
-## 7. Hook 系统
+## 7. Hook System
 
-### 7.1 Hook 类型
+### 7.1 Hook Types
 
-| Hook | 触发时机 |
-|------|----------|
-| `PreToolUse` | 工具执行前 |
-| `PostToolUse` | 工具执行后 |
-| `AgentStop` | Agent 停止时 |
-| `SessionStart` | 会话开始时 |
-| `UserPromptSubmit` | 用户提交时 |
+| Hook | Trigger Timing |
+|------|----------------|
+| `PreToolUse` | Before tool execution |
+| `PostToolUse` | After tool execution |
+| `AgentStop` | When Agent stops |
+| `SessionStart` | When session starts |
+| `UserPromptSubmit` | When user submits |
 
-### 7.2 Hook 用途
+### 7.2 Hook Purposes
 
-- 结果截断 (`result_truncator`)
-- 结果持久化 (`result_persister`)
-- 代码审查检查 (`code_reviewer_checker`)
-- 外部通知 (`external`)
+- Result truncation (`result_truncator`)
+- Result persistence (`result_persister`)
+- Code review check (`code_reviewer_checker`)
+- External notifications (`external`)
 
-## 8. 工具结果格式
+## 8. Tool Result Format
 
-### 8.1 文本结果
+### 8.1 Text Result
 
 ```
 <result>
-文件内容或命令输出
+File content or command output
 </result>
 ```
 
-### 8.2 错误结果
+### 8.2 Error Result
 
 ```json
 {
@@ -355,43 +355,43 @@ core/agent/permission/bash_rule_matcher/
 }
 ```
 
-### 8.3 截断结果
+### 8.3 Truncated Result
 
 ```
 ... [N lines truncated]
 ```
 
-## 9. 特殊工具行为
+## 9. Special Tool Behavior
 
-### 9.1 Bash 工具特殊处理
+### 9.1 Bash Tool Special Handling
 
-- `bash-output-special`: 特殊输出处理
-- `shell-snapshot`: Shell 状态快照
-- `background_shell`: 后台 Shell 管理
+- `bash-output-special`: Special output handling
+- `shell-snapshot`: Shell state snapshot
+- `background_shell`: Background shell management
 
-### 9.2 文件工具特殊处理
+### 9.2 File Tool Special Handling
 
-- `special_path_policy`: 特殊路径策略
-- `special_file_protection`: 特殊文件保护
-- `qoder_config_protection`: Qoder 配置保护
+- `special_path_policy`: Special path policy
+- `special_file_protection`: Special file protection
+- `qoder_config_protection`: Qoder config protection
 
-### 9.3 WebFetch 工具特殊处理
+### 9.3 WebFetch Tool Special Handling
 
-- `webfetch_rule_matcher`: URL 规则匹配
-- 受信任站点列表
-- 重定向限制
+- `webfetch_rule_matcher`: URL rule matching
+- Trusted site list
+- Redirect limits
 
-## 10. 工具配置
+## 10. Tool Configuration
 
-### 10.1 环境变量
+### 10.1 Environment Variables
 
 ```
-QODER_BASH_PATH      # Bash 路径
-QODER_BASH_TIMEOUT   # Bash 超时
-QODER_PROJECT_DIR    # 项目目录
+QODER_BASH_PATH      # Bash path
+QODER_BASH_TIMEOUT   # Bash timeout
+QODER_PROJECT_DIR    # Project directory
 ```
 
-### 10.2 配置文件
+### 10.2 Configuration File
 
 ```json
 {

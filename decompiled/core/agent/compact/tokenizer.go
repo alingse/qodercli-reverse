@@ -1,4 +1,4 @@
-// Package compact 提供上下文压缩功能 - Tokenizer 实现
+// Package compact provides context compaction - Tokenizer implementations
 package compact
 
 import (
@@ -6,15 +6,15 @@ import (
 	"unicode"
 )
 
-// SimpleTokenizer 简单的 Tokenizer 实现
+// SimpleTokenizer simple tokenizer implementation
 type SimpleTokenizer struct {
-	// 中文每个字符算 1.5 个 token
+	// Chinese characters count as 1.5 tokens each
 	chineseTokenFactor float64
-	// 英文每个单词算 1.3 个 token
+	// English words count as 1.3 tokens each
 	englishTokenFactor float64
 }
 
-// NewSimpleTokenizer 创建简单的 Tokenizer
+// NewSimpleTokenizer creates a simple tokenizer
 func NewSimpleTokenizer() *SimpleTokenizer {
 	return &SimpleTokenizer{
 		chineseTokenFactor: 1.5,
@@ -22,7 +22,7 @@ func NewSimpleTokenizer() *SimpleTokenizer {
 	}
 }
 
-// Count 计算文本的 Token 数
+// Count calculates the token count of text
 func (t *SimpleTokenizer) Count(text string) int {
 	if text == "" {
 		return 0
@@ -37,13 +37,13 @@ func (t *SimpleTokenizer) Count(text string) int {
 	for _, r := range text {
 		switch {
 		case unicode.Is(unicode.Han, r):
-			// 汉字
+			// Chinese character
 			chineseChars++
 		case unicode.IsLetter(r) || unicode.IsNumber(r):
-			// 英文字母或数字
+			// English letter or digit
 			currentWord.WriteRune(r)
 		default:
-			// 其他字符（空格、标点等）
+			// other characters (spaces, punctuation, etc.)
 			if currentWord.Len() > 0 {
 				englishWords++
 				currentWord.Reset()
@@ -52,16 +52,16 @@ func (t *SimpleTokenizer) Count(text string) int {
 		}
 	}
 
-	// 处理最后一个单词
+	// handle last word
 	if currentWord.Len() > 0 {
 		englishWords++
 	}
 
-	// 计算 Token 数
+	// calculate token count
 	tokens := 0
 	tokens += int(float64(chineseChars) * t.chineseTokenFactor)
 	tokens += int(float64(englishWords) * t.englishTokenFactor)
-	tokens += otherChars / 4 // 其他字符每 4 个算 1 个 token
+	tokens += otherChars / 4 // other characters: 4 chars = 1 token
 
 	return tokens
 }
