@@ -1,4 +1,6 @@
 .claude/
 .dev/
+*.jsonc
+*.json
 bin/
 *.DS_Store

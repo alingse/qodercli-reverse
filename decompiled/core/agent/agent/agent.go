@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/agent/permission"
 	"github.com/alingse/qodercli-reverse/decompiled/core/agent/provider"
 	"github.com/alingse/qodercli-reverse/decompiled/core/agent/state"
+	"github.com/alingse/qodercli-reverse/decompiled/core/agent/tools/security"
 	"github.com/alingse/qodercli-reverse/decompiled/core/agent/tools"
 	"github.com/alingse/qodercli-reverse/decompiled/core/log"
 	"github.com/alingse/qodercli-reverse/decompiled/core/types"
@@ -87,6 +89,11 @@ func NewAgent(config *Config, provider provider.Client) (*Agent, error) {
 
 	// create session memory and Todo state
 	sessionMemory := state.NewSessionMemory()
+	// Load any previously saved session
+	if err := sessionMemory.LoadSession(sessionMemory.GetSession()); err != nil {
+		fmt.Fprintf(os.Stderr, "Note: no previous session found, starting fresh\n")
+	}
+
 	todoState := state.NewTodoState(sessionMemory)
 
 	agent := &Agent{
@@ -154,6 +161,12 @@ func (a *Agent) registerBuiltinTools() error {
 	// TodoWrite tools
 	if err := a.toolRegistry.Register(tools.NewTodoWriteTool(a.todoState)); err != nil {
 		return err
+	}
+
+	// Security scan tool
+	ws := "."
+	if err := a.toolRegistry.Register(security.NewScanner(ws)); err != nil {
+		log.Warn("Failed to register security scanner: %v", err)
 	}
 
 	return nil
