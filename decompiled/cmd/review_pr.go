@@ -107,6 +107,7 @@ and for posting comments.`,
 				MaxTurns:       25,
 				PermissionMode: permission.Mode("allow"),
 				SystemPrompt:   utils.GetDefaultSystemPrompt(),
+				PlanMode:       planMode,
 			}
 			ag, aerr := agent.NewAgent(agentCfg, prov)
 			if aerr != nil {

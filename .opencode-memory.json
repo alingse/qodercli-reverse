@@ -74,6 +74,33 @@
       ],
       "status": "completed",
       "executed_in": "/Users/sham4/qodercli-reverse"
+    },
+    {
+      "id": "task-qodercli-reverse-makefile-install-20261109",
+      "description": "Added Makefile (build/install/test/clean/release/doctor) and scripts/install.sh one-command installer; updated .gitignore; committed and pushed to feat/qoder-community-integration (PR #5).",
+      "timestamp": "2026-11-09T14:05:00Z",
+      "files_changed": [
+        "Makefile",
+        "scripts/install.sh",
+        ".gitignore",
+        "docs/USER_GUIDE_MACOS.md"
+      ],
+      "status": "completed",
+      "executed_in": "/Users/sham4/qodercli-reverse"
+    },
+    {
+      "id": "task-qodercli-reverse-planmode-20261109",
+      "description": "Implemented P1 Plan mode feature: added --plan-mode flag, agent outputs a plan text before executing any tools when enabled. Modified core/agent/agent/agent.go, cmd/root.go, cmd/tui/tui.go, cmd/print/print.go, cmd/print/stream_json.go. Build tested; 401 expected without API key.",
+      "timestamp": "2026-11-09T15:10:00Z",
+      "files_changed": [
+        "decompiled/core/agent/agent/agent.go",
+        "cmd/root.go",
+        "cmd/tui/tui.go",
+        "cmd/print/print.go",
+        "cmd/print/stream_json.go"
+      ],
+      "status": "completed",
+      "executed_in": "/Users/sham4/qodercli-reverse"
     }
   ],
   "current_task": {
@@ -140,5 +167,5 @@
       }
     ]
   },
-  "updated": "2026-11-09T13:55:00Z"
+  "updated": "2026-11-09T14:05:00Z"
 }

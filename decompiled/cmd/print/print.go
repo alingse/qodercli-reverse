@@ -14,9 +14,9 @@ import (
 )
 
 // Run runs non-interactive print mode
-func Run(input string, flags *utils.Flags, quiet bool, systemPrompt string) error {
+func Run(input string, flags *utils.Flags, quiet bool, systemPrompt string, planMode bool) error {
 	if flags != nil && flags.OutputFormat == "stream-json" {
-		return RunStreamJSON(input, flags, systemPrompt)
+		return RunStreamJSON(input, flags, systemPrompt, planMode)
 	}
 	log.Info("Starting qodercli-reverse in print mode")
 	log.Debug("Input: %s", input)
@@ -55,6 +55,7 @@ func Run(input string, flags *utils.Flags, quiet bool, systemPrompt string) erro
 		MaxTurns:       flags.MaxTurns,
 		PermissionMode: permission.Mode(flags.PermissionMode),
 		SystemPrompt:   systemPrompt,
+		PlanMode:       planMode,
 	}
 
 	ag, err := agent.NewAgent(agentCfg, prov)

@@ -78,6 +78,7 @@ type Config struct {
 	SubagentMode          bool
 	AgentName             string
 	EnableEnhancedCompact bool // enable enhanced compact feature
+	PlanMode              bool // when true, agent outputs a plan before executing tools
 }
 
 // NewAgent creates Agent
@@ -237,6 +238,7 @@ func (a *Agent) SendMessage(ctx context.Context, content string, attachments ...
 // generate generates response
 func (a *Agent) generate(ctx context.Context) error {
 	turnCount := 0
+	var planOutputted bool
 
 	for {
 		// check max turns
@@ -378,6 +380,28 @@ func (a *Agent) generate(ctx context.Context) error {
 		// increment assistant reply count
 		a.state.IncrementAssistantReplies()
 		log.Debug("Added assistant message to state, total messages now: %d", len(a.state.GetMessages()))
+
+		// Plan mode: if enabled and plan not yet outputted, output the plan text
+		// and finish without executing any tools
+		if a.config.PlanMode && !planOutputted {
+			planOutputted = true
+			// extract plan text from assistant message
+			planText := ""
+			for _, part := range assistantMsg.Content {
+				if part.Type == "text" {
+					planText += part.Text + "\n"
+				}
+			}
+			if planText != "" {
+				log.Debug("Plan mode: outputting plan (length: %d)", len(planText))
+				// we can optionally log or store the plan; here we just finish
+				// the plan is available in the state for TUI/display
+			}
+			if a.onFinish != nil {
+				a.onFinish(types.FinishReasonStop)
+			}
+			return nil
+		}
 
 		// if no tool calls, finish
 		if len(toolCalls) == 0 {

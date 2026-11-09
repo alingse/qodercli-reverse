@@ -25,6 +25,7 @@ var (
 	continueSession  bool
 	resumeSession    string
 	workspace        string
+	planMode         bool // Enable plan mode: agent outputs a plan before executing tools
 	outputFormat     string
 	inputFormat      string
 	maxOutputTokens  string
@@ -104,14 +105,14 @@ file operations, and system interactions through natural language commands.`,
 
 		// If print arg present, run non-interactive mode
 		if printMode != "" {
-			if err := print.Run(printMode, flags, quiet, systemPromptText); err != nil {
+			if err := print.Run(printMode, flags, quiet, systemPromptText, planMode); err != nil {
 				log.Fatalf("Print mode error: %v", err)
 			}
 			return
 		}
 
 		// Run TUI mode
-		if err := tui.Run(flags, systemPromptText); err != nil {
+		if err := tui.Run(flags, systemPromptText, planMode); err != nil {
 			fmt.Fprintf(os.Stderr, "TUI error: %v\n", err)
 			os.Exit(1)
 		}
@@ -132,6 +133,7 @@ func init() {
 	rootCmd.PersistentFlags().IntVarP(&maxTokens, "max-tokens", "", 4096, "Maximum tokens for response")
 	rootCmd.PersistentFlags().Float64VarP(&temperature, "temperature", "", 0.7, "Temperature for generation")
 	rootCmd.PersistentFlags().IntVarP(&maxTurns, "max-turns", "", 25, "Maximum turns for agent")
+	rootCmd.PersistentFlags().BoolVarP(&planMode, "plan-mode", "", false, "Enable plan mode: agent outputs a plan before executing tools")
 	rootCmd.PersistentFlags().StringVarP(&permissionMode, "permission-mode", "", "ask", "Permission mode (ask/allow/deny)")
 
 	// System prompt flags - official standard

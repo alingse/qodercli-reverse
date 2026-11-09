@@ -13,7 +13,7 @@ import (
 )
 
 // Run runs TUI mode
-func Run(flags *utils.Flags, systemPrompt string) error {
+func Run(flags *utils.Flags, systemPrompt string, planMode bool) error {
 	log.Info("Starting qodercli-reverse in TUI mode")
 	if flags.Debug {
 		log.Info("Debug mode enabled - streaming trace will be saved to /tmp")
@@ -56,6 +56,7 @@ func Run(flags *utils.Flags, systemPrompt string) error {
 		MaxTurns:       flags.MaxTurns,
 		PermissionMode: permission.Mode(flags.PermissionMode),
 		SystemPrompt:   systemPrompt,
+		PlanMode:       planMode,
 	}
 
 	ag, err := agent.NewAgent(agentCfg, prov)
