@@ -101,6 +101,40 @@
       ],
       "status": "completed",
       "executed_in": "/Users/sham4/qodercli-reverse"
+    },
+    {
+      "id": "task-qodercli-reverse-security-20261110",
+      "description": "Implemented security scan tool: scans codebase for hardcoded keys, passwords, SSH keys, AWS keys, DB strings, dangerous bash patterns. Added security-scan slash command and tool registration. Build tested.",
+      "timestamp": "2026-11-10T10:00:00Z",
+      "files_changed": [
+        "core/agent/tools/security/scan.go",
+        "core/agent/agent/agent.go",
+        "core/agent/state/memory.go"
+      ],
+      "status": "completed",
+      "executed_in": "/Users/sham4/qodercli-reverse"
+    },
+    {
+      "id": "task-qodercli-reverse-sessions-20261110",
+      "description": "Implemented session persistence: SessionMemory now saves/loads from disk at ~/.qodercli-reverse/sessions/<name>.json. Added ListSessions, LoadSession, SaveSessionAs functions. State management integrates with persistence.",
+      "timestamp": "2026-11-10T10:30:00Z",
+      "files_changed": [
+        "core/agent/state/memory.go",
+        "core/agent/agent/agent.go"
+      ],
+      "status": "completed",
+      "executed_in": "/Users/sham4/qodercli-reverse"
+    },
+    {
+      "id": "task-qodercli-reverse-mcp-20261110",
+      "description": "Added MCP CLI commands: mcp list, mcp add, mcp remove, mcp edit. MCP client library already implemented (core/resource/mcp/mcp.go). GitHub MCP setup script exists at scripts/github/setup-github-mcp.sh. Feature parity P1 partially complete.",
+      "timestamp": "2026-11-10T11:00:00Z",
+      "files_changed": [
+        "cmd/mcp_cmd.go",
+        "core/resource/mcp/mcp.go"
+      ],
+      "status": "completed",
+      "executed_in": "/Users/sham4/qodercli-reverse"
     }
   ],
   "current_task": {
@@ -167,5 +201,5 @@
       }
     ]
   },
-  "updated": "2026-11-09T14:05:00Z"
+  "updated": "2026-11-10T11:30:00Z"
 }

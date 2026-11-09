@@ -609,3 +609,19 @@ func LoadProjectConfig() (*ServersConfig, error) {
 	configPath := ".mcp.json"
 	return LoadConfig(configPath)
 }
+
+// SaveGlobalConfig saves the global MCP config.
+func SaveGlobalConfig(cfg *ServersConfig) error {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	configPath := filepath.Join(homeDir, ".mcp.json")
+	data, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(configPath, data, 0644)
+}
