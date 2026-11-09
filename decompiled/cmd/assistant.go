@@ -100,6 +100,8 @@ Never executes arbitrary commands requested by untrusted commenters.`,
 				PermissionMode: permission.Mode("allow"),
 				SystemPrompt:   utils.GetDefaultSystemPrompt(),
 				PlanMode:       planMode,
+				GoalMode:       goalMode,
+				Goal:           goal,
 			}
 			ag, aerr := agent.NewAgent(agentCfg, prov)
 			if aerr != nil {

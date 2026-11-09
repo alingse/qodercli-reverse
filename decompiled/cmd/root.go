@@ -26,6 +26,8 @@ var (
 	resumeSession    string
 	workspace        string
 	planMode         bool // Enable plan mode: agent outputs a plan before executing tools
+goalMode         bool // Enable goal mode: agent works toward a verifiable goal
+goal             string // Goal to achieve (natural language description)
 	outputFormat     string
 	inputFormat      string
 	maxOutputTokens  string
@@ -105,14 +107,14 @@ file operations, and system interactions through natural language commands.`,
 
 		// If print arg present, run non-interactive mode
 		if printMode != "" {
-			if err := print.Run(printMode, flags, quiet, systemPromptText, planMode); err != nil {
+			if err := print.Run(printMode, flags, quiet, systemPromptText, planMode, goalMode, goal); err != nil {
 				log.Fatalf("Print mode error: %v", err)
 			}
 			return
 		}
 
 		// Run TUI mode
-		if err := tui.Run(flags, systemPromptText, planMode); err != nil {
+		if err := tui.Run(flags, systemPromptText, planMode, goalMode, goal); err != nil {
 			fmt.Fprintf(os.Stderr, "TUI error: %v\n", err)
 			os.Exit(1)
 		}
@@ -135,6 +137,8 @@ func init() {
 	rootCmd.PersistentFlags().IntVarP(&maxTurns, "max-turns", "", 25, "Maximum turns for agent")
 	rootCmd.PersistentFlags().BoolVarP(&planMode, "plan-mode", "", false, "Enable plan mode: agent outputs a plan before executing tools")
 	rootCmd.PersistentFlags().StringVarP(&permissionMode, "permission-mode", "", "ask", "Permission mode (ask/allow/deny)")
+rootCmd.PersistentFlags().BoolVarP(&goalMode, "goal-mode", "", false, "Enable goal mode: agent works toward a verifiable goal")
+rootCmd.PersistentFlags().StringVarP(&goal, "goal", "", "", "Goal to achieve (natural language description)")
 
 	// System prompt flags - official standard
 	rootCmd.PersistentFlags().StringVarP(&systemPrompt, "system-prompt", "", "", "System prompt for the agent")

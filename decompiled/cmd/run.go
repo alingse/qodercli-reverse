@@ -99,6 +99,8 @@ file path to GITHUB_OUTPUT, and propagates the process exit code.`,
 			PermissionMode: permission.Mode(flags.PermissionMode),
 			SystemPrompt:   systemPrompt,
 			PlanMode:       planMode,
+			GoalMode:       goalMode,
+			Goal:           goal,
 		}
 		ag, err := agent.NewAgent(agentCfg, prov)
 		if err != nil {

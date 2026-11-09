@@ -33,7 +33,7 @@ func emitEvent(ev StreamEvent) {
 }
 
 // RunStreamJSON runs non-interactive print mode emitting newline-delimited JSON events.
-func RunStreamJSON(input string, flags *utils.Flags, systemPrompt string, planMode bool) error {
+func RunStreamJSON(input string, flags *utils.Flags, systemPrompt string, planMode bool, goalMode bool, goal string) error {
 	log.Info("Starting qodercli-reverse in stream-json print mode")
 
 	cfg := utils.LoadConfig(flags)
@@ -65,6 +65,8 @@ func RunStreamJSON(input string, flags *utils.Flags, systemPrompt string, planMo
 		PermissionMode: permission.Mode(flags.PermissionMode),
 		SystemPrompt:   systemPrompt,
 		PlanMode:       planMode,
+		GoalMode:       goalMode,
+		Goal:           goal,
 	}
 
 	ag, err := agent.NewAgent(agentCfg, prov)

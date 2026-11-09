@@ -81,6 +81,8 @@ type Config struct {
 	AgentName             string
 	EnableEnhancedCompact bool // enable enhanced compact feature
 	PlanMode              bool // when true, agent outputs a plan before executing tools
+	GoalMode              bool // when true, agent works toward a verifiable goal
+	Goal                  string // the goal to achieve (set via --goal flag)
 }
 
 // NewAgent creates Agent
@@ -252,6 +254,7 @@ func (a *Agent) SendMessage(ctx context.Context, content string, attachments ...
 func (a *Agent) generate(ctx context.Context) error {
 	turnCount := 0
 	var planOutputted bool
+	var goalAchieved bool
 
 	for {
 		// check max turns
@@ -386,6 +389,18 @@ func (a *Agent) generate(ctx context.Context) error {
 		if len(toolCalls) > 0 {
 			assistantMsg.ToolCalls = toolCalls
 			log.Debug("Added %d tool calls to assistant message", len(toolCalls))
+
+			// Goal mode: check if goal was achieved after tool execution
+			if a.config.GoalMode && !goalAchieved {
+				goalAchieved = checkGoalAchieved(a.state, a.config.Goal)
+				if goalAchieved {
+					log.Debug("Goal mode: goal achieved after tool execution")
+					if a.onFinish != nil {
+						a.onFinish(types.FinishReasonStop)
+					}
+					return nil
+				}
+			}
 		}
 
 		// save assistant message
@@ -774,4 +789,33 @@ func (a *Agent) GetTodoListText() string {
 		return "Todo list not initialized."
 	}
 	return a.todoState.TodosToText()
+}
+
+// checkGoalAchieved checks whether the goal has been achieved based on the current state.
+// Returns true if the goal text appears in the assistant's response or tool outputs.
+func checkGoalAchieved(state *state.State, goal string) bool {
+	messages := state.GetMessages()
+	if len(messages) == 0 {
+		return false
+	}
+
+	// Check recent messages for goal achievement
+	for i := len(messages) - 1; i >= 0; i-- {
+		msg := messages[i]
+		for _, part := range msg.Content {
+			if part.Type == "text" && strings.Contains(strings.ToLower(part.Text), strings.ToLower(goal)) {
+				return true
+			}
+		}
+		// Check tool results
+		if msg.Role == types.RoleTool && msg.Content != nil {
+			for _, contentPart := range msg.Content {
+				if contentPart.Type == "text" && strings.Contains(strings.ToLower(contentPart.Text), strings.ToLower(goal)) {
+					return true
+				}
+			}
+		}
+	}
+
+	return false
 }

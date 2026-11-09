@@ -108,6 +108,8 @@ and for posting comments.`,
 				PermissionMode: permission.Mode("allow"),
 				SystemPrompt:   utils.GetDefaultSystemPrompt(),
 				PlanMode:       planMode,
+				GoalMode:       goalMode,
+				Goal:           goal,
 			}
 			ag, aerr := agent.NewAgent(agentCfg, prov)
 			if aerr != nil {

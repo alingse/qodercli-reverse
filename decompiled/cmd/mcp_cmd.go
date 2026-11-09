@@ -229,7 +229,7 @@ var mcpEditCmd = &cobra.Command{
 			url = server.URL
 		}
 
-		fmt.Print("Args (current: %v, comma-separated, press enter to keep): ", server.Args)
+		fmt.Printf("Args (current: %v, comma-separated, press enter to keep): ", server.Args)
 		argsInput := ""
 		fmt.Scanln(&argsInput)
 		if argsInput != "" {
