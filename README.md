@@ -9,6 +9,12 @@
 - **Deliverables**: complete architecture documentation + decompiled code examples
 - **Decompilation result**: core architecture successfully reconstructed; decompiled code compiles and runs
 
+## User Guide (macOS)
+
+See [`docs/USER_GUIDE_MACOS.md`](docs/USER_GUIDE_MACOS.md) for installation,
+configuration (provider keys, GitHub token), running modes (interactive TUI,
+print mode, subcommands), flags, smoke tests, and troubleshooting.
+
 ## Project Status Overview
 
 The core architecture reverse engineering is complete. Implementation status of the main functional modules:
