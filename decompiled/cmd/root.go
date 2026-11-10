@@ -25,9 +25,9 @@ var (
 	continueSession  bool
 	resumeSession    string
 	workspace        string
-	planMode         bool // Enable plan mode: agent outputs a plan before executing tools
-goalMode         bool // Enable goal mode: agent works toward a verifiable goal
-goal             string // Goal to achieve (natural language description)
+	planMode         bool   // Enable plan mode: agent outputs a plan before executing tools
+	goalMode         bool   // Enable goal mode: agent works toward a verifiable goal
+	goal             string // Goal to achieve (natural language description)
 	outputFormat     string
 	inputFormat      string
 	maxOutputTokens  string
@@ -137,8 +137,8 @@ func init() {
 	rootCmd.PersistentFlags().IntVarP(&maxTurns, "max-turns", "", 25, "Maximum turns for agent")
 	rootCmd.PersistentFlags().BoolVarP(&planMode, "plan-mode", "", false, "Enable plan mode: agent outputs a plan before executing tools")
 	rootCmd.PersistentFlags().StringVarP(&permissionMode, "permission-mode", "", "ask", "Permission mode (ask/allow/deny)")
-rootCmd.PersistentFlags().BoolVarP(&goalMode, "goal-mode", "", false, "Enable goal mode: agent works toward a verifiable goal")
-rootCmd.PersistentFlags().StringVarP(&goal, "goal", "", "", "Goal to achieve (natural language description)")
+	rootCmd.PersistentFlags().BoolVarP(&goalMode, "goal-mode", "", false, "Enable goal mode: agent works toward a verifiable goal")
+	rootCmd.PersistentFlags().StringVarP(&goal, "goal", "", "", "Goal to achieve (natural language description)")
 
 	// System prompt flags - official standard
 	rootCmd.PersistentFlags().StringVarP(&systemPrompt, "system-prompt", "", "", "System prompt for the agent")

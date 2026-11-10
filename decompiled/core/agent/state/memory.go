@@ -21,7 +21,7 @@ type SessionMemory struct {
 // NewSessionMemory Creates a new session memory
 func NewSessionMemory() *SessionMemory {
 	return &SessionMemory{
-		data: make(map[string]json.RawMessage),
+		data:    make(map[string]json.RawMessage),
 		session: "default",
 	}
 }
@@ -223,11 +223,11 @@ func (m *SessionMemory) SaveSessionAs(newSession string) error {
 
 // SessionStats session statistics.
 type SessionStats struct {
-	MessageCount       int
-	ToolCallCount      int
-	AssistantReplies   int
-	CreatedAt          string
-	LastAccessedAt     string
+	MessageCount     int
+	ToolCallCount    int
+	AssistantReplies int
+	CreatedAt        string
+	LastAccessedAt   string
 }
 
 // String returns a string representation of the session memory.

@@ -52,8 +52,8 @@ func TestValidate(t *testing.T) {
 
 	// Empty description
 	noDesc := &Skill{
-		Name:        "has-name",
-		Version:     "1.0.0",
+		Name:    "has-name",
+		Version: "1.0.0",
 	}
 	if err := noDesc.Validate(); err == nil {
 		t.Fatal("expected validation error for empty description")

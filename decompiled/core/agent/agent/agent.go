@@ -14,8 +14,8 @@ import (
 	"github.com/alingse/qodercli-reverse/decompiled/core/agent/permission"
 	"github.com/alingse/qodercli-reverse/decompiled/core/agent/provider"
 	"github.com/alingse/qodercli-reverse/decompiled/core/agent/state"
-	"github.com/alingse/qodercli-reverse/decompiled/core/agent/tools/security"
 	"github.com/alingse/qodercli-reverse/decompiled/core/agent/tools"
+	"github.com/alingse/qodercli-reverse/decompiled/core/agent/tools/security"
 	"github.com/alingse/qodercli-reverse/decompiled/core/log"
 	"github.com/alingse/qodercli-reverse/decompiled/core/types"
 )
@@ -79,9 +79,9 @@ type Config struct {
 	ThinkLevel            provider.ThinkLevel
 	SubagentMode          bool
 	AgentName             string
-	EnableEnhancedCompact bool // enable enhanced compact feature
-	PlanMode              bool // when true, agent outputs a plan before executing tools
-	GoalMode              bool // when true, agent works toward a verifiable goal
+	EnableEnhancedCompact bool   // enable enhanced compact feature
+	PlanMode              bool   // when true, agent outputs a plan before executing tools
+	GoalMode              bool   // when true, agent works toward a verifiable goal
 	Goal                  string // the goal to achieve (set via --goal flag)
 }
 
