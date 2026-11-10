@@ -138,17 +138,23 @@ func DiscoverSkills(roots ...string) ([]*Skill, error) {
 func Search(skills []*Skill, query string) []*Skill {
 	q := strings.ToLower(query)
 	var out []*Skill
+	seen := map[string]bool{}
 	for _, s := range skills {
+		matched := false
 		if strings.Contains(strings.ToLower(s.Name), q) ||
 			strings.Contains(strings.ToLower(s.Description), q) ||
 			strings.Contains(strings.ToLower(s.Category), q) {
-			out = append(out, s)
+			matched = true
 		}
 		for _, t := range s.Tags {
 			if strings.Contains(strings.ToLower(t), q) {
-				out = append(out, s)
+				matched = true
 				break
 			}
+		}
+		if matched && !seen[s.Name] {
+			out = append(out, s)
+			seen[s.Name] = true
 		}
 	}
 	return out
